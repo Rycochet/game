@@ -4,6 +4,7 @@ use shared::door::Swing;
 use shared::dungeon::Cell;
 use shared::id::Id;
 use shared::protocol::{ClientMessage, DoorAsk};
+use shared::spot::Spot;
 
 use super::tests::{beside, mob_health, run};
 use crate::connections::tests::TestClient;
@@ -15,24 +16,24 @@ fn kick(target: Option<Id>) -> ClientMessage {
     }
 }
 
-fn mob_at(test: &TestClient, id: Id) -> (i64, i64) {
+fn mob_at(test: &TestClient, id: Id) -> Spot {
     let population = test.world.populations.0.values().next().unwrap();
     population
         .mobs
         .iter()
         .find(|mob| mob.id == id)
         .unwrap()
-        .position
+        .spot
 }
 
 #[test]
-fn a_kick_shoves_a_creature_a_step_away_and_harms_it() {
+fn a_kick_shoves_a_creature_half_a_cell_away_and_harms_it() {
     let (mut test, id) = beside(CreatureKind::Kobold);
     let before = mob_at(&test, id);
     let health = mob_health(&test, id).unwrap();
     test.send(&[kick(Some(id))]);
     run(&mut test, 60, false);
-    assert_eq!(mob_at(&test, id), (before.0 + 1, before.1));
+    assert_eq!(mob_at(&test, id), before.offset(120, 0));
     assert!(mob_health(&test, id).unwrap() < health);
 }
 

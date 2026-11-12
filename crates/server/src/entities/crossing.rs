@@ -83,7 +83,7 @@ pub(super) fn cross(
             };
         }
     }
-    moving.position = landing;
+    moving.put(landing);
     let back_home = to_level == home && moving.way_back.is_empty();
     let left_home = from_level == home && !going_back && moving.way_back.len() == 1;
     let ready = moving.energy.ready_at(tick + 1, moving.speed);

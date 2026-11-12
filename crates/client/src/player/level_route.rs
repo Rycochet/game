@@ -10,15 +10,16 @@ use shared::spot::Spot;
 /// The quickest route from `from` to the middle of cell `goal` through the
 /// cells `known` accepts: through closed doors as if open (they are opened on
 /// the way), and through one known to be locked only if there is no other
-/// way. Players are all Medium for now (free positions PR 5).
+/// way. For a player of `size`.
 pub(super) fn level_route(
     level: &Level,
     from: Spot,
+    size: Size,
     goal: (i64, i64),
     known: impl Fn(i64, i64) -> bool + Copy,
 ) -> SizedPath {
     let open = level.with_all_doors_open();
-    let rooms = RoomMap::new(&open, Size::Medium);
+    let rooms = RoomMap::new(&open, size);
     let to = Spot::middle_of(goal);
     let unlocked = |x, y| known(x, y) && !level.is_locked(x, y);
     let path = find_sized_path(&open, &rooms, from, to, None, unlocked);

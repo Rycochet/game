@@ -37,6 +37,11 @@ impl Default for PlayerSpeed {
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PlayerGait(pub shared::movement::Gait);
 
+/// How big the player is, by their kind (`shared::creature::Size`), which
+/// `character` keeps up to date: their circle on levels and their token's base.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PlayerSize(pub shared::creature::Size);
+
 /// The most the player can carry, in grams, from what they are (`Sheet::capacity`),
 /// which `character` keeps up to date.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]

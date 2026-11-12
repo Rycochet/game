@@ -8,6 +8,7 @@ use shared::protocol::DoorAsk;
 use super::doors::AskDoor;
 use super::level_costs::LevelCosts;
 use super::level_step::level_step;
+use super::route_help::{Others, crowd};
 use super::stride::Stride;
 use super::{
     MOST_STEPS_WAITING, Moved, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick,
@@ -15,9 +16,11 @@ use super::{
 };
 use crate::common::{
     CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    NearRivers, Other, PlayerGait, PlayerSpeed, Sneaking, SpentEnergy, SpotPosition,
+    NearRivers, PlayerGait, PlayerSize, PlayerSpeed, Sneaking, SpentEnergy, SpotPosition,
     WildCellHeights,
 };
+use shared::clearance::crowd_per_mille;
+use shared::spot::Spot;
 
 /// Takes the steps asked for this frame, in order: on a level or in the Hall
 /// as a move to the next cell's middle (`level_step`: from a middle by the
@@ -44,8 +47,8 @@ pub(super) fn take_steps(
         MessageWriter<Moved>,
         MessageWriter<AskDoor>,
     ),
-    god: Res<GodMode>,
-    others: Query<(&Other, &MapPosition), Without<Player>>,
+    (god, size): (Res<GodMode>, Res<PlayerSize>),
+    others: Others,
     player: Single<(&mut MapPosition, &mut SpotPosition, &mut Travel), With<Player>>,
 ) {
     let (mut position, mut spot, mut travel) = player.into_inner();
@@ -78,12 +81,15 @@ pub(super) fn take_steps(
         }
         let from = (position.x, position.y);
         if *view.get() == GameView::Dungeon {
+            let crowd = crowd(&others, *god);
             let costs = LevelCosts {
                 level: &dungeon.level,
                 heights: &heights,
                 gait: gait.0,
                 sneaking: sneaking.0,
                 speed: speed.0,
+                size: size.0,
+                others: &crowd,
             };
             // Put somewhere else (the server, arriving): from there.
             if spot.0 != travel.last_spot {
@@ -99,9 +105,9 @@ pub(super) fn take_steps(
                 moved.write(Moved { from, to });
             }
             let start = travel.stride.at;
-            let landing = level_step(&dungeon.level, gait.0, start, step);
-            let Some(to) = landing.filter(|to| !enemy_cells(&others, *god).contains(&to.cell()))
-            else {
+            let landing = level_step(&dungeon.level, size.0, gait.0, start, step);
+            let free = |to: &Spot| crowd_per_mille(size.0, start, *to, &crowd).is_some();
+            let Some(to) = landing.filter(free) else {
                 // Walking into a closed door tries to open it.
                 let (dx, dy) = step.from(from);
                 if dungeon.level.is_shut(dx, dy) && travel.door_asked != Some((dx, dy)) {

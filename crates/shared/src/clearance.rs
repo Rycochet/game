@@ -9,11 +9,13 @@
 //! squeeze through a gap down to half its own width, more slowly (`squeeze`).
 //! A jump is one move over one jumpable cell. Integers only: both sides agree.
 //!
-//! Nothing in play uses these yet (free positions, PR 2 of 9).
+//! Other creatures are in the way too (`crowd`): enemies block, anyone else
+//! but a player to a player is squeezed past.
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod blocker;
 mod cell_blockers;
+mod crowd;
 mod footing;
 mod room_map;
 mod segment;
@@ -24,11 +26,14 @@ pub use blocker::{Blocker, Shape};
 pub use cell_blockers::{
     CORNER_CUT, DOOR_HALF_GAP, FENCE_HALF, TRUNK_RADIUS, blockers_near, cell_blockers,
 };
+pub use crowd::{Crowding, Other, check_among, crowd_per_mille, crowded_at};
 pub use footing::has_footing;
 pub use room_map::RoomMap;
 pub use segment::{JUMP_REACH, Passage, check_segment, segment_cost, segment_is_legal};
 pub use slide::slide;
 pub use squeeze::{MOST_SQUEEZE_PER_MILLE, squeeze_per_mille};
 
+#[cfg(test)]
+mod crowd_tests;
 #[cfg(test)]
 mod tests;

@@ -13,6 +13,8 @@ pub struct TokenView {
     pub(super) xray_body: Entity,
     pub(super) xray_outline: Entity,
     pub(super) anchor: Entity,
+    /// The base's radius, in 3D units (`base_radius`), for clicks.
+    pub(super) radius: f32,
 }
 
 /// A point above each token that is turned to face the camera every frame.

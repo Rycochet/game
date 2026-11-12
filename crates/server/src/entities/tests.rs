@@ -223,7 +223,7 @@ pub(super) fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
     let population = test.world.populations.0.values_mut().next().unwrap();
     let mob = &mut population.mobs[0];
     mob.kind = kind;
-    mob.position = (x + apart, y);
+    mob.put((x + apart, y));
     mob.home = (x + apart, y);
     test
 }
@@ -348,7 +348,7 @@ fn a_guard_beside_a_blocked_spot_keeps_to_one_cell() {
     let test = beside_a_mob(CreatureKind::Lizardfolk, 4);
     let mut mob = the_mob(&test);
     mob.home = (0, 0);
-    mob.position = (2, 0);
+    mob.put((2, 0));
     let mut level = Level::new(-12, -12, 25, 25);
     for y in -11..=11 {
         for x in -11..=11 {
@@ -361,14 +361,14 @@ fn a_guard_beside_a_blocked_spot_keeps_to_one_cell() {
     let first = guard_cell(&level, &mob, intruder, &BTreeSet::from([mob.position]));
     assert_eq!(cells_apart(first, (TERRITORY, 0)), 1);
     // Once there, the cell it stands on is still the one to stand on.
-    mob.position = first;
+    mob.put(first);
     for _ in 0..4 {
         let again = guard_cell(&level, &mob, intruder, &BTreeSet::from([mob.position]));
         assert_eq!(again, first);
     }
     // A second guard, with the first on the spot, stands beside it.
     level.set(TERRITORY, 0, Cell::Floor);
-    mob.position = (2, 1);
+    mob.put((2, 1));
     let taken = BTreeSet::from([(TERRITORY, 0), mob.position]);
     let beside = guard_cell(&level, &mob, intruder, &taken);
     assert_eq!(cells_apart(beside, (TERRITORY, 0)), 1);
@@ -454,7 +454,7 @@ fn being_chased_at_stairs(kind: CreatureKind) -> TestClient {
     // Beside the stairs, so it sees them taken.
     let population = test.world.populations.0.values_mut().next().unwrap();
     let mob = &mut population.mobs[0];
-    mob.position = stairs;
+    mob.put(stairs);
     mob.home = stairs;
     run(&mut test, 2);
     test
@@ -523,7 +523,7 @@ fn a_mob_part_way_through_something_carries_on_after_a_restart() {
     let population = test.world.populations.0.values_mut().next().unwrap();
     let spot = (x + 2, y);
     let settling = Doing::Settling { steps_left: 4 };
-    population.mobs[0].position = spot;
+    population.mobs[0].put(spot);
     population.mobs[0].doing = settling;
     test.world.save_mobs();
     let world = test.leave();
@@ -631,7 +631,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
     let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
     test.send(&[ClientMessage::DevTeleport { x, y }]);
     let population = test.world.populations.0.values_mut().next().unwrap();
-    population.mobs[0].position = (x + 1, y);
+    population.mobs[0].put((x + 1, y));
     let mob = population.mobs[0].id;
     let answers = test.send(&[ClientMessage::DevGiveItem {
         kind: shared::item::ItemKind::Coin,
@@ -686,7 +686,7 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
     let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(3);
     test.send(&[ClientMessage::DevTeleport { x, y }]);
     let population = test.world.populations.0.values_mut().next().unwrap();
-    population.mobs[0].position = (x + 1, y);
+    population.mobs[0].put((x + 1, y));
     let mob = population.mobs[0].id;
     let site = test.world.site_mut(dev_castle());
     let record = site.levels.get_mut(&0).unwrap().records.get_mut(&mob);
@@ -771,7 +771,7 @@ fn killing_needs_dev_tools_and_sight() {
 
     let far = test.client.visit.as_mut().unwrap().walkable_out_of_sight();
     let population = test.world.populations.0.values_mut().next().unwrap();
-    population.mobs[0].position = far;
+    population.mobs[0].put(far);
     test.send(&[ClientMessage::DevKillMob { mob }]);
     assert_eq!(the_mob(&test).id, mob, "out of sight");
 }
@@ -820,7 +820,7 @@ fn mobs_never_step_onto_each_other_or_a_player() {
     let spot = population.mobs[0].position;
     for (index, mob) in population.mobs.iter_mut().enumerate().take(3).skip(1) {
         mob.kind = CreatureKind::Kobold;
-        mob.position = (spot.0, spot.1 + index as i64 - 1);
+        mob.put((spot.0, spot.1 + index as i64 - 1));
         mob.home = mob.position;
     }
     for _ in 0..40 {
@@ -836,13 +836,14 @@ fn mobs_never_step_onto_each_other_or_a_player() {
 }
 
 #[test]
-fn a_player_swaps_with_someone_friendly_but_not_with_an_enemy() {
+fn a_player_squeezes_past_someone_friendly_but_not_an_enemy() {
     let east = (1, 0);
     let mut test = beside_a_mob(CreatureKind::Horse, 1);
     let from = player(&test);
     test.steps(&[east]);
     assert_eq!(player(&test), (from.0 + 1, from.1));
-    assert_eq!(the_mob(&test).position, from);
+    // It stays where it was: the player squeezed past it.
+    assert_eq!(the_mob(&test).position, (from.0 + 1, from.1));
 
     let mut test = beside_a_mob(CreatureKind::Kobold, 1);
     let from = player(&test);
@@ -902,12 +903,13 @@ fn in_god_mode_a_player_walks_through_an_enemy() {
     let from = player(&test);
     test.steps(&[east]);
     assert_eq!(player(&test), (from.0 + 1, from.1));
-    assert_eq!(the_mob(&test).position, from);
+    assert_eq!(the_mob(&test).position, (from.0 + 1, from.1));
 
-    // Turned off, it is in the way again.
+    // Turned off, it is in the way again: only away from it.
     test.send(&[ClientMessage::DevGodMode(false)]);
-    let from = player(&test);
     test.steps(&[(-1, 0)]);
+    assert_eq!(player(&test), from);
+    test.steps(&[east]);
     assert_eq!(player(&test), from);
 }
 

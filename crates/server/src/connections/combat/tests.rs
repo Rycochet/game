@@ -23,7 +23,7 @@ pub(super) fn beside(kind: CreatureKind) -> (TestClient, Id) {
     let population = test.world.populations.0.values_mut().next().unwrap();
     let mob = &mut population.mobs[0];
     mob.kind = kind;
-    mob.position = (x + 1, y);
+    mob.put((x + 1, y));
     mob.home = (x + 1, y);
     let id = mob.id;
     (test, id)

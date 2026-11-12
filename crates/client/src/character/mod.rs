@@ -9,7 +9,7 @@ use shared::protocol::ServerMessage;
 use shared::sheet::{Row, Sheet};
 use shared::vitals::VitalNow;
 
-use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSpeed};
+use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSize, PlayerSpeed};
 use crate::connection::FromServer;
 use crate::dom::Dom;
 use crate::inventory::Carried;
@@ -57,9 +57,16 @@ fn publish_speed(
 }
 
 /// The most the player can carry, for the weight under the inventory.
-fn publish_limit(sheet: Res<CharacterSheet>, carried: Res<Carried>, mut limit: ResMut<CarryLimit>) {
+/// And how big they are, for moving them and their token.
+fn publish_limit(
+    sheet: Res<CharacterSheet>,
+    carried: Res<Carried>,
+    mut limit: ResMut<CarryLimit>,
+    mut player_size: ResMut<PlayerSize>,
+) {
     let size = carried.0.creature.def().size;
     limit.set_if_neq(CarryLimit(sheet.0.capacity(size)));
+    player_size.set_if_neq(PlayerSize(size));
 }
 
 /// What the panel says.

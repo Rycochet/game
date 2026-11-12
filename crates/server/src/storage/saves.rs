@@ -140,7 +140,10 @@ pub struct MobRecord {
 /// What a mob was doing, for carrying on after the server has been off.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SavedMob {
+    /// The cell, for older saves: `spot` is where it is.
     pub position: (i64, i64),
+    #[serde(default)]
+    pub spot: Option<shared::spot::Spot>,
     pub doing: crate::entities::Doing,
 }
 

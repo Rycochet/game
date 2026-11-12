@@ -81,3 +81,13 @@ pub(super) fn spawn_player(mut commands: Commands) {
         },
     ));
 }
+
+/// The player's token's base is drawn to their size.
+pub(super) fn size_token(
+    size: Res<crate::common::PlayerSize>,
+    mut token: Single<&mut Token, With<Player>>,
+) {
+    if token.base != size.0 {
+        token.base = size.0;
+    }
+}

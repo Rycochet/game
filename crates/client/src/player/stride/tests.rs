@@ -17,11 +17,11 @@ fn room(r: i64) -> Level {
     level
 }
 
-fn walker(level: &Level) -> Walker<'_, impl Fn((i64, i64)) -> bool> {
+fn walker(level: &Level) -> Walker<'_> {
     Walker {
         level,
         size: Size::Medium,
-        free: |_| true,
+        others: &[],
         squeezes: false,
     }
 }
@@ -115,17 +115,24 @@ fn a_slow_walk_still_gets_somewhere() {
 }
 
 #[test]
-fn cells_not_free_are_not_walked_into() {
+fn enemies_are_not_walked_into() {
     let level = room(5);
     let start = Spot::middle_of((0, 0));
+    let enemy = shared::clearance::Other {
+        at: Spot::middle_of((1, 0)),
+        size: Size::Medium,
+        crowding: shared::clearance::Crowding::Block,
+    };
     let walker = Walker {
         level: &level,
         size: Size::Medium,
-        free: |cell: (i64, i64)| cell != (1, 0),
+        others: &[enemy],
         squeezes: false,
     };
     let mut stride = Stride::at(start);
     let mut moves = Vec::new();
     stride.walk(&walker, DVec2::X, 500.0, None, &mut moves);
     assert_eq!(stride.at.cell(), (0, 0));
+    // Up to touching it.
+    assert!(stride.at.x >= Spot::middle_of((1, 0)).x - 160 - 40);
 }

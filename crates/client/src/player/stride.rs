@@ -4,7 +4,7 @@
 //! way.
 
 use bevy::math::DVec2;
-use shared::clearance::{check_segment, slide};
+use shared::clearance::{Other, check_segment, crowd_per_mille, slide};
 use shared::creature::Size;
 use shared::dungeon::Level;
 use shared::spot::{CELL_SPAN, Spot};
@@ -19,20 +19,21 @@ const LONGEST: f64 = CELL_SPAN as f64;
 /// a camera turning a hair doesn't end a move.
 const SAME_WAY: f64 = 0.9999;
 
-/// Who walks: their size, and the cells they may not walk into (enemies).
-pub(super) struct Walker<'a, F: Fn((i64, i64)) -> bool> {
+/// Who walks: their size, and who else is about (enemies block; anyone else
+/// but another player is squeezed past, `shared::clearance::crowd`).
+pub(super) struct Walker<'a> {
     pub level: &'a Level,
     pub size: Size,
-    pub free: F,
+    pub others: &'a [Other],
     /// Walking freely, nobody squeezes any more than where they started (as
     /// `slide`), so pushing against a wall doesn't press into it; a
     /// journey's route squeezes through where it was found to.
     pub squeezes: bool,
 }
 
-impl<F: Fn((i64, i64)) -> bool> Walker<'_, F> {
+impl Walker<'_> {
     /// Whether the straight walk from `a` to `b` is allowed: by the one rule,
-    /// without jumping, and not into a cell `free` refuses.
+    /// without jumping, and not into an enemy.
     pub(super) fn walks(&self, a: Spot, b: Spot) -> bool {
         let Some(passage) = check_segment(self.level, self.size, a, b) else {
             return false;
@@ -42,7 +43,7 @@ impl<F: Fn((i64, i64)) -> bool> Walker<'_, F> {
         let squeezed = !self.squeezes
             && passage.squeeze_per_mille > 1000
             && squeeze(a).is_none_or(|at_a| passage.squeeze_per_mille > at_a);
-        let free = b.cell() == a.cell() || (self.free)(b.cell());
+        let free = crowd_per_mille(self.size, a, b, self.others).is_some();
         passage.jumped.is_none() && !squeezed && free
     }
 }
@@ -105,9 +106,9 @@ impl Stride {
     /// whatever is in the way, adding each straight move finished to `moves`.
     /// `exactly`: stop on this spot, and don't slide (a journey's next
     /// point).
-    pub(super) fn walk<F: Fn((i64, i64)) -> bool>(
+    pub(super) fn walk(
         &mut self,
-        walker: &Walker<F>,
+        walker: &Walker,
         want: DVec2,
         distance: f64,
         exactly: Option<Spot>,
@@ -182,7 +183,7 @@ impl Stride {
 /// anywhere: by `slide`, or else closer by halves, or along whichever of
 /// east-west or north-south goes further (as much as the walk goes that
 /// way), as nothing may squeeze more than where it starts.
-fn slid<F: Fn((i64, i64)) -> bool>(walker: &Walker<F>, at: Spot, by: DVec2) -> Option<Spot> {
+fn slid(walker: &Walker, at: Spot, by: DVec2) -> Option<Spot> {
     let slid = slide(walker.level, walker.size, at, offset(at, by));
     let (along_x, along_y) = (DVec2::new(by.x, 0.0), DVec2::new(0.0, by.y));
     let axes = match along_x.length() >= along_y.length() {

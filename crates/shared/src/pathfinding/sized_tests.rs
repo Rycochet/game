@@ -109,3 +109,26 @@ fn nowhere_to_start() {
     let path = route(&level, Size::Medium, m(0, 0), m(3, 0));
     assert_eq!(path, SizedPath::default());
 }
+
+#[test]
+fn distance_maps_by_size() {
+    // Two rooms, five cells square, with an open doorway between them.
+    let mut level = Level::new(-6, -3, 13, 7);
+    for y in -2..=2 {
+        for x in -5..=5 {
+            level.set(x, y, if x == 0 { Cell::Wall } else { Cell::Floor });
+        }
+    }
+    level.set(0, 0, Cell::Door);
+    level.set_swing(0, 0, Swing::Open(Side::East));
+    let goal = (3, 0);
+    let medium = DistanceMap::to(&level, goal);
+    let large = DistanceMap::sized(&level, Size::Large, goal);
+    let giant = DistanceMap::sized(&level, Size::Giant, goal);
+    let from = (-3, 0);
+    // Large squeezes through, so it takes longer; a Giant never does.
+    assert!(large.cost(from).unwrap() > medium.cost(from).unwrap());
+    assert_eq!(giant.cost(from), None);
+    assert!(giant.cost((4, 0)).is_some());
+    assert!(large.towards(&level, from, |_| true).is_some());
+}

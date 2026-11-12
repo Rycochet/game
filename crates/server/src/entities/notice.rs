@@ -1,6 +1,6 @@
 //! What a mob notices: players near enough, and where they are.
 
-use shared::creature::CreatureKind;
+use shared::creature::{CreatureKind, Size};
 use shared::dungeon::{Level, line_is_clear};
 use shared::id::Id;
 use shared::mob::scent_strength;
@@ -86,15 +86,15 @@ pub(super) fn cells_apart(a: (i64, i64), b: (i64, i64)) -> i64 {
 }
 
 /// The distance maps worked out this tick on one level: mobs after the same place
-/// share one.
+/// share one, one for each size after it.
 #[derive(Default)]
-pub(super) struct Maps(BTreeMap<(i64, i64), DistanceMap>);
+pub(super) struct Maps(BTreeMap<((i64, i64), Size), DistanceMap>);
 
 impl Maps {
-    pub(super) fn to(&mut self, level: &Level, goal: (i64, i64)) -> &DistanceMap {
+    pub(super) fn to(&mut self, level: &Level, size: Size, goal: (i64, i64)) -> &DistanceMap {
         self.0
-            .entry(goal)
-            .or_insert_with(|| DistanceMap::to(level, goal))
+            .entry((goal, size))
+            .or_insert_with(|| DistanceMap::sized(level, size, goal))
     }
 }
 

@@ -206,6 +206,11 @@ impl Client {
         self.character_id.map_or(Id(uuid::Uuid::nil()), |id| id.0)
     }
 
+    /// How big their character is, by its kind: their circle on levels.
+    pub(crate) fn size(&self) -> shared::creature::Size {
+        self.inventory.creature.def().size
+    }
+
     pub(crate) fn refuse_for_saves(&self, error: &str) -> bool {
         error!("Refusing a client: {error}");
         self.link

@@ -13,15 +13,15 @@ use super::doors::AskDoor;
 use super::level_costs::LevelCosts;
 use super::level_moves::{door_ahead, follow_route, jump_ahead};
 use super::level_route::level_route;
-use super::route_help::enemy_cells;
+use super::route_help::{Others, crowd, enemy_cells};
 use super::stride::{Stride, Walker};
 use super::{
     Arrived, DUNGEON_TRAVEL_SPEED, Moved, Player, PlayerEnergy, Travel, TravelTo, Walking,
     action_tick,
 };
 use crate::common::{
-    CurrentDungeon, GameView, GodMode, MapPosition, Other, PlayerGait, PlayerSpeed, SmoothPosition,
-    Sneaking, SpotPosition, WildCellHeights,
+    CurrentDungeon, GameView, GodMode, MapPosition, PlayerGait, PlayerSize, PlayerSpeed,
+    SmoothPosition, Sneaking, SpotPosition, WildCellHeights,
 };
 
 /// How far ahead of the energy it has the player may walk, in seconds: moves
@@ -42,8 +42,8 @@ pub(super) fn travel_on_level(
     (speed_now, gait, sneaking): (Res<PlayerSpeed>, Res<PlayerGait>, Res<Sneaking>),
     heights: Res<WildCellHeights>,
     mut energy: ResMut<PlayerEnergy>,
-    god: Res<GodMode>,
-    others: Query<(&Other, &MapPosition), Without<Player>>,
+    (god, size): (Res<GodMode>, Res<PlayerSize>),
+    others: Others,
     player: Single<
         (
             &mut MapPosition,
@@ -103,10 +103,11 @@ pub(super) fn travel_on_level(
 
     let enemies = enemy_cells(&others, *god);
     let level = &dungeon.level;
+    let crowd = crowd(&others, *god);
     let walker = Walker {
         level,
-        size: shared::creature::Size::Medium,
-        free: |cell: (i64, i64)| !enemies.contains(&cell),
+        size: size.0,
+        others: &crowd,
         squeezes: walk.is_none(),
     };
     let costs = LevelCosts {
@@ -115,6 +116,8 @@ pub(super) fn travel_on_level(
         gait: gait.0,
         sneaking: sneaking.0,
         speed: speed_now.0,
+        size: size.0,
+        others: &crowd,
     };
     // Not further ahead of the energy than the server will let it be.
     let ahead = (AHEAD * ACTION_TICKS_PER_SECOND) as u64;
@@ -158,7 +161,7 @@ pub(super) fn travel_on_level(
                 && ((x, y) == goal || level.cell(x, y) != Cell::WorldGate)
         };
         moves.extend(travel.stride.finish());
-        let path = level_route(level, travel.stride.at, goal, known);
+        let path = level_route(level, travel.stride.at, size.0, goal, known);
         travel.route_arrives = path.reached;
         travel.spots = path.spots.into_iter().skip(1).collect();
         if travel.spots.is_empty() && path.reached {

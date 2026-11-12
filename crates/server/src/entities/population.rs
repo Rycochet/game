@@ -1,5 +1,6 @@
 //! Who lives on each level: populating levels, moving mobs aside, stairs taken and saving them.
 
+use shared::clearance::{Crowding, Other};
 use shared::creature::CreatureKind;
 use shared::dungeon::line_is_clear;
 use shared::mob::{Memory, spawns};
@@ -7,6 +8,7 @@ use shared::poi::Poi;
 use shared::protocol::CharacterId;
 use shared::sheet::Feeling;
 use shared::site::SiteLevel;
+use shared::spot::Spot;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::scent::Went;
@@ -58,14 +60,18 @@ impl ServerWorld {
                 if carried_on.is_some() {
                     due.insert((tick, id));
                 }
-                Mob {
-                    position: carried_on.map_or(spawn.position, |saved| saved.position),
+                let mut mob = Mob {
                     doing: carried_on.map_or(Doing::Idle, |saved| saved.doing),
                     memory: records
                         .get(&id)
                         .map_or_else(Memory::default, |r| r.memory.clone()),
                     ..Mob::new(id, &spawn, &carrying, index)
+                };
+                if let Some(saved) = carried_on {
+                    // Older saves have only the cell: its middle.
+                    mob.place(saved.spot.unwrap_or(Spot::middle_of(saved.position)));
                 }
+                mob
             })
             .collect();
         let population = Population {
@@ -84,30 +90,31 @@ impl ServerWorld {
         self.populations.0.insert((id, index), population);
     }
 
-    /// Whether a mob on this cell won't let this player past.
-    pub(crate) fn enemy_at(
+    /// The mobs about a player on `place`, as far as their moves go
+    /// (`clearance::crowd`): enemies block, the rest are squeezed past. Other
+    /// players are walked through, so they aren't here.
+    pub(crate) fn crowd_round(
         &self,
         place: (SiteId, u32),
-        cell: (i64, i64),
         kind: CreatureKind,
         character: Option<&CharacterId>,
-    ) -> bool {
-        self.populations.0.get(&place).is_some_and(|population| {
-            population.mobs.iter().any(|mob| {
-                mob.position == cell && mob.feeling(kind, character) == Feeling::Unfriendly
+    ) -> Vec<Other> {
+        let Some(population) = self.populations.0.get(&place) else {
+            return Vec::new();
+        };
+        let crowding = |mob: &Mob| match mob.feeling(kind, character) {
+            Feeling::Unfriendly => Crowding::Block,
+            _ => Crowding::Squeeze,
+        };
+        population
+            .mobs
+            .iter()
+            .map(|mob| Other {
+                at: mob.spot,
+                size: mob.size(),
+                crowding: crowding(mob),
             })
-        })
-    }
-
-    /// A player has stepped from `from` to `to`: a mob there takes their place.
-    pub(crate) fn swap_mob(&mut self, place: (SiteId, u32), to: (i64, i64), from: (i64, i64)) {
-        if let Some(population) = self.populations.0.get_mut(&place) {
-            for mob in &mut population.mobs {
-                if mob.position == to {
-                    mob.position = from;
-                }
-            }
-        }
+            .collect()
     }
 
     /// A player has arrived on this cell, not by a step: a mob there moves to the
@@ -121,7 +128,7 @@ impl ServerWorld {
         };
         let taken = |spot: (i64, i64)| population.mobs.iter().any(|mob| mob.position == spot);
         if let Some(spot) = nearest_free(&population.level, cell, taken) {
-            population.mobs[index].position = spot;
+            population.mobs[index].put(spot);
         }
     }
 
@@ -181,6 +188,7 @@ impl ServerWorld {
                 .map(|mob| {
                     let saved = SavedMob {
                         position: mob.position,
+                        spot: Some(mob.spot),
                         doing: mob.doing,
                     };
                     (mob.number, saved)

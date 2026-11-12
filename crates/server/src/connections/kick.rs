@@ -1,19 +1,18 @@
 //! A player kicking (`Ability::Kick`, anyone with legs): at the target if it
-//! is in sight and reach, shoving it a step away (or harming it twice as much
+//! is in sight and reach, shoving it half a cell away (or harming it twice as much
 //! if it can't be shoved), or else at the closed door beside them, which
 //! enough kicks break.
 
 use bevy::prelude::*;
 use shared::combat::{PRACTICE_PER_BLOW, Swing, kick_skill};
 use shared::id::Id;
-use shared::movement::mob_can_stand;
 use shared::protocol::{Landed, ServerMessage};
 use shared::skill::{familiarity, taught};
 
 use super::Client;
 use crate::ServerWorld;
 use crate::combat::{Act, Pending, luck, ticks_for};
-use crate::entities::{Striker, hit_mob};
+use crate::entities::{Striker, hit_mob, shove, shoved_to};
 use crate::sites::{door_to_kick, kick_door};
 
 /// Begins a kick, if there is something to kick: whether the client is still
@@ -58,8 +57,8 @@ pub(super) fn start_kick(
     (stayed, swing.cost)
 }
 
-/// A kick at a creature lands: shoved a step straight away from the player if
-/// that cell is free, harmed (more if it wasn't shoved).
+/// A kick at a creature lands: shoved half a cell straight away from the player
+/// if there is room, harmed (more if it wasn't shoved).
 pub(super) fn land_kick(
     client: &mut Client,
     world: &mut ServerWorld,
@@ -78,18 +77,13 @@ pub(super) fn land_kick(
     };
     let place = (visit.population(), visit.index());
     let from = visit.position();
-    let to = (
-        at.0 + (at.0 - from.0).signum(),
-        at.1 + (at.1 - from.1).signum(),
-    );
-    let kept = (visit.id(), visit.index(), (visit.kept_at(to.0), to.1));
-    let player_there = world.standing.iter().any(|&(cell, _)| cell == kept);
-    let population = world.populations.0.get(&place.0);
-    let free = population.is_some_and(|population| {
-        mob_can_stand(population.level(), to.0, to.1)
-            && !population.mobs.iter().any(|mob| mob.position == to)
-    }) && !player_there
-        && from != to;
+    // Half a cell away (owner, 2026-11-10), onto nobody.
+    let shoved = shoved_to(world, place.0, target, visit.spot()).filter(|to| {
+        let (x, y) = to.cell();
+        let kept = (visit.id(), visit.index(), (visit.kept_at(x), y));
+        to.cell() == at || !world.standing.iter().any(|&(cell, _)| cell == kept)
+    });
+    let free = shoved.is_some();
     let striker = Striker {
         id: client.entity_id(),
         position: from,
@@ -100,11 +94,8 @@ pub(super) fn land_kick(
     let Some(hit) = hit_mob(world, place, target, striker, tick) else {
         return true;
     };
-    if free
-        && let Some(population) = world.populations.0.get_mut(&place.0)
-        && let Some(mob) = population.mobs.iter_mut().find(|mob| mob.id == target)
-    {
-        mob.position = to;
+    if let Some(to) = shoved {
+        shove(world, place.0, target, to);
     }
     client.practise(kick_skill(), hit.kind, tick);
     client

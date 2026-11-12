@@ -14,6 +14,10 @@ pub struct Token {
     pub completed: bool,
     /// How big the entity's `Icon` is drawn (the base stays the same).
     pub size: TokenSize,
+    /// How big the base is: the creature's size, drawn to scale by
+    /// `Size::radius` (Medium's is `view3d`'s usual diameter), the same circle
+    /// it blocks with.
+    pub base: shared::creature::Size,
     /// Draws no base: the view shows something else there, such as a world
     /// map poi's model. It can still be clicked.
     pub no_base: bool,

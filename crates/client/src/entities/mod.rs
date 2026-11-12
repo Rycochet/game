@@ -21,7 +21,7 @@ use shared::id::Id;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::sheet::Feeling;
 
-use crate::common::{Attitude, DetectMonsters, Icon, MapPosition, Other, Token};
+use crate::common::{Attitude, DetectMonsters, Icon, MapPosition, Other, SpotPosition, Token};
 use crate::connection::{FromServer, ToServer};
 use crate::inventory::Carried;
 use crate::player::{Player, PlayerSystems};
@@ -85,7 +85,7 @@ struct Others(HashMap<Id, Entity>);
 fn read_server(
     mut from_server: MessageReader<FromServer>,
     mut others: ResMut<Others>,
-    mut positions: Query<(&mut MapPosition, &mut Goal), With<Other>>,
+    mut positions: Query<(&mut MapPosition, &mut SpotPosition, &mut Goal), With<Other>>,
     mut on_level: Local<bool>,
     seen: Query<(&Other, &morph::SeenLooks)>,
     time: Res<Time>,
@@ -106,10 +106,13 @@ fn read_server(
                             feeling: look.feeling,
                         },
                         at,
+                        // Where the server has it (units on a level).
+                        SpotPosition(shared::spot::Spot::new(look.x, look.y)),
                         smooth,
                         Goal::still(smooth),
                         Token {
                             size: picture_size(look.kind),
+                            base: look.kind.def().size,
                             attitude: attitude(look.feeling),
                             ..default()
                         },
@@ -147,9 +150,10 @@ fn read_server(
             ServerMessage::Moves(stretches) => {
                 for stretch in stretches {
                     if let Some(&entity) = others.0.get(&stretch.id)
-                        && let Ok((mut position, mut goal)) = positions.get_mut(entity)
+                        && let Ok((mut position, mut spot, mut goal)) = positions.get_mut(entity)
                     {
                         (*position, *goal) = moving::stretch(*on_level, stretch);
+                        spot.0 = shared::spot::Spot::new(stretch.to.0, stretch.to.1);
                     }
                 }
             }

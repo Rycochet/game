@@ -12,6 +12,16 @@ use super::{
     XrayMaterial,
 };
 use crate::common::{Attitude, TokenShape};
+use shared::creature::Size;
+
+/// Meshes by size, then by shape.
+type BySize<T> = [[T; TokenShape::ALL.len()]; Size::ALL.len()];
+
+/// A token base's radius in 3D units for a creature of `size`: to scale by
+/// `Size::radius`, Medium's being `DIAMETER / 2`.
+pub(super) fn base_radius(size: Size) -> f32 {
+    DIAMETER / 2.0 * size.radius() as f32 / Size::Medium.radius() as f32
+}
 
 /// Meshes and materials shared by all tokens. The outlines, sized in screen
 /// pixels, are rebuilt when the window height or the camera's zoom changes.
@@ -21,13 +31,13 @@ pub struct TokenAssets {
     /// were made for.
     pub(super) window_height: f32,
     pub(super) camera_distance: f32,
-    /// Indexed by `TokenShape as usize`.
-    pub(super) bodies: [Handle<Mesh>; TokenShape::ALL.len()],
-    pub(super) outlines: [Handle<Mesh>; TokenShape::ALL.len()],
+    /// Indexed by `[Size as usize][TokenShape as usize]` (`Token::base`).
+    pub(super) bodies: BySize<Handle<Mesh>>,
+    pub(super) outlines: BySize<Handle<Mesh>>,
     /// The outline drawn through what hides it: as `outlines`, but not
     /// below the ground, where the ground would hide it and the x-ray would
     /// show it as a line under every token.
-    pub(super) xray_outlines: [Handle<Mesh>; TokenShape::ALL.len()],
+    pub(super) xray_outlines: BySize<Handle<Mesh>>,
     /// Indexed by `[completed as usize][Attitude as usize]`.
     pub(super) colours: [[Handle<StandardMaterial>; Attitude::ALL.len()]; 2],
     /// Indexed by `completed as usize`.
@@ -91,9 +101,13 @@ impl TokenAssets {
         Self {
             window_height,
             camera_distance,
-            bodies: TokenShape::ALL.map(|shape| meshes.add(prism(shape, 0.0))),
-            outlines: TokenShape::ALL.map(|shape| meshes.add(prism(shape, outline))),
-            xray_outlines: TokenShape::ALL.map(|shape| meshes.add(raised_prism(shape, outline))),
+            bodies: Size::ALL
+                .map(|size| TokenShape::ALL.map(|shape| meshes.add(prism(shape, size, 0.0)))),
+            outlines: Size::ALL
+                .map(|size| TokenShape::ALL.map(|shape| meshes.add(prism(shape, size, outline)))),
+            xray_outlines: Size::ALL.map(|size| {
+                TokenShape::ALL.map(|shape| meshes.add(raised_prism(shape, size, outline)))
+            }),
             colours: [false, true].map(|completed| {
                 Attitude::ALL.map(|attitude| {
                     // Lit, so the sun shades the top and sides differently and
@@ -161,15 +175,15 @@ pub(super) fn fade(colour: Color, completed: bool) -> StandardMaterial {
 }
 
 /// `prism(shape, grow)` moved up by `grow`, so its bottom is the token's.
-pub(super) fn raised_prism(shape: TokenShape, grow: f32) -> Mesh {
-    prism(shape, grow).translated_by(Vec3::Y * grow)
+pub(super) fn raised_prism(shape: TokenShape, size: Size, grow: f32) -> Mesh {
+    prism(shape, size, grow).translated_by(Vec3::Y * grow)
 }
 
 /// The token's shape extruded to its thickness, standing on the XZ plane and
-/// centred on the origin. `grow` makes it that much bigger all round (for the
-/// outline).
-pub(super) fn prism(shape: TokenShape, grow: f32) -> Mesh {
-    let radius = DIAMETER / 2.0;
+/// centred on the origin, as wide as `size`'s base (`base_radius`) and as thick
+/// as any. `grow` makes it that much bigger all round (for the outline).
+pub(super) fn prism(shape: TokenShape, size: Size, grow: f32) -> Mesh {
+    let radius = base_radius(size);
     let height = 2.0 * (HALF_THICKNESS + grow);
     // Sides, and a turn about the vertical. Polygons start with a corner
     // pointing north: the square turns to line up with the grid, the hexagon

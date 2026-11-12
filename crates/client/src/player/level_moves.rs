@@ -3,7 +3,7 @@
 
 use bevy::math::DVec2;
 use bevy::prelude::*;
-use shared::clearance::{JUMP_REACH, check_segment};
+use shared::clearance::{JUMP_REACH, check_segment, crowd_per_mille};
 use shared::dungeon::Level;
 use shared::spot::{CELL_SPAN, Spot};
 
@@ -31,15 +31,12 @@ pub(super) fn door_ahead(level: &Level, at: Spot, way: DVec2) -> Option<(i64, i6
 
 /// Where a jump from `at` going `way` lands, if one can be taken: over one
 /// cell of liquid, a hole or a fence (`check_segment`).
-pub(super) fn jump_ahead<F: Fn((i64, i64)) -> bool>(
-    walker: &Walker<F>,
-    at: Spot,
-    way: DVec2,
-) -> Option<Spot> {
+pub(super) fn jump_ahead(walker: &Walker, at: Spot, way: DVec2) -> Option<Spot> {
     JUMP_LENGTHS
         .into_iter()
         .map(|length| ahead_of(at, way, length))
-        .filter(|to| at.distance(*to) <= JUMP_REACH && (walker.free)(to.cell()))
+        .filter(|to| at.distance(*to) <= JUMP_REACH)
+        .filter(|&to| crowd_per_mille(walker.size, at, to, walker.others).is_some())
         .find(|&to| {
             check_segment(walker.level, walker.size, at, to)
                 .is_some_and(|passage| passage.jumped.is_some())
@@ -52,9 +49,9 @@ pub(super) fn jump_ahead<F: Fn((i64, i64)) -> bool>(
 /// open once); finds a new way from where it is if something else is in
 /// the way, giving up if that found way is blocked at once. Whether it has
 /// arrived where it was asked to go.
-pub(super) fn follow_route<F: Fn((i64, i64)) -> bool>(
+pub(super) fn follow_route(
     travel: &mut Travel,
-    walker: &Walker<F>,
+    walker: &Walker,
     mut distance: f64,
     slowness: impl Fn((i64, i64), (i64, i64)) -> f64,
     moves: &mut Vec<(Spot, Spot)>,

@@ -7,6 +7,7 @@ use shared::body::has_hands;
 use shared::door::{Side, Swing};
 use shared::dungeon::{Cell, Level};
 use shared::poi::Poi;
+use shared::spot::Spot;
 
 use super::{Mob, Population};
 
@@ -60,13 +61,14 @@ pub(super) fn way_level<'a>(mob: &Mob, level: &'a Level, doors: Option<&'a MobDo
 pub(super) fn open_on_the_way(
     mob: &mut Mob,
     level: &mut Level,
-    was_at: (i64, i64),
+    was_at: Spot,
 ) -> Option<((i64, i64), Swing)> {
     let (x, y) = mob.position;
     if !level.is_shut(x, y) {
         return None;
     }
-    mob.position = was_at;
+    mob.place(was_at);
+    let was_at = was_at.cell();
     let runs = level.opening_runs_east_west(x, y);
     let from = Side::of(runs, (x, y), was_at);
     let side = if level.cell(x, y) == Cell::SecretDoor {

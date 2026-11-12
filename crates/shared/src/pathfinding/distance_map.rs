@@ -4,14 +4,17 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 use super::DIRECTIONS;
+use crate::creature::Size;
 use crate::dungeon::Level;
-use crate::movement::{Step, mob_can_stand, mob_step_on_level, step_cost};
+use crate::movement::{Step, mob_can_stand, mob_step_sized, step_cost};
 
 /// How long it takes to reach one goal from everywhere on a level, in
 /// `movement::step_cost` units: for many mobs after one target, sharing the work.
-/// By the mobs' rules (`movement::mob_step_on_level`): never over a World Gate.
+/// By the mobs' rules for one size (`movement::mob_step_sized`): never over a
+/// World Gate, and through only what that size fits, slower where it squeezes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DistanceMap {
+    size: Size,
     min: (i64, i64),
     width: i64,
     height: i64,
@@ -19,10 +22,16 @@ pub struct DistanceMap {
 }
 
 impl DistanceMap {
-    /// Flooded out from `goal` over legal steps.
+    /// Flooded out from `goal` over legal steps, for a Medium mob.
     pub fn to(level: &Level, goal: (i64, i64)) -> Self {
+        Self::sized(level, Size::Medium, goal)
+    }
+
+    /// Flooded out from `goal` over legal steps for a mob of `size`.
+    pub fn sized(level: &Level, size: Size, goal: (i64, i64)) -> Self {
         let (min_x, min_y, width, height) = level.bounds();
         let mut map = Self {
+            size,
             min: (min_x, min_y),
             width,
             height,
@@ -42,12 +51,16 @@ impl DistanceMap {
                 for reach in [1, 2] {
                     let from = (cell.0 - dx * reach, cell.1 - dy * reach);
                     let step = Step::new(dx, dy).expect("a direction is a step");
-                    if !mob_can_stand(level, from.0, from.1)
-                        || mob_step_on_level(level, from, step) != Some(cell)
-                    {
+                    if !mob_can_stand(level, from.0, from.1) {
                         continue;
                     }
-                    let total = cost + step_cost(from, cell);
+                    let Some((to, squeeze)) = mob_step_sized(level, size, from, step) else {
+                        continue;
+                    };
+                    if to != cell {
+                        continue;
+                    }
+                    let total = cost + step_cost(from, cell) * squeeze / 1000;
                     if let Some(index) = map.index(from)
                         && total < map.costs[index]
                     {
@@ -110,7 +123,7 @@ impl DistanceMap {
             .iter()
             .filter_map(|&(dx, dy)| {
                 let step = Step::new(dx, dy)?;
-                let to = mob_step_on_level(level, from, step)?;
+                let (to, _) = mob_step_sized(level, self.size, from, step)?;
                 if !free(to) {
                     return None;
                 }
