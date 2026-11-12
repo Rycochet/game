@@ -15,6 +15,15 @@ use crate::ServerWorld;
 use crate::storage::SiteId;
 use crate::wilderness::WildChunk;
 
+/// A chunk of the wilderness, worked out again if it was let go of: a road
+/// worked out since forgets the chunks near it (`Wilderness::add_road`), and
+/// too many kept forgets them all. Anything reading a chunk after the window
+/// was made (a later tick) goes through this.
+pub(crate) fn wild_chunk(world: &mut ServerWorld, chunk: ChunkPos) -> Option<&WildChunk> {
+    ensure_chunk(world, chunk);
+    world.wilderness.chunk(chunk)
+}
+
 /// Makes sure the server has worked out a chunk of the wilderness.
 pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     if world.wilderness.chunk(chunk).is_some() {

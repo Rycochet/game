@@ -279,8 +279,9 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
         offset: (-ox - turn, -oy),
         bounds,
     });
-    // The site's own changes, if anyone has made any.
-    let changes = world.sites.get(&id).and_then(|site| site.levels.get(&0));
+    // The site's own changes, if anyone has made any (its save opened if it
+    // isn't yet, as after a restart).
+    let changes = world.site(id).levels.get(&0);
     for (&(sx, sy), &cell) in changes.iter().flat_map(|level| &level.changes) {
         window.level.level.set(sx + ox + turn, sy + oy, cell);
     }

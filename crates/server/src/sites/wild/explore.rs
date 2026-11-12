@@ -119,13 +119,14 @@ pub(crate) fn follow(client: &mut Client, world: &mut ServerWorld) -> bool {
     }
     let wild = &world.wilderness.wild;
     client.character.world_position = wild.point_of(x, y);
+    let same_block = wild.block_of(x, y) == centre;
     if visit.level.level.cell(x, y) == Cell::WorldGate {
         return through_gate(client, world, (x, y));
     }
     if !tell_poi(client, world) || !found_by_standing(client) {
         return false;
     }
-    if wild.block_of(x, y) == centre {
+    if same_block {
         return send_town(client);
     }
     let mut made = window(world, (x, y));

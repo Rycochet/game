@@ -57,7 +57,7 @@ pub(super) fn shop_of(client: &Client, world: &mut ServerWorld, with: Id) -> Opt
             continue;
         };
         // Only towns have shops (and this leaves other sites' saves alone).
-        let has_town = world.wilderness.chunk(chunk);
+        let has_town = super::wild_chunk(world, chunk);
         if !has_town.is_some_and(|wild| !wild.town.is_empty()) {
             continue;
         }
