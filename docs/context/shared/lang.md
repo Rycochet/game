@@ -11,7 +11,7 @@ Words in the player's language: every word sits in a language file (Fluent `.ftl
 - `lang/variables.rs`: `Lang::variables` and `missing`, read from the messages' syntax trees.
 - `lang/rules.rs`: the `Rules` trait. `lang/english.rs`: English's.
 - `lang/functions.rs`: the rules as functions files call: `A`, `POSSESSIVE`, `CAP` (and Fluent's `NUMBER`).
-- `lang/files.rs`: the built-in files per language. `lang/en/common.ftl`: genders by name, pronouns. `lang/en/story.ftl`: names' order, and `shared::story`'s values (epithets, pets, places, directions, distances).
+- `lang/files.rs`: the built-in files per language. `lang/en/common.ftl`: genders by name, pronouns. `lang/en/story.ftl`: names' order, and `shared::story`'s values (epithets, pets, places, directions, distances). `lang/en/story-plots.ftl`: stories' facts, creatures, coins, beats, titles and steps (placeholder wordings until Flavour text PR 4).
 
 ## Public API
 
@@ -28,7 +28,7 @@ Words in the player's language: every word sits in a language file (Fluent `.ftl
 
 ## Used by
 
-- `shared::story` (its values are selectors; whole names and place descriptions rendered). Story plots (Flavour text PR 3) and the client's quest text will.
+- `shared::story` (its values are selectors; names, places, and whole stories rendered). The client's quest text will.
 
 ## Notes
 

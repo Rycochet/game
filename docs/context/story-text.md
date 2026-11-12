@@ -1,6 +1,6 @@
 # Story text (plan)
 
-The plan for quests' flavour text, in 4 PRs, planned with the owner on 2026-11-12. PR 1 (`shared: lang`) and PR 2 (`shared: story`'s names and facts) are built; the rest is not. **Owner** marks the owner's decisions.
+The plan for quests' flavour text, in 4 PRs, planned with the owner on 2026-11-12. PRs 1 to 3 (`shared: lang`, and `shared: story`'s names, facts, plots and beats) are built; PR 4 (English wordings) is not. **Owner** marks the owner's decisions.
 
 ## Goal
 
@@ -43,5 +43,5 @@ From the research catalogue (`docs/context/research-story-plots.md` with PR 3), 
 |---|---|---|---|
 | 1 | `shared::lang`: `Language`, Fluent bundles built in, English rules, rendering with names, counts and selectors; tests that every message parses and renders with its values. This note. | - | built |
 | 2 | Names: family names per household, given names per people (`creature::names`), pet names, named bosses with a translated epithet, descriptions of unnamed places, direction and distance bands from a town, as facts. | Gender (merged) | built |
-| 3 | `shared::story`: plots and beats from the catalogue, `Cast` with roles carried over, facts, seeded choices, beats into up to 3 paragraphs, a serialisable `Story` for the protocol; sample stories printed by a test. The Quest system's PR 2 needs this and uses it for givers' names and text. | 1, 2 | |
-| 4 | English wordings: drafted in bulk, reviewed by the owner, then the `.ftl` files and golden tests. | 3 | |
+| 3 | `shared::story`: plots and beats from the catalogue, `Cast` with roles carried over, facts, seeded choices, beats into up to 3 paragraphs, a serialisable `Story` for the protocol; sample stories printed by a test. The Quest system's PR 2 needs this and uses it for givers' names and text. | 1, 2 | built |
+| 4 | English wordings: drafted in bulk, reviewed by the owner, then the `.ftl` files and golden tests. Replaces the placeholders in `lang/en/story-plots.ftl`, keeping each beat to the values it is sure to have (`shared/story.md`). | 3 | |
