@@ -111,7 +111,7 @@ impl CreatureKind {
 }
 
 /// Whether a letter comes three times running ("Sss").
-fn three_alike(name: &str) -> bool {
+pub(crate) fn three_alike(name: &str) -> bool {
     let letters: Vec<char> = name.chars().map(|c| c.to_ascii_lowercase()).collect();
     letters
         .windows(3)

@@ -17,7 +17,7 @@ Every creature's gender, players and mobs alike, animals too: Male, Female or Ne
 
 ## Used by
 
-- `shared::sheet` (`Sheet::gender`, `Attributes::for_kind(kind, gender, build)`), `shared::mob` (`Spawn::gender`, `EntityLook::gender`), `protocol` (`NewCharacter::gender`), `server` (new characters, mobs, what others are told), client `character_create` (the toggle row), `character` and `character_select` (shown beside the kind).
+- `shared::sheet` (`Sheet::gender`, `Attributes::for_kind(kind, gender, build)`), `shared::mob` (`Spawn::gender`, `EntityLook::gender`), `protocol` (`NewCharacter::gender`), `server` (new characters, mobs, what others are told), `shared::story` (people, pets and bosses rolled like mobs), client `character_create` (the toggle row), `character` and `character_select` (shown beside the kind).
 
 ## Notes
 

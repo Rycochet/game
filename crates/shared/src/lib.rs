@@ -47,6 +47,7 @@ pub mod shop;
 pub mod site;
 pub mod skill;
 pub mod spot;
+pub mod story;
 pub mod surface;
 pub mod underclothes;
 pub mod vegetation;
