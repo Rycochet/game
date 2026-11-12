@@ -32,9 +32,8 @@ pub(in crate::debug_menu) fn show_menu(
     (window, ui_scale): (Single<&Window, With<PrimaryWindow>>, Res<UiScale>),
     sources: FactSources,
     mut roots: Query<(&MenuRoot, &mut Visibility)>,
-    mut warning: Single<
-        &mut Visibility,
-        (With<WarningButton>, Without<MenuRoot>, Without<PageButton>),
+    warning: Option<
+        Single<&mut Visibility, (With<WarningButton>, Without<MenuRoot>, Without<PageButton>)>,
     >,
     grids: Query<(Entity, &MenuGrid)>,
     mut filter_boxes: Query<(&FilterBox, &mut TextBox)>,
@@ -44,11 +43,14 @@ pub(in crate::debug_menu) fn show_menu(
 ) {
     // Without any entry there is no menu (owner, 2026-11-09).
     let hidden = *sources.view.get() == GameView::Connecting || !sources.any_entry();
-    warning.set_if_neq(if hidden {
-        Visibility::Hidden
-    } else {
-        Visibility::Inherited
-    });
+    // (Not there until its markup is built.)
+    if let Some(mut warning) = warning {
+        warning.set_if_neq(if hidden {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        });
+    }
     for (root, mut visibility) in &mut roots {
         let shows = menu.open && menu.level(root.0).is_some();
         visibility.set_if_neq(if shows {

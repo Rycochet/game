@@ -6,6 +6,7 @@ use bevy::prelude::*;
 
 use super::spawn::{PadToggle, StepPad};
 use crate::common::{GameView, PadButton, PadSteps, Preferences};
+use crate::dom::Dom;
 use crate::widgets::{ButtonPressed, ButtonState, HoldButton, INK, PanelMoved};
 
 /// How strongly a disabled button's picture shows.
@@ -38,30 +39,29 @@ pub(super) fn remember_place(
 }
 
 /// Shows the toggle button on a map, and the pad too while open; the toggle
-/// button is flat-edged while it is. Hidden by `Display::None`, the pad keeps
-/// its place.
+/// button is flat-edged while it is. Hidden, the pad keeps its place. (Told
+/// to the elements only when it changes.)
 pub(super) fn show_pad(
     preferences: Res<Preferences>,
     view: Res<State<GameView>>,
-    mut pad: Single<&mut Node, (With<StepPad>, Without<PadToggle>)>,
-    toggle: Single<(&mut Node, &mut ButtonState), With<PadToggle>>,
+    mut toggle: Single<&mut ButtonState, With<PadToggle>>,
+    mut dom: Dom,
+    mut shown: Local<Option<(bool, bool)>>,
 ) {
     let open = !preferences.step_pad.closed;
     let on_a_map = matches!(view.get(), GameView::WorldMap | GameView::Dungeon);
-    let shown = |yes: bool| if yes { Display::Flex } else { Display::None };
-    if pad.display != shown(on_a_map && open) {
-        pad.display = shown(on_a_map && open);
-    }
-    let (mut node, mut state) = toggle.into_inner();
-    if node.display != shown(on_a_map) {
-        node.display = shown(on_a_map);
+    let now = (on_a_map, on_a_map && open);
+    if *shown != Some(now) {
+        *shown = Some(now);
+        dom.set_flag("hud/step_pad", "hidden", !now.0);
+        dom.set_flag("step_pad/panel", "hidden", !now.1);
     }
     let look = if open {
         ButtonState::Active
     } else {
         ButtonState::Normal
     };
-    state.set_if_neq(look);
+    toggle.set_if_neq(look);
 }
 
 /// The pad's buttons and its toggle, with what is in them.

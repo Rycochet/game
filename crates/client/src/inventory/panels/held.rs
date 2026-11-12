@@ -82,8 +82,12 @@ pub(in crate::inventory) fn show_tooltip(
 /// The button is hidden while connecting, as the warning button is.
 pub(in crate::inventory) fn show_button(
     view: Res<State<GameView>>,
-    mut button: Single<&mut Visibility, With<InventoryButton>>,
+    button: Option<Single<&mut Visibility, With<InventoryButton>>>,
 ) {
+    // (Not there until its markup is built.)
+    let Some(mut button) = button else {
+        return;
+    };
     button.set_if_neq(if *view.get() == GameView::Connecting {
         Visibility::Hidden
     } else {

@@ -5,13 +5,22 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use super::{
-    CORNER_GAP, FORMS, FilterBox, MenuClose, MenuGrid, MenuRoot, PageButton, WARNING_BUTTON,
-    WarningButton,
-};
-use crate::dom::{Template, document};
+use super::{FORMS, FilterBox, MenuClose, MenuGrid, MenuRoot, PageButton, WarningButton};
+use crate::dom::{Pictures, Template, document, top_strip};
 use crate::html;
-use crate::widgets::{ButtonState, ButtonTooltip, Pressable, TextBox, spawn_icon_button};
+use crate::widgets::{ButtonTooltip, TextBox};
+
+/// The warning button, in the window's top left corner (8 from it, 34
+/// across). It has no form round it: a form on a strip has no height, and
+/// the pointer is never on what is outside its form.
+pub(super) static WARNING: Template = html!(
+    "debug_menu.warning",
+    r#"
+<button id="debug_menu" form="hud" top="8" left="8" width="34" height="34">
+  <img src="picture:warning"/>
+</button>
+"#
+);
 
 /// A warning triangle with an exclamation mark, drawn here so there is no file
 /// to ship for it.
@@ -49,31 +58,15 @@ pub(super) fn warning_icon() -> Image {
     )
 }
 
-pub(in crate::debug_menu) fn spawn_menu(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let icon = images.add(warning_icon());
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                top: px(CORNER_GAP),
-                left: px(CORNER_GAP),
-                ..default()
-            },
-            GlobalZIndex(15),
-        ))
-        .with_children(|holder| {
-            let node = Node {
-                width: px(WARNING_BUTTON),
-                height: px(WARNING_BUTTON),
-                ..default()
-            };
-            spawn_icon_button(holder, ButtonState::Normal, icon, node).insert((
-                WarningButton,
-                Pressable,
-                UiId::new("hud", "debug_menu"),
-                ButtonTooltip("Debug Menu".into()),
-            ));
-        });
+pub(in crate::debug_menu) fn spawn_menu(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    mut pictures: ResMut<Pictures>,
+) {
+    pictures.name("warning", images.add(warning_icon()));
+    // Above the maps, as the other corner buttons are.
+    let warning = (document(&WARNING), GlobalZIndex(15));
+    commands.spawn(warning).insert(top_strip());
     commands.spawn(document(&MENU));
 }
 
@@ -119,6 +112,10 @@ pub(in crate::debug_menu) fn bind_menu(
 ) {
     for (entity, id) in &new {
         let (form, name) = id.parts();
+        if (form, name) == ("hud", "debug_menu") {
+            let tip = ButtonTooltip("Debug Menu".into());
+            commands.entity(entity).insert((WarningButton, tip));
+        }
         let Some(layer) = FORMS.iter().position(|known| *known == form) else {
             continue;
         };

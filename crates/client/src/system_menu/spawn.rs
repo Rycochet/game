@@ -4,9 +4,20 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use super::{Action, CORNER_GAP, GEAR_BUTTON, GearButton};
-use crate::dom::{Dom, Pictures};
-use crate::widgets::{ButtonState, ButtonTooltip, Pressable, spawn_icon_button};
+use crate::dom::{Dom, Pictures, Template, document, top_strip};
+use crate::html;
+
+/// The gear button, in the window's top right corner (8 from it, 34
+/// across). It has no form round it: a form on a strip has no height, and
+/// the pointer is never on what is outside its form.
+pub(super) static GEAR: Template = html!(
+    "system_menu.gear",
+    r#"
+<button id="menu" form="hud" top="8" right="8" width="34" height="34">
+  <img src="picture:gear"/>
+</button>
+"#
+);
 
 /// A gear, drawn here so there is no file to ship for it.
 pub(super) fn gear_icon() -> Image {
@@ -51,34 +62,11 @@ pub(super) fn spawn_menu(
     mut dom: Dom,
     mut pictures: ResMut<Pictures>,
 ) {
-    let icon = images.add(gear_icon());
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                top: px(CORNER_GAP),
-                right: px(CORNER_GAP),
-                ..default()
-            },
-            // Above the maps, as the warning button is.
-            GlobalZIndex(15),
-        ))
-        .with_children(|holder| {
-            let node = Node {
-                width: px(GEAR_BUTTON),
-                height: px(GEAR_BUTTON),
-                ..default()
-            };
-            spawn_icon_button(holder, ButtonState::Normal, icon.clone(), node).insert((
-                GearButton,
-                Action::Open,
-                Action::Open.ui_id("hud"),
-                Pressable,
-                ButtonTooltip("Menu".into()),
-            ));
-        });
-    // The gear again, on the menu's Server Options button.
-    pictures.name("gear", icon.clone());
+    // The gear, on its button and on the menu's Server Options button.
+    pictures.name("gear", images.add(gear_icon()));
+    // Above the maps, as the warning button is.
+    let gear = (document(&GEAR), GlobalZIndex(15));
+    commands.spawn(gear).insert(top_strip());
     super::panel::spawn_main_panel(&mut commands);
     super::requesters::spawn_requesters(&mut commands, &mut dom, super::slow_drawing::WORDS);
     super::settings::spawn_settings(&mut commands, &mut dom);

@@ -110,7 +110,7 @@ impl Plugin for InventoryPlugin {
                     give::show_give_aim,
                     panels::show_aim,
                     panels::show_tooltip,
-                    panels::show_button,
+                    (panels::bind_button, panels::show_button).chain(),
                     split::move_split,
                     (split::show_split, split::bind_split).chain(),
                 )
