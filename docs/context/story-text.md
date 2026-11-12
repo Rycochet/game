@@ -4,7 +4,7 @@ The plan for quests' flavour text, in 4 PRs, planned with the owner on 2026-11-1
 
 ## Goal
 
-A quest's structure ("find item:ring at poi") becomes up to about three paragraphs of flavour text: a grandmother's ring lost when she went to a cave west of here, wolves chased the family off, and the giver is getting married. Deterministic, open to other languages' grammar, with generated names, and the same names and facts across a questline's steps. Quests themselves: the Quest system plan (`docs/context/quests.md` once its PR 1 lands).
+A quest's structure ("find item:ring at poi") becomes up to about three paragraphs of flavour text: a grandmother's ring lost when she went to a cave west of here, wolves chased the family off, and the giver is getting married. Deterministic, open to other languages' grammar, with generated names, and the same names and facts across a questline's steps. Quests themselves: the Quest system plan (`quests.md`).
 
 ## How it works
 
