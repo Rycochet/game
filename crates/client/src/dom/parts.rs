@@ -56,6 +56,14 @@ pub struct Inert;
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Solid;
 
+/// On a surface lying over other things (a dialog's panel on its darkening,
+/// an open list, a bar over a view): a press on it, or on anything in it that
+/// isn't a button, stops at it, and is never a press on a button or panel it
+/// lies on.
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[require(Solid)]
+pub struct Opaque;
+
 /// On an element while the pointer is on it or on something in it.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Hovered;

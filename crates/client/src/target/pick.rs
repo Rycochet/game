@@ -9,8 +9,8 @@ use super::choose::{Pointing, pointing};
 use crate::common::{
     HoveredBag, HoveredInSky, HoveredOnMap, Other, PointerPosition, Target, TouchGesture,
 };
+use crate::dom::Hit;
 use crate::view3d::HoveredToken;
-use crate::widgets::OverInterface;
 
 /// How far the pointer may move between pressing and letting go of the right
 /// button for it to count as a click rather than turning the camera, in pixels.
@@ -27,7 +27,7 @@ const LONG_PRESS: f32 = 0.5;
 pub(super) struct UnderPointer<'w, 's> {
     hovered: Res<'w, HoveredToken>,
     others: Query<'w, 's, &'static Other>,
-    interface: Res<'w, OverInterface>,
+    interface: Res<'w, Hit>,
     bag: Res<'w, HoveredBag>,
     place: Res<'w, HoveredOnMap>,
     sky: Res<'w, HoveredInSky>,
@@ -50,7 +50,7 @@ impl UnderPointer<'_, '_> {
 
     /// What pointing here does.
     fn pointing(&self) -> Pointing {
-        if self.interface.0 {
+        if self.interface.target.is_some() {
             return Pointing::Keep;
         }
         pointing(self.creature(), self.something())
@@ -84,7 +84,7 @@ pub(super) fn pick_by_right_click(
 ) {
     if mouse.just_pressed(MouseButton::Right) {
         // A press on the interface isn't a press on the map behind it.
-        *pressed_at = pointer.0.filter(|_| !under.interface.0);
+        *pressed_at = pointer.0.filter(|_| under.interface.target.is_none());
     }
     if !mouse.just_released(MouseButton::Right) {
         return;

@@ -45,6 +45,7 @@ use bevy::input::InputSystems;
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
+use crate::dom::DomInput;
 
 pub use ability::{ABILITY, AbilityLook, spawn_ability, spawn_outlined_icon};
 pub use attribute_colour::{Shade, attribute_colour, row_rgb};
@@ -52,11 +53,11 @@ pub use aura::{Aura, AuraMask, aura_glow};
 pub use auto_scroll::AutoScroll;
 #[cfg(not(target_arch = "wasm32"))]
 pub use clipboard::copy_to_clipboard;
-pub use colour_picker::{ColourChosen, ColourPicker, SAMPLE_GRADIENT, Swatch, spawn_colour_picker};
+pub use colour_picker::{ColourChosen, ColourPicker, Swatch, spawn_colour_picker};
 #[cfg(not(target_arch = "wasm32"))]
 pub use copy_button::spawn_copy_button;
 pub use dropdown::{Dropdown, DropdownChosen, spawn_dropdown, spawn_icon_dropdown};
-pub use feedback::{ButtonStyle, ButtonTooltip, OverInterface};
+pub use feedback::{ButtonStyle, ButtonTooltip};
 pub use filter_list::{HighlightStep, matches_filter};
 pub use fullscreen::{
     darkening, layer_share, layer_z, leaves_presses, spawn_dialog, spawn_fullscreen_layer,
@@ -65,20 +66,20 @@ pub use fullscreen::{
 pub use hold_button::HoldButton;
 pub use hover_tip::HoverTip;
 pub use item::{
-    CELL, Floating, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
+    CELL, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
     item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
 };
-pub use item_text::{ItemText, item_text, spawn_item_text};
+pub use item_text::{ItemText, item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
 pub use moveable::{MoveablePanel, PanelMoved, PanelPlace, PanelTitleOf};
-pub use moveable::{spawn_grip_panel, spawn_moveable_panel, stops_presses};
+pub use moveable::{spawn_grip_panel, spawn_moveable_panel};
 pub use new_seed_icon::spawn_new_seed_button;
 pub use outlined::spawn_outlined_text;
 pub use progress::{Progress, spawn_progress_bar};
 pub use queued_stripe::queued_stripe;
 pub use scale::{INTERFACE_PERCENTS, TouchOnly};
-pub use scroll::{spawn_filling_scroll_area, spawn_scroll_area, spawn_wide_scroll_area};
+pub use scroll::{spawn_filling_scroll_area, spawn_wide_scroll_area};
 pub use set_edge::set_edge;
 pub use skill_ring::{SkillRing, skill_ring};
 pub use slider::{Slider, SliderMoved, spawn_slider};
@@ -103,12 +104,9 @@ mod boxes;
 mod button_state;
 mod buttons;
 
-pub use boxes::{
-    TOOLTIP_BOX_EDGE, panel, panel_title, raised_box, spawn_tooltip, tooltip_box, tooltip_colours,
-    tooltip_trim,
-};
-use boxes::{raised_border, sunken_border};
-pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel, WidgetSystems};
+pub use boxes::{TOOLTIP_BOX_EDGE, panel, panel_title, tooltip_box, tooltip_colours, tooltip_trim};
+use boxes::{raised_border, spawn_tooltip, sunken_border};
+pub use button_state::{ButtonPressed, ButtonState, Pressable, RaisePanel};
 use buttons::{Stroke, spawn_strokes};
 pub use buttons::{
     spawn_button, spawn_check_button, spawn_close_button, spawn_icon_button,
@@ -157,7 +155,6 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<switch::Slides>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
-            .init_resource::<OverInterface>()
             .init_resource::<crate::common::BandShift>()
             .init_resource::<aura::Auras>()
             .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())
@@ -174,13 +171,7 @@ impl Plugin for WidgetsPlugin {
                     queued_stripe::chase_stripes,
                 ),
             )
-            .add_systems(
-                Startup,
-                (
-                    new_seed_icon::make_new_seed_icon,
-                    colour_picker::make_sample_gradient,
-                ),
-            )
+            .add_systems(Startup, new_seed_icon::make_new_seed_icon)
             .add_systems(
                 Update,
                 (
@@ -212,15 +203,6 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<text_box::PressedThisFrame>()
             .init_resource::<text_box::Held>()
             .init_resource::<dropdown::OpenList>()
-            .configure_sets(
-                PreUpdate,
-                (
-                    WidgetSystems::Presses,
-                    WidgetSystems::Front,
-                    WidgetSystems::Modal,
-                )
-                    .chain(),
-            )
             .insert_resource(scale::TouchOnly::detect())
             .add_systems(
                 PreUpdate,
@@ -244,7 +226,7 @@ impl Plugin for WidgetsPlugin {
                     dropdown::run_dropdowns,
                 )
                     .chain()
-                    .in_set(WidgetSystems::Presses)
+                    .in_set(DomInput::Presses)
                     .after(InputSystems)
                     .after(PointerSystems),
             )

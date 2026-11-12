@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::widgets::WidgetSystems;
+use crate::dom::DomInput;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod icons;
@@ -33,7 +33,7 @@ pub struct StepPadPlugin;
 impl Plugin for StepPadPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn::spawn_pad)
-            .add_systems(PreUpdate, show::read_pad.after(WidgetSystems::Presses))
+            .add_systems(PreUpdate, show::read_pad.after(DomInput::Presses))
             .add_systems(
                 Update,
                 (

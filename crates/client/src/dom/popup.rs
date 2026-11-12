@@ -10,11 +10,11 @@ mod drag;
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
+use super::DomInput;
 use super::controls::{UiEvent, UiValue};
 use crate::common::{PointerSystems, UiPointer};
 use crate::widgets::{
-    ButtonPressed, HELD_ITEM_Z, HoverTip, Pressable, UiId, WidgetSystems, logical_rect,
-    stops_presses, tooltip_box,
+    ButtonPressed, HELD_ITEM_Z, HoverTip, Pressable, UiId, logical_rect, tooltip_box,
 };
 
 /// How big the padlock is, and how far in from the corner.
@@ -50,7 +50,7 @@ pub(super) fn spawn_popup(commands: &mut Commands, assets: &AssetServer) -> Enti
     let popup = commands
         .spawn((Popup::default(), tooltip_box(node), front))
         .id();
-    commands.entity(popup).insert(stops_presses(popup));
+    commands.entity(popup).insert(super::Opaque);
     let corner = Node {
         position_type: PositionType::Absolute,
         top: px(LOCK_INSET),
@@ -128,9 +128,7 @@ pub(super) fn close_popups(
 pub(super) fn add(app: &mut App) {
     app.configure_sets(
         PreUpdate,
-        ClosePopups
-            .after(PointerSystems)
-            .before(WidgetSystems::Presses),
+        ClosePopups.after(PointerSystems).before(DomInput::Presses),
     )
     // A press that takes hold of a popup isn't one elsewhere.
     .add_systems(

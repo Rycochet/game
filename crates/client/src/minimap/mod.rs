@@ -19,9 +19,9 @@ use sprites::Sprites;
 use world::WorldTiles;
 
 use crate::common::{GameView, PointerSystems};
+use crate::dom::DomInput;
 use crate::player::PlayerSystems;
 use crate::view3d::View3dSystems;
-use crate::widgets::WidgetSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod draw;
@@ -168,7 +168,7 @@ impl Plugin for MinimapPlugin {
                     .chain()
                     .after(InputSystems)
                     .after(PointerSystems)
-                    .after(WidgetSystems::Modal),
+                    .after(DomInput::Modal),
             )
             .add_systems(
                 Update,

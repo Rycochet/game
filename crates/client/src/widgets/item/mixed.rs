@@ -4,7 +4,6 @@
 use bevy::prelude::*;
 use shared::item::Shape;
 
-use super::super::Floating;
 use super::{CELL, ITEM_LABEL_FONT};
 
 /// How big the mark is, across, in logical pixels.
@@ -28,7 +27,6 @@ pub(super) fn spawn_mixed_mark(
     let right = (corner.0 + shape.width as f32) * CELL - edge;
     parent
         .spawn((
-            Floating,
             Node {
                 position_type: PositionType::Absolute,
                 left: px(right - SIZE),
@@ -43,10 +41,5 @@ pub(super) fn spawn_mixed_mark(
             BackgroundColor(BACKGROUND),
             BorderColor::from(EDGE),
         ))
-        .with_child((
-            Floating,
-            Text::new("!"),
-            ITEM_LABEL_FONT.font(),
-            TextColor(SIGN),
-        ));
+        .with_child((Text::new("!"), ITEM_LABEL_FONT.font(), TextColor(SIGN)));
 }

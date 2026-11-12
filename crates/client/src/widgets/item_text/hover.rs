@@ -2,12 +2,13 @@
 
 use bevy::prelude::*;
 use bevy::text::TextLayoutInfo;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::UiGlobalTransform;
 
 use super::inline::InlineItem;
-use crate::common::{KnownItem, KnownItems, UiPointer};
+use crate::common::{KnownItem, KnownItems};
+use crate::dom::Hit;
 use crate::widgets::item::TOOLTIP_OFFSET;
-use crate::widgets::{Floating, ItemTip, ItemTooltip, shown_at};
+use crate::widgets::{ItemTip, ItemTooltip};
 
 /// What an item in writing is called, as far as it is known.
 fn tip(known: Option<&KnownItem>, at: Vec2) -> ItemTip {
@@ -24,39 +25,20 @@ fn tip(known: Option<&KnownItem>, at: Vec2) -> ItemTip {
     }
 }
 
-/// Names the item under the pointer in the writing in front there, if any.
-#[allow(clippy::type_complexity)]
+/// Names the item under the pointer in the writing in front there
+/// (`dom::Hit`'s target), if any.
 pub(in crate::widgets) fn name_inline_items(
-    pointer: Res<UiPointer>,
-    nodes: Query<
-        (
-            Entity,
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&CalculatedClip>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
-    layouts: Query<&TextLayoutInfo>,
+    hit: Res<Hit>,
+    layouts: Query<(&TextLayoutInfo, &ComputedNode, &UiGlobalTransform)>,
     items: Query<&InlineItem>,
     known: Res<KnownItems>,
     mut tooltip: ResMut<ItemTooltip>,
 ) {
-    let Some(at) = pointer.0.filter(|_| tooltip.0.is_none()) else {
+    let Some(at) = hit.at.filter(|_| tooltip.0.is_none()) else {
         return;
     };
-    let front = nodes
-        .iter()
-        .filter(|(_, _, node, transform, visible, clip)| {
-            visible.get() && shown_at(at, node, transform, *clip)
-        })
-        .max_by_key(|(_, stack, ..)| stack.0);
-    let Some((entity, _, node, transform, ..)) = front else {
-        return;
-    };
-    let Ok(layout) = layouts.get(entity) else {
+    let Some((layout, node, transform)) = hit.target.and_then(|front| layouts.get(front).ok())
+    else {
         return;
     };
     // In the layout's own pixels, from the node's top left.

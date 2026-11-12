@@ -3,19 +3,12 @@
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::super::item::{Floating, logical_rect};
+use super::super::item::logical_rect;
 use super::super::moveable::PanelPart;
 use super::super::theme::RIPPLE;
 use super::super::{BUTTON_BORDER, ButtonState, Pressable, Switch};
 use super::{Pointed, RIPPLE_SECONDS, Ripple, ripple_shape};
 use crate::dom::Hit;
-
-/// Whether the pointer is on the interface: a panel or a button, enabled or
-/// not, this frame (`PreUpdate`, first in `WidgetSystems::Presses`). For what
-/// the pointer does to the map behind, such as a right click clearing the
-/// target.
-#[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct OverInterface(pub bool);
 
 /// Notes what the pointer is on, and starts a ripple on a press. Runs before
 /// anything takes the press.
@@ -36,15 +29,18 @@ pub(in crate::widgets) fn track_pointer(
             Option<&ButtonState>,
             Has<Switch>,
         ),
-        Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>,
+        Or<(
+            With<Pressable>,
+            With<PanelPart>,
+            With<ButtonState>,
+            With<crate::dom::Opaque>,
+        )>,
     >,
     mut pointed: ResMut<Pointed>,
-    mut over: ResMut<OverInterface>,
 ) {
     // The nearest widget to what is in front (`dom::Hit`): the thing itself, or
     // what holds it, so nothing behind something else is ever pointed at.
     let front = hit.first(|entity| widgets.get(entity).ok());
-    over.set_if_neq(OverInterface(hit.target.is_some()));
     let usable = front.filter(|(.., state, _)| !state.is_some_and(|state| state.is_disabled()));
     let under = usable.map(|(entity, ..)| entity);
     let pressing = mouse.just_pressed(MouseButton::Left);
@@ -71,20 +67,16 @@ pub(in crate::widgets) fn track_pointer(
     let (corner, size) = logical_rect(node, transform);
     commands.entity(button).with_children(|inside| {
         inside
-            .spawn((
-                Floating,
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: px(0),
-                    top: px(0),
-                    width: percent(100),
-                    height: percent(100),
-                    overflow: Overflow::clip(),
-                    ..default()
-                },
-            ))
+            .spawn((Node {
+                position_type: PositionType::Absolute,
+                left: px(0),
+                top: px(0),
+                width: percent(100),
+                height: percent(100),
+                overflow: Overflow::clip(),
+                ..default()
+            },))
             .with_child((
-                Floating,
                 Ripple {
                     age: 0.0,
                     centre: at - corner - Vec2::splat(BUTTON_BORDER),

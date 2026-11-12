@@ -4,10 +4,10 @@
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
 
-use super::fullscreen::Darkening;
 use super::theme::SUNKEN_BACKGROUND;
 use super::{ButtonPressed, INK, Pressable, RAISED_BACKGROUND, raised_border};
 use crate::common::{TouchGesture, UiPointer, in_interface};
+use crate::dom::Finder;
 
 const HEIGHT: f32 = 18.0;
 const BORDER: f32 = 1.0;
@@ -164,26 +164,16 @@ pub(super) fn drag_sliders(
         &UiGlobalTransform,
         &InheritedVisibility,
     )>,
-    entities: Query<Entity, With<Slider>>,
-    layers: Query<&InheritedVisibility, With<Darkening>>,
+    finder: Finder,
     mut moved: MessageWriter<SliderMoved>,
 ) {
     let Some(at) = pointer.0.filter(|_| gesture.drag != Vec2::ZERO) else {
         return;
     };
-    // Sliders are all on moveable panels, under any full-screen layer.
-    if layers.iter().any(|visible| visible.get()) {
-        return;
-    }
-    for entity in &entities {
-        let Ok((_, node, transform, visible)) = sliders.get(entity) else {
-            continue;
-        };
-        let start = in_interface(gesture.drag_start, &ui_scale) / node.inverse_scale_factor;
-        if visible.get() && node.contains_point(*transform, start) {
-            move_slider(entity, at, &mut sliders, &mut moved);
-            return;
-        }
+    // The slider the finger landed on, if it is what was in front there.
+    let chain = finder.chain_at(in_interface(gesture.drag_start, &ui_scale));
+    if let Some(entity) = chain.into_iter().find(|&entity| sliders.contains(entity)) {
+        move_slider(entity, at, &mut sliders, &mut moved);
     }
 }
 

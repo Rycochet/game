@@ -9,8 +9,8 @@ use shared::item::{Item, Placed, Shape};
 use crate::common::{NO_QUALITY_NAME, quality_colour};
 use crate::item_art::{ItemPicture, look_of};
 use crate::widgets::{
-    Aura, AuraMask, CELL, Floating, PICTURE_PIXELS_PER_CELL, Pressable, TextSize, aura_glow,
-    item_colour, item_edge, item_edge_width,
+    Aura, AuraMask, CELL, PICTURE_PIXELS_PER_CELL, Pressable, TextSize, aura_glow, item_colour,
+    item_edge, item_edge_width,
 };
 
 const GAP: f32 = 8.0;
@@ -91,11 +91,6 @@ fn spawn_small(line: &mut ChildSpawnerCommands, item: &Item) {
     }
     if let Some(look) = picture {
         let pixels = PICTURE_PIXELS_PER_CELL;
-        square.with_child((
-            Floating,
-            ItemPicture { look, pixels },
-            ImageNode::default(),
-            fill(),
-        ));
+        square.with_child((ItemPicture { look, pixels }, ImageNode::default(), fill()));
     }
 }

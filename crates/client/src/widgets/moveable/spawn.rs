@@ -204,11 +204,6 @@ fn spawn_root(commands: &mut Commands, place: PanelPlace, top: f32) -> Entity {
     root
 }
 
-/// Put this on a node for presses on it to go no further. `entity` is the node.
-pub fn stops_presses(entity: Entity) -> impl Bundle {
-    PanelPart::Body(entity)
-}
-
 /// Lines running from the title out to the edge of the panel.
 pub(super) fn spawn_stripes(bar: &mut ChildSpawnerCommands) {
     bar.spawn(Node {

@@ -27,24 +27,6 @@ pub fn item_text(text: impl Into<String>, size: TextSize) -> impl Bundle {
     (ItemText(text.into()), height)
 }
 
-/// Shows this writing, with any items in it as pictures, wrapping like any text.
-pub fn spawn_item_text<'a>(
-    parent: &'a mut ChildSpawnerCommands,
-    text: impl Into<String>,
-    size: TextSize,
-    colour: Color,
-    node: Node,
-) -> EntityCommands<'a> {
-    parent.spawn((
-        ItemText(text.into()),
-        Text::default(),
-        size.font(),
-        TextColor(colour),
-        InlineHeight(super::text_box::line_height(size)),
-        node,
-    ))
-}
-
 pub(super) fn add(app: &mut App) {
     app.add_systems(Startup, tiles::make_tiles).add_systems(
         Update,

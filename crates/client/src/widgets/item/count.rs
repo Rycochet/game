@@ -4,14 +4,14 @@
 use bevy::prelude::*;
 use shared::item::Shape;
 
-use super::super::{Floating, spawn_outlined_text};
+use super::super::spawn_outlined_text;
 use super::{CELL, ITEM_LABEL_FONT};
 
 /// How far above the bottom of the frame the number sits, inside its edge.
 const ABOVE_EDGE: f32 = 1.0;
 
 /// The count over an item's cells, if there are more than one. `edge` is how thick
-/// its frame is. None of it is what the pointer is on (`Floating`), so presses and
+/// its frame is. None of it is what the pointer is on (it isn't `dom::Solid`), so presses and
 /// names go to the cells beneath.
 pub(super) fn spawn_count(
     parent: &mut ChildSpawnerCommands,
@@ -36,7 +36,7 @@ pub(super) fn spawn_count(
         padding: UiRect::bottom(px(edge + ABOVE_EDGE)),
         ..default()
     };
-    parent.spawn((Floating, across)).with_children(|strip| {
+    parent.spawn(across).with_children(|strip| {
         spawn_outlined_text(strip, &words, ITEM_LABEL_FONT);
     });
 }

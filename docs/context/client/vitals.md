@@ -15,7 +15,7 @@ The player's Health and Mana, shown as a circle at the bottom middle of the wind
 
 ## Depends on
 
-- `common` (`OwnVitals`, `ToldVitals`, `BottomHud`, `GameView`, `interface_area`), `connection` (`FromServer`), `dom` (`Dom`, `document`, `bottom_strip`), `widgets` (`UiId`, `stops_presses`), `shared::vitals`, `shared::protocol`.
+- `common` (`OwnVitals`, `ToldVitals`, `BottomHud`, `GameView`, `interface_area`), `connection` (`FromServer`), `dom` (`Dom`, `document`, `bottom_strip`), `widgets` (`UiId`), `shared::vitals`, `shared::protocol`.
 
 ## Used by
 

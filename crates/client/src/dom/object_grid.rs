@@ -8,13 +8,14 @@
 //! node a screen not yet moved to markup spawns.
 
 use bevy::prelude::*;
+
+use super::Solid;
 use shared::id::Id;
 use shared::item::{Item, Rotation};
 
 use crate::common::TakesGifts;
 use crate::widgets::{
-    ALLOWED, CELL, Floating, GRID_COLOUR, GRID_LINE, ItemLook, REFUSED, at_cell, covering,
-    spawn_item_cells,
+    ALLOWED, CELL, GRID_COLOUR, GRID_LINE, ItemLook, REFUSED, at_cell, covering, spawn_item_cells,
 };
 
 /// When grids and slots are drawn (`PostUpdate`): an owner's system giving
@@ -42,6 +43,7 @@ pub struct GridAim {
 
 /// What a grid shows, set by its owner. It is drawn again when this changes.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
+#[require(Solid)]
 pub struct GridShown {
     pub columns: u8,
     pub rows: u8,
@@ -61,6 +63,7 @@ pub struct GridBox(pub Entity);
 /// grid or slot, which thing, how it is turned, and which cell of its shape
 /// this is.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(Solid)]
 pub struct ThingCell {
     pub grid: Entity,
     pub item: Id,
@@ -130,6 +133,10 @@ fn spawn_box(commands: &mut Commands, grid: Entity, shown: &GridShown) -> (Entit
         made.insert(gifts);
     }
     let made = made.id();
+    // On the grid too: it is what the pointer is on between its things.
+    if let Some(gifts) = gifts {
+        commands.entity(grid).insert(gifts);
+    }
     for y in 0..shown.rows {
         for x in 0..shown.columns {
             let line = (at_cell(x as f32, y as f32), BorderColor::from(GRID_LINE));
@@ -139,9 +146,8 @@ fn spawn_box(commands: &mut Commands, grid: Entity, shown: &GridShown) -> (Entit
             }
         }
     }
-    // Floating: the cells in them are what the pointer is on, or the grid.
-    let things = commands.spawn((covering(), Floating, ChildOf(made))).id();
-    let aim = commands.spawn((covering(), Floating, ChildOf(made))).id();
+    let things = commands.spawn((covering(), ChildOf(made))).id();
+    let aim = commands.spawn((covering(), ChildOf(made))).id();
     (made, things, aim)
 }
 
@@ -175,9 +181,9 @@ fn draw_aim(commands: &mut Commands, layer: Entity, shown: &GridShown) {
     commands.entity(layer).with_children(|layer| {
         for &(x, y) in &aim.cells {
             if (0..columns).contains(&x) && (0..rows).contains(&y) {
-                // Floating: the grid under them is still what the pointer is on.
+                // Not solid: the grid under them is still what the pointer is on.
                 let cell = at_cell(x as f32, y as f32);
-                layer.spawn((cell, BackgroundColor(tint), Floating));
+                layer.spawn((cell, BackgroundColor(tint)));
             }
         }
     });

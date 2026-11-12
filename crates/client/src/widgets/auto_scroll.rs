@@ -12,7 +12,7 @@ const WAIT_AT_BOTTOM: f32 = 4.0;
 /// How fast it goes, in interface pixels a second.
 const SPEED: f32 = 30.0;
 
-/// Put this on a scroll area (from `spawn_scroll_area`) to have it scroll by
+/// Put this on a scroll area (markup's `scroll`) to have it scroll by
 /// itself while it has more than it can show. Scrolling it by hand in any way
 /// removes this; put it back (with its position at the top) to start again.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq)]

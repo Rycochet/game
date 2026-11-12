@@ -69,21 +69,6 @@ fn world_time_refuses_what_it_cant_read() {
     }
 }
 
-/// What fills a panel.
-type SpawnPanel = fn(&mut ChildSpawnerCommands);
-
-/// The ids of what `spawn` puts in a panel.
-fn ids_in(spawn: impl FnOnce(&mut ChildSpawnerCommands)) -> Vec<crate::widgets::UiId> {
-    let mut world = World::new();
-    world.commands().spawn(Node::default()).with_children(spawn);
-    world.flush();
-    world
-        .query::<&crate::widgets::UiId>()
-        .iter(&world)
-        .copied()
-        .collect()
-}
-
 /// The qualities are written out in Item Pictures' markup, in order.
 #[test]
 fn item_pictures_offers_every_quality() {
@@ -95,16 +80,6 @@ fn item_pictures_offers_every_quality() {
         from += at.unwrap_or_else(|| panic!("{quality:?} is missing, or out of order"));
     }
     assert_eq!(source.matches("</option>").count(), 8, "and the page's own");
-}
-
-#[test]
-fn every_panels_widgets_each_have_their_own_id() {
-    let panels: [(&str, SpawnPanel); 1] = [("Show Widgets", spawn_every_widget)];
-    for (name, spawn) in panels {
-        let ids = ids_in(spawn);
-        let twice = crate::widgets::duplicate_ids(&ids);
-        assert!(twice.is_empty(), "{name}: {twice:?}");
-    }
 }
 
 /// A template's check finds an id used twice, so being good covers that.

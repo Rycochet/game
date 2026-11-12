@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 
 use crate::common::GameView;
-use crate::widgets::WidgetSystems;
+use crate::dom::DomInput;
 
 mod build;
 mod details;
@@ -26,7 +26,7 @@ impl Plugin for SkillsPagePlugin {
             .add_systems(
                 PreUpdate,
                 input::take_input
-                    .after(WidgetSystems::Modal)
+                    .after(DomInput::Modal)
                     .run_if(not(in_state(GameView::Connecting))),
             )
             .add_systems(

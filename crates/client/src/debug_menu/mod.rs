@@ -15,8 +15,8 @@ use crate::common::{
     ClickMode, CurrentDungeon, DebugInfo, DebugTools, DetectMonsters, FreezeMobs, GameView,
     GodMode, Truesight,
 };
+use crate::dom::DomInput;
 use crate::player::{PlayerSystems, TakeStep};
-use crate::widgets::WidgetSystems;
 pub use actions::DebugAction;
 use actions::Facts;
 pub use menu::DebugMenu;
@@ -48,7 +48,7 @@ impl Plugin for DebugMenuPlugin {
             .add_systems(
                 PreUpdate,
                 menu::take_input
-                    .in_set(WidgetSystems::Modal)
+                    .in_set(DomInput::Modal)
                     .run_if(not(in_state(GameView::Connecting))),
             )
             .add_systems(
@@ -95,8 +95,6 @@ impl Plugin for DebugMenuPlugin {
                     panels::fill_pictures,
                     panels::show_pictures,
                     panels::update_panel_buttons,
-                    panels::show_typed_items,
-                    panels::give_sample_icons,
                     (panels::fill_html_sample, panels::show_html_events),
                     (menu::bind_menu, menu::show_menu, panels::bind_panels),
                 )

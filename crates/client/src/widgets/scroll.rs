@@ -3,7 +3,7 @@
 
 use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::prelude::*;
-use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::UiGlobalTransform;
 
 mod keep;
 
@@ -12,10 +12,9 @@ pub(super) use keep::{ScrollMemory, bring_back_places, keep_places};
 use keep::ScrollShare;
 
 use super::AutoScroll;
-use super::moveable::PanelPart;
 use super::{GRID_LINE, INK};
-use crate::common::{Preferences, TouchGesture, UiPointer, in_interface};
-use crate::dom::AlwaysBars;
+use crate::common::{Preferences, TouchGesture, in_interface};
+use crate::dom::{AlwaysBars, Finder, Hit, Solid};
 
 const BAR_WIDTH: f32 = 10.0;
 const BAR_GAP: f32 = 4.0;
@@ -25,30 +24,23 @@ const PIXELS_PER_NOTCH: f32 = 48.0;
 /// What scrolls: its contents go in this. It keeps its place as a share of how far
 /// it can go (`keep`).
 #[derive(Component)]
-#[require(ScrollShare)]
+#[require(ScrollShare, Solid)]
 pub(super) struct ScrollArea;
 
 /// The bar beside an area.
 #[derive(Component, Clone, Copy)]
+#[require(Solid)]
 pub(super) struct ScrollBar(Entity);
 
 /// The part of a bar saying where the area is.
 #[derive(Component, Clone, Copy)]
 pub(super) struct ScrollThumb(Entity);
 
-/// An area no taller than `max_height`, as tall as its contents until then. Returns
-/// the entity to put its contents in. They scroll, and don't take presses where they
-/// are out of sight: check `shown_at` when looking for what is under the pointer.
-pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
-    let row = Node {
-        flex_shrink: 0.0,
-        ..default()
-    };
-    spawn_area(parent, row, max_height, false)
-}
-
-/// The same, as wide as what holds it rather than as what is in it, so rows
-/// in it can fill it (markup's `scroll`).
+/// An area no taller than `max_height`, as tall as its contents until then,
+/// and as wide as what holds it, so rows in it can fill it (markup's
+/// `scroll`). Returns the entity to put its contents in. They scroll, and
+/// don't take presses where they are out of sight: check `shown_at` when
+/// looking for what is under the pointer.
 pub fn spawn_wide_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
     let row = Node {
         flex_shrink: 0.0,
@@ -128,72 +120,23 @@ fn at_share(share: f32, furthest: f32) -> f32 {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn scroll_areas(
     mut commands: Commands,
-    pointer: Res<UiPointer>,
+    (hit, finder): (Res<Hit>, Finder),
     ui_scale: Res<UiScale>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut wheel: ResMut<AccumulatedMouseScroll>,
     mut gesture: ResMut<TouchGesture>,
-    mut areas: Query<
-        (
-            Entity,
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            &mut ScrollPosition,
-        ),
-        With<ScrollArea>,
-    >,
-    bars: Query<(
-        &ScrollBar,
-        &ComputedNode,
-        &UiGlobalTransform,
-        &InheritedVisibility,
-    )>,
-    parts: Query<
-        (
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-        ),
-        With<PanelPart>,
-    >,
+    mut areas: Query<(&ComputedNode, &mut ScrollPosition), With<ScrollArea>>,
+    bars: Query<(&ScrollBar, &ComputedNode, &UiGlobalTransform)>,
     mut held_bar: Local<Option<Entity>>,
 ) {
-    let on_top = |at: Vec2, stack: u32| {
-        !parts.iter().any(|(other, node, transform, visible)| {
-            visible.get()
-                && other.0 > stack
-                && node.contains_point(*transform, at / node.inverse_scale_factor)
-        })
-    };
-    let over = |at: Vec2,
-                areas: &Query<
-        (
-            Entity,
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            &mut ScrollPosition,
-        ),
-        With<ScrollArea>,
-    >| {
-        areas
-            .iter()
-            .filter(|(_, stack, node, transform, visible, _)| {
-                visible.get()
-                    && node.contains_point(**transform, at / node.inverse_scale_factor)
-                    && on_top(at, stack.0)
-            })
-            .max_by_key(|(_, stack, ..)| stack.0)
-            .map(|(area, ..)| area)
-    };
+    // The nearest area to what is in front (`dom`'s one search), so one
+    // behind a panel never scrolls.
+    let nearest = |chain: &[Entity]| chain.iter().copied().find(|&entity| areas.contains(entity));
+    let pointed = nearest(&hit.chain);
 
     let mut moved = None;
     if wheel.delta.y != 0.0
-        && let Some(area) = pointer.0.and_then(|at| over(at, &areas))
+        && let Some(area) = pointed
     {
         let pixels = match wheel.unit {
             MouseScrollUnit::Line => wheel.delta.y * PIXELS_PER_NOTCH,
@@ -202,13 +145,13 @@ pub(super) fn scroll_areas(
         moved = Some((area, -pixels));
         wheel.delta = Vec2::ZERO;
     } else if gesture.drag != Vec2::ZERO
-        && let Some(area) = over(in_interface(gesture.drag_start, &ui_scale), &areas)
+        && let Some(area) = nearest(&finder.chain_at(in_interface(gesture.drag_start, &ui_scale)))
     {
         moved = Some((area, -in_interface(gesture.drag, &ui_scale).y));
         gesture.drag = Vec2::ZERO;
     }
     if let Some((area, by)) = moved
-        && let Ok((.., node, _, _, mut position)) = areas.get_mut(area)
+        && let Ok((node, mut position)) = areas.get_mut(area)
     {
         position.y = (position.y + by).clamp(0.0, furthest(node));
         commands.entity(area).remove::<AutoScroll>();
@@ -217,26 +160,18 @@ pub(super) fn scroll_areas(
     if !mouse.pressed(MouseButton::Left) {
         *held_bar = None;
     }
-    let Some(at) = pointer.0 else {
+    let Some(at) = hit.at else {
         return;
     };
-    let bar_at = |(_, node, transform, visible): &(
-        &ScrollBar,
-        &ComputedNode,
-        &UiGlobalTransform,
-        &InheritedVisibility,
-    )| {
-        visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
-    };
     if mouse.just_pressed(MouseButton::Left) {
-        *held_bar = bars.iter().find(bar_at).map(|(bar, ..)| bar.0);
+        *held_bar = hit.first(|entity| bars.get(entity).ok().map(|(bar, ..)| bar.0));
     }
     let Some(area) = *held_bar else {
         return;
     };
     let bar = bars.iter().find(|(bar, ..)| bar.0 == area);
-    if let Some((_, node, transform, _)) = bar
-        && let Ok((.., area_node, _, _, mut position)) = areas.get_mut(area)
+    if let Some((_, node, transform)) = bar
+        && let Ok((area_node, mut position)) = areas.get_mut(area)
     {
         let height = node.size.y * node.inverse_scale_factor;
         let top = transform.translation.y * node.inverse_scale_factor - height / 2.0;

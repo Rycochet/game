@@ -1,4 +1,4 @@
-//! Widget system order, button presses, and how a button looks by state.
+//! Button presses, and how a button looks by state.
 
 use bevy::prelude::*;
 
@@ -8,19 +8,6 @@ use super::theme::{
     DISABLED_BACKGROUND, DISABLED_EDGE, DISABLED_TEXT, RAISED_BACKGROUND, SELECTED_TEXT,
     SHADED_EDGE,
 };
-
-/// Where widgets take what they use of the mouse and fingers, in `PreUpdate`,
-/// so nothing underneath them sees it. Anything else taking clicks there runs
-/// after these.
-#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum WidgetSystems {
-    /// Presses on widgets become `ButtonPressed`.
-    Presses,
-    /// As `Modal`, for what stays in front of everything that is in `Modal`.
-    Front,
-    /// Something covering the screen reads them, and takes all other input.
-    Modal,
-}
 
 /// Brings this moveable panel to the front.
 #[derive(Message, Clone, Copy, Debug, PartialEq, Eq)]

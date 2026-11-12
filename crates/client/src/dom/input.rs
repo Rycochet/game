@@ -6,7 +6,6 @@ use bevy::input::InputSystems;
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
-use crate::widgets::WidgetSystems;
 
 mod dispatch;
 mod events;
@@ -18,32 +17,39 @@ pub use events::{Click, ContextMenu, PointerEnter, PointerLeave, Press, Release,
 pub use hit::find_now;
 pub use hit::{Finder, Hit, PointerCapture};
 
-/// When the search and the events happen, in `PreUpdate`.
+/// When the pointer and the keys are read, in `PreUpdate`, in this order.
+/// Anything else taking clicks there runs after all of them.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DomInput {
     /// `Hit` is worked out: before anything reads what the pointer is on.
     Find,
-    /// Events are sent: after the old widgets have read the press.
+    /// Presses on controls and panels are taken (`ButtonPressed`), so
+    /// nothing under them sees them.
+    Presses,
+    /// Events are sent, once the controls have read the press.
     Send,
+    /// As `Modal`, for what stays in front of everything that is in `Modal`
+    /// (the system menu).
+    Front,
+    /// Something covering the screen reads its presses and keys, and takes
+    /// all other input.
+    Modal,
 }
 
 pub(super) fn add(app: &mut App) {
     app.init_resource::<Hit>()
         .init_resource::<PointerCapture>()
         .init_resource::<dispatch::Buttons>()
-        // What the pointer is on is found before any widget reads it, and
-        // events are sent once the old widgets have read presses.
         .configure_sets(
             PreUpdate,
             (
-                DomInput::Find
-                    .after(InputSystems)
-                    .after(PointerSystems)
-                    .before(WidgetSystems::Presses),
-                DomInput::Send
-                    .after(WidgetSystems::Presses)
-                    .before(WidgetSystems::Front),
-            ),
+                DomInput::Find.after(InputSystems).after(PointerSystems),
+                DomInput::Presses,
+                DomInput::Send,
+                DomInput::Front,
+                DomInput::Modal,
+            )
+                .chain(),
         )
         .add_systems(
             PreUpdate,

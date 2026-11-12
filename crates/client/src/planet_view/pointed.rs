@@ -41,7 +41,7 @@ pub(super) fn point_at_gates(
         return;
     };
     // Not through the bar. (The whole view is a layer of the interface, so
-    // `OverInterface` is always on here.)
+    // `dom::Hit` always has a target here.)
     if let Ok((node, transform)) = nodes.get(showing.bar.root)
         && shown_at(at, node, transform, None)
     {

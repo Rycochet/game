@@ -42,7 +42,7 @@ pub use object_ability::{
 };
 pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, ThingCell};
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
-pub use parts::{AlwaysBars, Solid};
+pub use parts::{AlwaysBars, Opaque, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
 pub use popup::ClosePopups;
 pub use strip::{bottom_strip, top_strip};

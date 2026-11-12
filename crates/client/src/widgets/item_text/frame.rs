@@ -10,7 +10,7 @@ use bevy::ui::UiGlobalTransform;
 use super::inline::{GAP, InlineItem, inline_item};
 use super::look::Shows;
 use crate::common::{KnownItem, KnownItems};
-use crate::widgets::{Floating, item_edge, item_edge_width};
+use crate::widgets::{item_edge, item_edge_width};
 
 /// How far a frame is moved down from its room, as a share of its height:
 /// about the font's descender, as the room is a line tall (1.2 of the font's
@@ -61,7 +61,6 @@ pub(in crate::widgets) fn add_frames(
                 Shows::Loading,
                 ChildOf(holder.parent()),
                 // Not what the pointer is on: the writing is, for naming it.
-                Floating,
                 Node {
                     position_type: PositionType::Absolute,
                     ..default()

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::item::{Rotation, Shape};
 
-use super::{CELL, Floating};
+use super::CELL;
 use crate::item_art::{ItemPicture, Look};
 
 /// Where a picture goes over a shape as it lies, with the shape's corner at `corner`. A
@@ -43,7 +43,6 @@ pub fn picture_in_square(look: &Look) -> Node {
 /// An item's picture in this node, turned this way. It never takes the pointer.
 pub fn item_picture(look: Look, pixels: u32, node: Node, rotation: Rotation) -> impl Bundle {
     (
-        Floating,
         ItemPicture { look, pixels },
         ImageNode::default(),
         node,

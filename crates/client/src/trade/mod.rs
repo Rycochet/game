@@ -5,8 +5,8 @@
 use bevy::prelude::*;
 
 use crate::common::PointerSystems;
+use crate::dom::DomInput;
 use crate::player::PlayerSystems;
-use crate::widgets::WidgetSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod close;
@@ -37,7 +37,7 @@ impl Plugin for TradePlugin {
                 PreUpdate,
                 close_on_escape
                     .after(PointerSystems)
-                    .before(WidgetSystems::Front),
+                    .before(DomInput::Front),
             )
             // After the steps there have gone, so the server has the player at it.
             .add_systems(PostUpdate, open_on_arrival)

@@ -14,7 +14,7 @@ use panels::OpenGrids;
 use shared::item::Inventory;
 
 use crate::common::{GaveItem, HeldOverGifts, HeldStock, PointerSystems, TookItem};
-use crate::widgets::WidgetSystems;
+use crate::dom::DomInput;
 
 // Split into files (`cargo xtask lint` keeps files small).
 #[cfg(not(target_arch = "wasm32"))]
@@ -73,18 +73,18 @@ impl Plugin for InventoryPlugin {
                     // Before widgets stop a finger's drag on a panel, and before the
                     // menus see Esc.
                     (pick_up_by_finger, cancel_held)
-                        .before(WidgetSystems::Presses)
+                        .before(DomInput::Presses)
                         .after(PointerSystems),
                     // Once the split box has said whether it closed itself.
                     split::close_split
                         .after(crate::dom::ClosePopups)
-                        .before(WidgetSystems::Presses),
+                        .before(DomInput::Presses),
                     // Either side of `dom` moving what is held.
                     (
                         hold_items.before(crate::dom::HoldObjects),
                         aim_items.after(crate::dom::HoldObjects),
                     )
-                        .after(WidgetSystems::Modal),
+                        .after(DomInput::Modal),
                 ),
             )
             .add_systems(

@@ -336,3 +336,50 @@ fn a_finger_on_the_panel_drags_nothing_and_elsewhere_is_left_alone() {
     touch_drag(&mut test, Vec2::new(20.0, 20.0), drag);
     assert_eq!(test.app.world().resource::<TouchGesture>().drag, drag);
 }
+
+#[test]
+fn a_press_on_a_surface_is_not_a_press_on_the_button_it_lies_on() {
+    let mut test = test();
+    // A layer's darkening, which closes on a press, with a dialog's panel on
+    // it and something solid (a scroll bar) in that.
+    let world = test.app.world_mut();
+    let layer = world
+        .spawn((
+            Pressable,
+            laid_out(Vec2::ZERO, Vec2::new(800.0, 600.0), 10, 1.0),
+        ))
+        .id();
+    let panel = world
+        .spawn((
+            crate::dom::Opaque,
+            ChildOf(layer),
+            laid_out(Vec2::new(400.0, 300.0), Vec2::new(200.0, 200.0), 11, 1.0),
+        ))
+        .id();
+    world.spawn((
+        crate::dom::Solid,
+        ChildOf(panel),
+        laid_out(Vec2::new(580.0, 300.0), Vec2::new(20.0, 200.0), 12, 1.0),
+    ));
+    // On the panel, and on the bar in it: taken, and nobody's press.
+    for at in [Vec2::new(450.0, 350.0), Vec2::new(590.0, 350.0)] {
+        test.click(at.x, at.y);
+        assert!(!test.still_pressed());
+        assert!(test.presses().is_empty(), "at {at}");
+    }
+    // Outside the panel, it is the layer's.
+    test.click(700.0, 50.0);
+    assert_eq!(test.presses(), vec![layer]);
+}
+
+#[test]
+fn a_press_on_anything_solid_goes_no_further() {
+    let mut test = test();
+    test.app.world_mut().spawn((
+        crate::dom::Solid,
+        laid_out(Vec2::new(500.0, 400.0), Vec2::new(50.0, 50.0), 3, 1.0),
+    ));
+    test.click(510.0, 410.0);
+    assert!(!test.still_pressed());
+    assert!(test.presses().is_empty());
+}

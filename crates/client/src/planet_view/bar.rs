@@ -11,7 +11,6 @@ use crate::widgets::UiId;
 use crate::widgets::{
     BUTTON_PADDING, ButtonState, Dropdown, HoverTip, INK, PANEL_EDGE, Pressable, TextBox, TextSize,
     field_label, panel, spawn_button, spawn_dropdown, spawn_new_seed_button, spawn_text_box,
-    stops_presses,
 };
 
 const FONT: TextSize = TextSize::Medium;
@@ -52,7 +51,7 @@ pub(super) fn spawn_bar(layer: &mut ChildSpawnerCommands, choice: Choice) -> Bar
         ..default()
     });
     let entity = bar.id();
-    bar.insert(stops_presses(entity));
+    bar.insert(crate::dom::Opaque);
     let mut parts = None;
     bar.with_children(|row| {
         let control = |width: Option<f32>| Node {
