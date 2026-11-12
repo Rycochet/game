@@ -12,11 +12,6 @@ pub struct Other {
     pub feeling: shared::sheet::Feeling,
 }
 
-/// The words on the Character panel saying what the character is like, which
-/// `character` fills in.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct SheetText;
-
 /// The Character panel's Abilities page, which `abilities` fills in.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct AbilitiesPage;
