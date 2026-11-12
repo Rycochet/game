@@ -7,6 +7,7 @@ use shared::id::Id;
 use shared::item::{Inventory, ItemKind, MadeAt, Quality, StackLimits, coin_items};
 use shared::item_form::give_blade_within;
 use shared::mob::GIVE_REACH;
+use shared::protocol::CharacterId;
 use shared::sheet::Sheet;
 
 use super::cells_apart;
@@ -168,10 +169,14 @@ pub(super) fn bury(
     let (at, size) = (dead.spot, dead.size());
     world.died.insert(mob);
     if leaves {
+        let provoked = dead.harmed_by.credited(world.action_clock.ticks());
+        let provoked = provoked.filter(|&who| dead.memory.provoked(&CharacterId(who)));
         world.kills.push(super::Kill {
             place,
             kind: dead.kind,
             by: dead.harmed_by.clone(),
+            alignment: dead.alignment,
+            provoked: provoked.collect(),
         });
     }
     population.due.retain(|&(_, id)| id != mob);

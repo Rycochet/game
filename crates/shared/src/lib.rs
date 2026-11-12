@@ -5,6 +5,7 @@
 //! `docs/context/architecture.md` for the rules.
 
 pub mod ability;
+pub mod alignment;
 pub mod armour;
 pub mod blade;
 pub mod body;

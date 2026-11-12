@@ -27,6 +27,7 @@ pub enum DebugTool {
     GiveItem,
     Vitals,
     LearnSkills,
+    Alignment,
     // Mobs.
     CreateMob,
     ExamineMob,
@@ -55,7 +56,7 @@ pub enum DebugTool {
 }
 
 impl DebugTool {
-    pub const ALL: [Self; 33] = [
+    pub const ALL: [Self; 34] = [
         Self::ShowDebugInfo,
         Self::LightningNow,
         Self::SunsAndMoons,
@@ -71,6 +72,7 @@ impl DebugTool {
         Self::GiveItem,
         Self::Vitals,
         Self::LearnSkills,
+        Self::Alignment,
         Self::CreateMob,
         Self::ExamineMob,
         Self::KillMob,

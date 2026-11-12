@@ -64,7 +64,7 @@ impl Client {
     /// Tells the player their Heal landed (`target` `None`: on themselves),
     /// with their sheet (practice) and vitals (Mana). `false` if they have gone.
     fn healed(&mut self, target: Option<Id>, amount: Points, left: u16, now: u64) -> bool {
-        self.link.send(&ServerMessage::Sheet(self.sheet.clone()))
+        self.link.send(&ServerMessage::Sheet(self.sheet.as_sent()))
             && self.send_vitals(now)
             && self.link.send(&ServerMessage::AbilityLanded {
                 who: None,
@@ -212,7 +212,9 @@ fn heal_player(caster: &mut Client, other: &mut Client, world: &ServerWorld, tic
         return;
     }
     let left = other.take_healing(amount, tick);
-    other.link.send(&ServerMessage::Sheet(other.sheet.clone()));
+    other
+        .link
+        .send(&ServerMessage::Sheet(other.sheet.as_sent()));
     other.send_vitals(tick);
     caster.healed(Some(target), amount, left, tick);
 }

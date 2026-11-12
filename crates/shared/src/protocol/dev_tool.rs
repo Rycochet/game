@@ -1,6 +1,6 @@
 //! Which client messages are developer tools, and which tool each needs.
 
-use super::{ClientMessage, DevMobTool, DevSkills, DoorAsk};
+use super::{ClientMessage, DevAlignment, DevMobTool, DevSkills, DoorAsk};
 use crate::role::DebugTool;
 
 impl ClientMessage {
@@ -29,6 +29,7 @@ impl ClientMessage {
             Self::DevTruesight(_) => DebugTool::Truesight,
             Self::DevGodMode(_) => DebugTool::GodMode,
             Self::DevVitals(_) => DebugTool::Vitals,
+            Self::DevAlignment(_) => DebugTool::Alignment,
             Self::DevSkills { .. } => DebugTool::LearnSkills,
             Self::Door(DoorAsk::DevAll { open: true }) => DebugTool::OpenAllDoors,
             Self::Door(DoorAsk::DevAll { open: false }) => DebugTool::CloseAllDoors,
@@ -53,6 +54,7 @@ impl ClientMessage {
             && !matches!(
                 self,
                 Self::DevMobs(DevMobTool::Inspect(_))
+                    | Self::DevAlignment(DevAlignment::Ask)
                     | Self::DevSkills {
                         change: DevSkills::Ask,
                         ..

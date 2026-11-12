@@ -52,7 +52,8 @@ impl DebugAction {
             | Self::ChangeCreature
             | Self::GiveItem
             | Self::Vitals
-            | Self::LearnSkills => Group::Character,
+            | Self::LearnSkills
+            | Self::Alignment => Group::Character,
             Self::CreateMob | Self::ExamineMob | Self::FreezeMobs | Self::DetectMobs => Group::Mobs,
             Self::RevealMap
             | Self::ForgetMap

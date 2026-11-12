@@ -32,7 +32,18 @@ pub(super) fn describe(
     if let Some(character) = character {
         let opinion = mob.memory.opinion(character) as f64 / 1000.0;
         lines.push(format!("Opinion of you: {opinion:.1} Health"));
+        if mob.memory.provoked(character) {
+            lines.push("Killing it would be self-defence".into());
+        }
     }
+    lines.push(match mob.alignment {
+        Some(alignment) => format!(
+            "Alignment: {} ({})",
+            alignment.value(),
+            alignment.band().name()
+        ),
+        None => "Alignment: none".into(),
+    });
     lines.push(format!("Speed: {}; scent {}%", mob.speed, mob.scent));
     lines.push(format!("Wields: {:?}", mob.wielded));
     lines.push(format!("Wears: {} things", mob.shown.len()));

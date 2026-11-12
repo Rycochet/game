@@ -41,6 +41,7 @@ impl Plugin for DebugMenuPlugin {
                 panels::add_dev_area_panel,
                 panels::add_create_mob_panel,
                 panels::add_examine_mob_panel,
+                panels::add_alignment_panel,
                 panels::add_learn_skills_panel,
                 panels::add_kept_choices,
             ))

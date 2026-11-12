@@ -26,7 +26,7 @@ pub(super) fn change_kind(
         // Put right whatever the client guessed.
         return client
             .link
-            .send(&ServerMessage::Sheet(client.sheet.clone()))
+            .send(&ServerMessage::Sheet(client.sheet.as_sent()))
             && client.send_inventory();
     }
     let was = client.inventory.creature;
@@ -41,14 +41,16 @@ pub(super) fn change_kind(
         KindChange::Temporary => client.sheet.shapeshift(was, kind),
         KindChange::Permanent => {
             let vitals = std::mem::take(&mut client.sheet.vitals);
+            let alignment = client.sheet.alignment;
             client.sheet = Sheet::new(kind);
             client.sheet.vitals = vitals;
+            client.sheet.alignment = alignment;
         }
     }
     client.unsaved = true;
     client
         .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()))
+        .send(&ServerMessage::Sheet(client.sheet.as_sent()))
         && {
             client.update_speed(world.action_clock.ticks());
             client.send_inventory()

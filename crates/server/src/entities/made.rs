@@ -28,6 +28,7 @@ impl Mob {
             id,
             kind: spawn.kind,
             gender: spawn.gender,
+            alignment: spawn.alignment,
             appearance: spawn.appearance.clone(),
             position: spawn.position,
             spot: Spot::middle_of(spawn.position),

@@ -69,7 +69,7 @@ fn a_new_guest_makes_their_character_before_joining() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(
         sheet_in(&told),
-        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()))
+        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()).as_sent())
     );
     // The server added a man's bonus to Body itself.
     let sheet = sheet_in(&told).unwrap();
@@ -142,11 +142,7 @@ fn the_single_player_makes_theirs_too() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(
         sheet_in(&told),
-        Some(Sheet::built(
-            CreatureKind::Elf,
-            Gender::Male,
-            Build::CENTRED
-        ))
+        Some(Sheet::built(CreatureKind::Elf, Gender::Male, Build::CENTRED).as_sent())
     );
     assert_eq!(connections.clients.len(), 1);
 }
@@ -182,7 +178,7 @@ fn deleting_a_character_offers_the_rest_and_a_new_one_has_a_new_id() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(
         sheet_in(&told),
-        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()))
+        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()).as_sent())
     );
     let new = connections.clients[0].character_id.unwrap();
     assert_ne!(new, old);

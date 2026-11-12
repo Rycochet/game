@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::alignment::Alignment;
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::gender::Gender;
@@ -150,6 +151,11 @@ pub struct Sheet {
     /// (owner, 2026-11-12).
     #[serde(default)]
     pub gender: Gender,
+    /// How good or evil it is (`shared::alignment`): secret, never sent to a
+    /// client (`as_sent`). A player always has one (0 in a save from before
+    /// alignments, `settled`); an animal has none.
+    #[serde(default)]
+    pub alignment: Option<Alignment>,
     /// What it has learned (`skill::Skills`): saves from before the tree are read
     /// by the old names.
     pub skills: Skills,
@@ -184,6 +190,7 @@ impl Sheet {
             attributes: Attributes::for_kind(kind, gender, &build),
             build,
             gender,
+            alignment: Some(Alignment::NEUTRAL),
             skills: Skills::starting(kind),
             appearance: Appearance::default(),
             vitals: Vitals::default(),
@@ -193,8 +200,10 @@ impl Sheet {
     }
 
     /// As loaded, its body of kind `kind`: a save from before the nine attributes has
-    /// none, so they are worked out again from its build (the centre, for such a save).
+    /// none, so they are worked out again from its build (the centre, for such a save);
+    /// one from before alignments starts at 0.
     pub fn settled(mut self, kind: CreatureKind) -> Self {
+        self.alignment.get_or_insert(Alignment::NEUTRAL);
         if self.attributes == Attributes::default() {
             if !self.build.is_valid() {
                 self.build = Build::CENTRED;
@@ -208,6 +217,15 @@ impl Sheet {
             }
         }
         self
+    }
+
+    /// A copy to send its player, without what they may not know: their
+    /// alignment. Every `Sheet` the server sends goes through this.
+    pub fn as_sent(&self) -> Self {
+        Self {
+            alignment: None,
+            ..self.clone()
+        }
     }
 
     /// How much it can carry before it is overloaded, in grams: by strength, and

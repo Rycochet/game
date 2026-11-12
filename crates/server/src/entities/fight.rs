@@ -134,6 +134,11 @@ pub(super) fn mob_turn(
             struck: true,
         };
     }
+    // Whatever a player does to it now is self-defence.
+    let player = spots.iter().find(|spot| spot.id == after);
+    if let Some(character) = player.and_then(|spot| spot.character) {
+        mob.memory.remember_attacking(character);
+    }
     blows.push(MobBlow::Started {
         mob: mob.id,
         target: after,

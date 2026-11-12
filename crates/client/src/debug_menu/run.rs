@@ -124,7 +124,8 @@ pub(super) fn run_actions(
             DebugAction::WorldTime | DebugAction::SunsAndMoons => {
                 open.toggle(action, &mut commands, &mut dom, &nodes);
             }
-            DebugAction::ChangeCreature
+            DebugAction::Alignment
+            | DebugAction::ChangeCreature
             | DebugAction::CreateMob
             | DebugAction::DevArea
             | DebugAction::DrawingStates

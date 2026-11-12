@@ -30,6 +30,7 @@ mod client;
 mod combat;
 mod connections_impl;
 mod delete_character;
+mod dev_alignment;
 mod dev_audit;
 mod dev_skills;
 pub(crate) mod difficulty;

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use super::super::bodies::BodiesToShow;
 use super::html_sample::HTML_SAMPLE;
 use super::{
-    change_creature, create_mob, dev_area, examine_mob, generate, give, learn_skills,
+    alignment, change_creature, create_mob, dev_area, examine_mob, generate, give, learn_skills,
     pictures_spawn, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::{Dom, document};
@@ -32,6 +32,7 @@ pub(in crate::debug_menu) fn bind_panels(
         }
         match id.parts().0 {
             "debug.vitals" => vitals::bind(&mut bound, id),
+            "debug.alignment" => alignment::bind(&mut bound, id),
             "debug.change_creature" => change_creature::bind(&mut bound, id, &mut dom),
             "debug.drawing_states" => steps::bind(&mut bound, id),
             "debug.world_time" => world_time::bind(&mut bound, id),

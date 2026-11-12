@@ -171,7 +171,7 @@ pub(super) fn send_welcome(
     client.link.send(&welcome)
         && client
             .link
-            .send(&ServerMessage::Sheet(client.sheet.clone()))
+            .send(&ServerMessage::Sheet(client.sheet.as_sent()))
         && client.send_vitals(world.action_clock.ticks())
         && client.send_action_bar()
         && client.send_visited_gates()

@@ -24,6 +24,7 @@ impl DebugAction {
             Self::ItemPictures => "Item Pictures",
             Self::KeyForThisDoor => "Key for This Door",
             Self::LearnSkills => "Learn Skills",
+            Self::Alignment => "Alignment",
             Self::LightningNow => "Lightning Now",
             Self::LightningStrikeHere => "Lightning Strike Here",
             Self::OpenAllDoors => "Open All Doors",

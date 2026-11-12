@@ -131,3 +131,31 @@ fn a_standing_set_by_hand_holds_until_something_changes_it() {
     );
     assert_eq!(memory.opinion(&who(1)), 0);
 }
+
+#[test]
+fn striking_back_at_a_hostile_mob_is_self_defence() {
+    let mut memory = Memory::default();
+    // Unfriendly from the start.
+    memory.remember_harm(who(1), Points::whole(1), Feeling::Unfriendly);
+    assert!(memory.provoked(&who(1)));
+    // Neutral, but it attacked first.
+    memory.remember_attacking(who(2));
+    memory.remember_harm(who(2), Points::whole(1), Feeling::Neutral);
+    assert!(memory.provoked(&who(2)));
+    // A trespasser it turned on.
+    memory.remember_trespass(who(3), 0);
+    memory.remember_harm(who(3), Points::whole(1), Feeling::Neutral);
+    assert!(memory.provoked(&who(3)));
+}
+
+#[test]
+fn starting_a_fight_is_never_self_defence() {
+    let mut memory = Memory::default();
+    memory.remember_harm(who(1), Points::whole(1), Feeling::Neutral);
+    assert!(!memory.provoked(&who(1)));
+    // It hitting back afterwards doesn't change who started it.
+    memory.remember_attacking(who(1));
+    memory.remember_harm(who(1), Points::whole(1), Feeling::Neutral);
+    assert!(!memory.provoked(&who(1)));
+    assert!(!memory.provoked(&who(2)));
+}

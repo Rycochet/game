@@ -147,6 +147,8 @@ pub(crate) struct Mob {
     pub kind: CreatureKind,
     /// Rolled with it (`Spawn::gender`), for others to be told.
     pub gender: shared::gender::Gender,
+    /// Rolled with it (`Spawn::alignment`): secret, never told to players.
+    pub alignment: Option<shared::alignment::Alignment>,
     pub appearance: Appearance,
     /// The cell it thinks in: always the one under `spot` (`place`).
     pub position: (i64, i64),
