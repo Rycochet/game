@@ -5,8 +5,8 @@ use std::collections::HashMap;
 
 use super::super::actions::DebugAction;
 use super::{
-    FIRST_AT, NEXT_AT, change_creature, create_mob, dev_area, examine_mob, generate, give,
-    learn_skills, pictures_spawn, steps, teleport_to_world, vitals, world_time,
+    FIRST_AT, NEXT_AT, alignment, change_creature, create_mob, dev_area, examine_mob, generate,
+    give, learn_skills, pictures_spawn, steps, teleport_to_world, vitals, world_time,
 };
 use crate::dom::{Dom, Template, UiEvent, UiValue, document, top_strip};
 use crate::html;
@@ -105,6 +105,7 @@ fn template_of(action: DebugAction) -> Option<&'static Template> {
         DebugAction::GeneratePoi => Some(&generate::GENERATE_POI),
         DebugAction::ChangeCreature => Some(&change_creature::CHANGE_CREATURE),
         DebugAction::Vitals => Some(&vitals::VITALS),
+        DebugAction::Alignment => Some(&alignment::ALIGNMENT),
         DebugAction::DrawingStates => Some(&steps::DRAWING_STATES),
         DebugAction::WorldTime => Some(&world_time::WORLD_TIME),
         DebugAction::ExamineMob => Some(&examine_mob::EXAMINE_MOB),
@@ -129,6 +130,7 @@ pub(in crate::debug_menu) fn form_of(action: DebugAction) -> &'static str {
         DebugAction::WorldTime => "debug.world_time",
         DebugAction::TeleportToWorld => super::teleport_to_world::FORM,
         DebugAction::Vitals => "debug.vitals",
+        DebugAction::Alignment => "debug.alignment",
         DebugAction::DevArea => "debug.dev_area",
         DebugAction::CreateMob => "debug.create_mob",
         DebugAction::ExamineMob => "debug.examine_mob",

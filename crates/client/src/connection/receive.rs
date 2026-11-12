@@ -237,6 +237,7 @@ pub(super) fn receive(
                 | ServerMessage::Harmed { .. }
                 | ServerMessage::Lightning { .. }
                 | ServerMessage::DevMobInfo { .. }
+                | ServerMessage::DevAlignment(_)
                 | ServerMessage::DevSkillsOf { .. }
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::Moves(_)

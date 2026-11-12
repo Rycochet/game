@@ -95,7 +95,7 @@ impl Client {
             let played = self.activity.played;
             if played / TICKS_PER_MINUTE != before / TICKS_PER_MINUTE
                 && self.sheet.skills.rust(played)
-                && !self.link.send(&ServerMessage::Sheet(self.sheet.clone()))
+                && !self.link.send(&ServerMessage::Sheet(self.sheet.as_sent()))
             {
                 return false;
             }

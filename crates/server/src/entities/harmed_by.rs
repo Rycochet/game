@@ -2,6 +2,7 @@
 //! (owner, 2026-11-07). Kept in memory only, and forgotten once the mob gives up
 //! fighting (`Doing::gave_up`).
 
+use shared::alignment::{Alignment, Deed};
 use shared::creature::CreatureKind;
 use shared::id::Id;
 
@@ -45,11 +46,26 @@ pub(crate) struct Kill {
     pub place: (SiteId, u32),
     pub kind: CreatureKind,
     pub by: HarmedBy,
+    /// Its alignment, if it had one (animals don't).
+    pub alignment: Option<Alignment>,
+    /// Those of `by` for whom it was self-defence (`Memory::provoked`).
+    pub provoked: Vec<Id>,
+}
+
+impl Kill {
+    /// What it was for this one of its killers, if it moves their alignment.
+    fn deed_for(&self, who: Id) -> Option<Deed> {
+        Some(Deed::Killed {
+            victim: self.alignment?,
+            provoked: self.provoked.contains(&who),
+        })
+    }
 }
 
 /// Every tick, after telling who died: each kill counts, in `Sheet::foes`, for
 /// everyone who harmed the mob in the last `KILL_CREDIT_TICKS` and is still on
-/// its level (so not if they were killed, or left).
+/// its level (so not if they were killed, or left), and moves their alignment
+/// (`Deed::Killed`): down for a Neutral or Good victim, unless in self-defence.
 pub(super) fn credit_kills(clients: &mut [Client], world: &mut ServerWorld) {
     let now = world.action_clock.ticks();
     for kill in std::mem::take(&mut world.kills) {
@@ -60,6 +76,11 @@ pub(super) fn credit_kills(clients: &mut [Client], world: &mut ServerWorld) {
             let here = client.visit.as_ref().map(|visit| visit.population());
             if here == Some(kill.place) {
                 client.sheet.foes.defeated(kill.kind);
+                if let (Some(deed), Some(alignment)) =
+                    (kill.deed_for(who), client.sheet.alignment.as_mut())
+                {
+                    *alignment = alignment.after(deed);
+                }
                 client.unsaved = true;
             }
         }

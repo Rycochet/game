@@ -44,8 +44,8 @@ impl Connections {
         self.clients.is_empty()
     }
 
-    /// Everyone connected, to change in tests.
-    #[cfg(test)]
+    /// Everyone connected, to change in tests and from the debug API.
+    #[cfg(any(test, feature = "debug-api"))]
     pub(crate) fn clients_mut(&mut self) -> &mut [Client] {
         &mut self.clients
     }

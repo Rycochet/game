@@ -3,6 +3,7 @@
 //! made again has them back as they were.
 
 use super::{Spawn, looks, roll_coins, roll_gear};
+use crate::alignment::Alignment;
 use crate::climate::Biome;
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
@@ -104,6 +105,7 @@ pub fn wild_spawns(seed: Seed, block: BlockPos, level: &Level, biome: Biome) -> 
             position,
             appearance: looks(&own, kind),
             gender,
+            alignment: Alignment::rolled(kind, own(62)),
             attributes: Attributes::for_kind(
                 kind,
                 gender,

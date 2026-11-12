@@ -191,7 +191,7 @@ pub(super) fn land_ability(client: &mut Client, world: &mut ServerWorld) -> bool
     };
     client
         .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()))
+        .send(&ServerMessage::Sheet(client.sheet.as_sent()))
         && client.link.send(&ServerMessage::AbilityLanded {
             who: None,
             target: Some(target),
@@ -282,6 +282,8 @@ pub(crate) fn take_mob_blows(
 
 mod struck;
 
+#[cfg(test)]
+mod alignment_tests;
 #[cfg(test)]
 mod death_tests;
 #[cfg(test)]

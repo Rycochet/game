@@ -784,13 +784,19 @@ fn a_character_is_told_their_sheet_and_a_new_body_gives_a_new_one() {
         })
     };
     let mut test = TestClient::new();
-    assert_eq!(sheet(&test.welcome), Some(Sheet::new(CreatureKind::Human)));
+    assert_eq!(
+        sheet(&test.welcome),
+        Some(Sheet::new(CreatureKind::Human).as_sent())
+    );
     test.enter_a_castle();
     let answers = test.send(&[ClientMessage::DevSetCreature {
         kind: CreatureKind::Giant,
         how: KindChange::Permanent,
     }]);
-    assert_eq!(sheet(&answers), Some(Sheet::new(CreatureKind::Giant)));
+    assert_eq!(
+        sheet(&answers),
+        Some(Sheet::new(CreatureKind::Giant).as_sent())
+    );
 }
 
 #[test]
@@ -1127,10 +1133,13 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
     });
     assert_eq!(
         sheet,
-        Some(Sheet {
-            appearance: red,
-            ..Sheet::built(CreatureKind::Dwarf, shared::gender::Gender::Neutral, strong)
-        })
+        Some(
+            Sheet {
+                appearance: red,
+                ..Sheet::built(CreatureKind::Dwarf, shared::gender::Gender::Neutral, strong)
+            }
+            .as_sent()
+        )
     );
     let carried = inventory(&told);
     assert_eq!(carried.creature, CreatureKind::Dwarf);

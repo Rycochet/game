@@ -51,6 +51,11 @@ pub struct Regard {
     pub opinion: i64,
     /// They have hit it: it gives them no further chance.
     pub harmed: bool,
+    /// Whatever they did to it was self-defence: it attacked them, or was
+    /// unfriendly to them, before their first blow. Killing it then costs
+    /// them nothing (`alignment::Deed::Killed`). False in older saves.
+    #[serde(default)]
+    pub provoked: bool,
 }
 
 /// What a mob remembers, about which characters.
@@ -115,9 +120,15 @@ impl Memory {
     /// neutral, neutral to unfriendly) and its opinion by at least
     /// `FIRST_HARM_OPINION` (for a neutral one, sets it to minus that); any
     /// later blow makes it unfriendly and lowers its opinion by the harm.
+    /// Their first blow was self-defence (`Regard::provoked`) if it was
+    /// already unfriendly to them, a trespass included.
     pub fn remember_harm(&mut self, about: CharacterId, harm: Points, start: Feeling) {
         let first = i64::from(harm.milli().max(FIRST_HARM_OPINION));
+        let hostile = self.standing(&about, start) == Feeling::Unfriendly;
         let regard = self.regard_mut(about);
+        if !regard.harmed && hostile {
+            regard.provoked = true;
+        }
         let standing = regard.standing.unwrap_or(start);
         if regard.harmed {
             regard.standing = Some(Feeling::Unfriendly);
@@ -139,6 +150,21 @@ impl Memory {
             }
         }
         regard.harmed = true;
+    }
+
+    /// It attacked them. Before they have struck it, that makes anything they
+    /// do to it self-defence (`Regard::provoked`).
+    pub fn remember_attacking(&mut self, about: CharacterId) {
+        let regard = self.regard_mut(about);
+        if !regard.harmed {
+            regard.provoked = true;
+        }
+    }
+
+    /// Whether killing it would be self-defence for this character
+    /// (`Regard::provoked`).
+    pub fn provoked(&self, about: &CharacterId) -> bool {
+        self.regard(about).is_some_and(|regard| regard.provoked)
     }
 
     /// They came into its territory at this tick. Only the latest trespass is

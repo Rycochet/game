@@ -88,7 +88,7 @@ impl Storage {
             kind: save.inventory.creature,
             appearance: save.sheet.appearance.clone(),
             worn: save.inventory.shown(),
-            sheet: save.sheet,
+            sheet: save.sheet.as_sent(),
             difficulty: save.difficulty,
         }))
     }

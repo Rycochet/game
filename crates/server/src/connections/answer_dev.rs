@@ -40,6 +40,7 @@ pub(super) fn answer_dev(
             true
         }
         ClientMessage::DevVitals(what) => client.dev_vitals(what, world.action_clock.ticks()),
+        ClientMessage::DevAlignment(change) => client.dev_alignment(change),
         ClientMessage::DevSkills { who, change } => {
             client.dev_skills(who, change, world.action_clock.ticks())
         }

@@ -209,7 +209,7 @@ impl Client {
         if after.1 != before.1 {
             self.update_speed(now);
         }
-        self.link.send(&ServerMessage::Sheet(self.sheet.clone()))
+        self.link.send(&ServerMessage::Sheet(self.sheet.as_sent()))
     }
 }
 

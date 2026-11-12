@@ -1,8 +1,10 @@
 //! Mobs of a kind chosen by a developer (a Dev Area), put anywhere open.
 
 use super::{
-    ATTRIBUTE_ROLL, FROM_STAIRS, GENDER_ROLL, PURPOSE, Spawn, TRIES, looks, roll_coins, roll_gear,
+    ALIGNMENT_ROLL, ATTRIBUTE_ROLL, FROM_STAIRS, GENDER_ROLL, PURPOSE, Spawn, TRIES, looks,
+    roll_coins, roll_gear,
 };
+use crate::alignment::Alignment;
 use crate::creature::CreatureKind;
 use crate::dungeon::Level;
 use crate::gender::Gender;
@@ -52,6 +54,7 @@ pub fn chosen_spawns(
             position,
             appearance: looks(&roll, kind),
             gender,
+            alignment: Alignment::rolled(kind, roll(ALIGNMENT_ROLL)),
             attributes: Attributes::for_kind(
                 kind,
                 gender,

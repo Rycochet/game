@@ -12,6 +12,7 @@ use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{EmailAddress, LoginMethod, SessionToken};
 use super::{WorldChunk, WorldInfo};
 use crate::ability::{Ability, ActionBar};
+use crate::alignment::Alignment;
 use crate::difficulty::{Difficulties, Difficulty};
 use crate::ground::Load;
 use crate::id::Id;
@@ -244,6 +245,9 @@ pub enum ServerMessage {
     /// Developer tools: what the server knows of a mob, as lines to show
     /// (`DevMobTool::Inspect`).
     DevMobInfo { mob: Id, lines: Vec<String> },
+    /// Developer tools: the character's hidden alignment, after
+    /// `ClientMessage::DevAlignment`. Never sent otherwise.
+    DevAlignment(Alignment),
     /// Developer tools: the skills of the character (`who` none) or of another
     /// player, after `ClientMessage::DevSkills` asked or changed them.
     DevSkillsOf {

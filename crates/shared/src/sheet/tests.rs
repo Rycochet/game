@@ -181,3 +181,33 @@ fn a_save_from_before_genders_is_neutral_and_keeps_its_attributes() {
     let settled = loaded.settled(CreatureKind::Human);
     assert_eq!(settled.attributes, Attributes::all(100));
 }
+
+#[test]
+fn a_save_from_before_alignments_starts_at_zero() {
+    let grown = median_human();
+    let saved = ron::to_string(&grown).unwrap();
+    let old = saved.replace("alignment:Some((0)),", "");
+    assert_ne!(old, saved, "the field should be in the save: {saved}");
+    let loaded: Sheet = ron::from_str(&old).unwrap();
+    assert_eq!(loaded.alignment, None);
+    let settled = loaded.settled(CreatureKind::Human);
+    assert_eq!(
+        settled.alignment,
+        Some(crate::alignment::Alignment::NEUTRAL)
+    );
+}
+
+#[test]
+fn a_sheet_as_sent_keeps_its_alignment_secret() {
+    let mut sheet = median_human();
+    sheet.alignment = Some(crate::alignment::Alignment::new(-450));
+    let sent = sheet.as_sent();
+    assert_eq!(sent.alignment, None);
+    assert_eq!(
+        Sheet {
+            alignment: None,
+            ..sheet
+        },
+        sent
+    );
+}

@@ -191,3 +191,21 @@ fn mobs_genders_spread_roughly_45_45_10() {
     assert!((38..=52).contains(&share(counts[1])), "{counts:?}");
     assert!((5..=15).contains(&share(counts[2])), "{counts:?}");
 }
+
+#[test]
+fn peoples_have_an_alignment_and_animals_none() {
+    let level = room();
+    let (mut people, mut animals) = (0, 0);
+    for seed in 0..100 {
+        for mob in spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &[]) {
+            let leans = mob.kind.alignment_leaning();
+            assert_eq!(mob.alignment.is_some(), leans.is_some(), "{:?}", mob.kind);
+            if leans.is_some() {
+                people += 1;
+            } else {
+                animals += 1;
+            }
+        }
+    }
+    assert!(people > 0 && animals > 0, "{people} {animals}");
+}

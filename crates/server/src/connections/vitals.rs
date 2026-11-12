@@ -42,7 +42,7 @@ impl Client {
         if self.sheet.vitals.forget_ended(before, now) {
             self.unsaved = true;
             // Its Character panel shows the changes.
-            if !self.link.send(&ServerMessage::Sheet(self.sheet.clone())) {
+            if !self.link.send(&ServerMessage::Sheet(self.sheet.as_sent())) {
                 return false;
             }
         }
@@ -76,6 +76,6 @@ impl Client {
         }
         self.unsaved = true;
         // Practice and changes are on the sheet, for the Character panel.
-        self.link.send(&ServerMessage::Sheet(self.sheet.clone())) && self.send_vitals(now)
+        self.link.send(&ServerMessage::Sheet(self.sheet.as_sent())) && self.send_vitals(now)
     }
 }

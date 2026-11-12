@@ -11,6 +11,7 @@ use super::{AddDebugMethod, BrpResult, Value, json, params, refused};
 use crate::connections::{Client, save_all};
 use crate::{Connections, ServerOptions, ServerWorlds};
 
+mod alignment;
 mod tick;
 mod worlds;
 
@@ -27,6 +28,7 @@ pub(crate) fn add_server_methods(app: &mut App, data: Option<PathBuf>) {
               -> BrpResult { Ok(state(&data, &worlds, &connections, &options)) },
     )
     .add_debug_method("server.mobs", mobs)
+    .add_debug_method("server.alignment", alignment::alignment)
     .add_debug_method("server.cells", cells)
     .add_debug_method("server.sites", sites)
     .add_debug_method("server.worlds", worlds::worlds)
@@ -96,6 +98,7 @@ fn mobs(In(request): In<Option<Value>>, worlds: Res<ServerWorlds>) -> BrpResult 
                         "home": mob.home,
                         "doing": mob.doing,
                         "target": mob.target,
+                        "alignment": mob.alignment.map(|alignment| alignment.value()),
                     })
                 })
                 .collect();

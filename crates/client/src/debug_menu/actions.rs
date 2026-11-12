@@ -10,6 +10,7 @@ use crate::widgets::matches_filter;
 #[derive(bevy::prelude::Message, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DebugAction {
     Accounts,
+    Alignment,
     ChangeCellMode,
     ChangeCreature,
     CloseAllDoors,
@@ -68,7 +69,7 @@ pub(super) struct Facts {
 impl DebugAction {
     /// Every action, in the order the menu lists them: by group (`Group`),
     /// then as the owner ordered each group.
-    pub(super) const ALL: [Self; 32] = [
+    pub(super) const ALL: [Self; 33] = [
         // Display
         Self::ShowDebugInfo,
         Self::LightningNow,
@@ -88,6 +89,7 @@ impl DebugAction {
         Self::GiveItem,
         Self::Vitals,
         Self::LearnSkills,
+        Self::Alignment,
         // Mobs
         Self::CreateMob,
         Self::ExamineMob,
@@ -142,6 +144,7 @@ impl DebugAction {
                 | Self::GiveItem
                 | Self::Vitals
                 | Self::LearnSkills
+                | Self::Alignment
                 | Self::CreateMob
                 | Self::ExamineMob
                 | Self::WorldTime

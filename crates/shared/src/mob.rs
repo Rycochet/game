@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::alignment::Alignment;
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
 use crate::gender::Gender;
@@ -44,6 +45,8 @@ const TRIES: i64 = 16;
 const ATTRIBUTE_ROLL: i64 = 2000;
 /// Which roll of a mob's own is its gender's (`Gender::rolled`).
 const GENDER_ROLL: i64 = 2001;
+/// Which roll of a mob's own is its alignment's (`Alignment::rolled`).
+const ALIGNMENT_ROLL: i64 = 2002;
 
 /// One of a level's mobs, as generated.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,6 +58,8 @@ pub struct Spawn {
     pub appearance: Appearance,
     /// Rolled from its own hash: 45% Male, 45% Female, 10% Neutral.
     pub gender: Gender,
+    /// Rolled from its own hash about its kind's leaning; `None` for an animal.
+    pub alignment: Option<Alignment>,
     /// Rolled near its kind's medians, with its kind's and gender's bonuses.
     pub attributes: Attributes,
     /// What it starts with, innermost clothes first: it wears what it can.
@@ -218,6 +223,7 @@ pub fn spawns(
             position,
             appearance: looks(&roll, kind),
             gender,
+            alignment: Alignment::rolled(kind, roll(ALIGNMENT_ROLL)),
             attributes: Attributes::for_kind(
                 kind,
                 gender,

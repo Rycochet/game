@@ -2,13 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::OnlineSettings;
-use super::dev_mob::DevMobTool;
-use super::dev_skills::DevSkills;
-use super::dev_vitals::DevVitals;
-use super::door_ask::DoorAsk;
-use super::kind_change::KindChange;
 use super::login::{CharacterId, Credentials, NewCharacter};
+use super::{DevAlignment, DevMobTool, DevSkills, DevVitals, DoorAsk, KindChange, OnlineSettings};
 use crate::ability::{Ability, BarChange};
 use crate::creature::{CreatureKind, Size};
 use crate::difficulty::{Difficulties, Difficulty};
@@ -273,6 +268,9 @@ pub enum ClientMessage {
     /// Developer tools: harm, spend, fill or raise the character's Health and
     /// Mana (`DevVitals`), answered with `Vitals`.
     DevVitals(DevVitals),
+    /// Developer tools: ask after or change the character's hidden alignment
+    /// (`DevAlignment`), answered with `ServerMessage::DevAlignment`.
+    DevAlignment(DevAlignment),
     /// Developer tools: change the character's skills, or `who`'s (another player
     /// in sight), answered with `DevSkillsOf` and their `Sheet`.
     DevSkills { who: Option<Id>, change: DevSkills },

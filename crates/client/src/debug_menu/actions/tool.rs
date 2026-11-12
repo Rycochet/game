@@ -25,6 +25,7 @@ impl DebugAction {
             Self::GiveItem => DebugTool::GiveItem,
             Self::Vitals => DebugTool::Vitals,
             Self::LearnSkills => DebugTool::LearnSkills,
+            Self::Alignment => DebugTool::Alignment,
             Self::CreateMob => DebugTool::CreateMob,
             Self::ExamineMob => DebugTool::ExamineMob,
             Self::FreezeMobs => DebugTool::FreezeMobs,

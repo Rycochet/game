@@ -38,7 +38,7 @@ pub(super) fn struck(
     }
     client
         .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()));
+        .send(&ServerMessage::Sheet(client.sheet.as_sent()));
     client.send_vitals(tick);
     left
 }
@@ -75,7 +75,7 @@ fn killed(client: &mut Client, world: &mut ServerWorld, tick: u64) {
     crate::sites::killed(client, world);
     client
         .link
-        .send(&ServerMessage::Sheet(client.sheet.clone()));
+        .send(&ServerMessage::Sheet(client.sheet.as_sent()));
     client.send_vitals(tick);
     client.link.send(&ServerMessage::Killed { permanent });
 }
