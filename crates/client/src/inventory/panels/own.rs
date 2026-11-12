@@ -8,7 +8,8 @@ use super::super::{Carried, OpenCharacter};
 use super::shown::shown_size;
 use super::{InventoryButton, OpenGrids, Page};
 use crate::common::{Action, GameView, Preferences};
-use crate::widgets::{ButtonPressed, ChooseTab, RaisePanel};
+use crate::dom::Dom;
+use crate::widgets::{ButtonPressed, RaisePanel};
 
 /// The keys for the Character panel's tabs (C, I, B, K).
 const TAB_KEYS: [(Action, Page); 4] = [
@@ -35,7 +36,7 @@ pub(in crate::inventory) fn toggle_inventory(
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
     mut raise: MessageWriter<RaisePanel>,
-    mut choose: MessageWriter<ChooseTab>,
+    mut dom: Dom,
 ) {
     let by_button = pressed.read().any(|press| button.contains(press.0));
     let by_key = TAB_KEYS
@@ -66,15 +67,13 @@ pub(in crate::inventory) fn toggle_inventory(
     }
     if let Some(page) = want {
         open.page = page;
-        if let Some(pages) = open.pages {
-            pages.show(page, &mut commands);
-            choose.write(ChooseTab(pages.row, page as usize));
-        }
     }
     if !is_open {
         nearby.open(&mut commands, &mut raise, &nodes);
     }
     open.open(Holder::Inventory, &carried.0, &mut commands, &mut raise);
+    // (Also when it has only just been opened: it is built by then.)
+    open.page.show(&mut dom);
 }
 
 /// Forgets panels closed by their own close buttons, and closes those of bags no
@@ -86,10 +85,8 @@ pub(in crate::inventory) fn forget_closed(
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
 ) {
-    let mut closed_character = false;
     open.open.retain_mut(|(holder, panel, size)| {
         if !nodes.contains(*panel) {
-            closed_character |= *holder == Holder::Inventory;
             return false;
         }
         let Some(now) = shown_size(&carried.0, *holder) else {
@@ -100,7 +97,4 @@ pub(in crate::inventory) fn forget_closed(
         *size = now;
         true
     });
-    if closed_character {
-        open.pages = None;
-    }
 }

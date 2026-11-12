@@ -35,23 +35,15 @@ impl OpenGrids {
         let (panel, content) = spawn_moveable_panel(commands, title, at);
         let id = super::super::ui_ids::grid_id(Some(holder), "panel");
         commands.entity(panel).insert(id);
-        let page = self.page;
-        commands.entity(content).with_children(|content| {
-            if holder != Holder::Inventory {
-                spawn_grid(content, holder, grows);
-                return;
+        match holder {
+            // Tabs for what they are like, what they wear and carry, and what
+            // they can do (whoever opens it shows the page: `Page::show`).
+            Holder::Inventory => spawn_pages(commands, content),
+            Holder::Inside(_) => {
+                let mut content = commands.entity(content);
+                content.with_children(|content| spawn_grid(content, holder, grows));
             }
-            // Tabs for what they are like, what they wear and carry, and what they
-            // can do.
-            content
-                .spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                })
-                .with_children(|column| {
-                    self.pages = Some(spawn_pages(column, page));
-                });
-        });
+        }
         self.open.push((holder, panel, (width, height)));
     }
 
@@ -76,7 +68,6 @@ impl OpenGrids {
             Some(index) => {
                 let (_, panel, _) = self.open.remove(index);
                 commands.entity(panel).despawn();
-                self.pages = None;
             }
             None => self.open(Holder::Inventory, carried, commands, raise),
         }

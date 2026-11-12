@@ -30,12 +30,11 @@ pub(super) use held::{show_button, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
 pub(super) use mark::mark_grids;
 pub(super) use own::{forget_closed, toggle_inventory};
-pub(super) use pages::switch_pages;
-use pages::{Page, Pages};
+use pages::Page;
+pub(super) use pages::{bind_pages, switch_pages};
 pub(super) use show::{show_grids, show_weights};
 
 const BUTTON: f32 = 34.0;
-const COLUMN_GAP: f32 = 16.0;
 const CORNER_GAP: f32 = 8.0;
 const FONT: TextSize = TextSize::Medium;
 /// How far from the pointer an item's name goes.
@@ -52,8 +51,6 @@ pub(super) struct OpenGrids {
     /// Each with the size its grid was drawn at.
     open: Vec<(Holder, Entity, (u8, u8))>,
     opened: u32,
-    /// The Character panel's tabs, while it is open.
-    pages: Option<Pages>,
     /// The tab it shows, or will open on: the last chosen.
     page: Page,
 }

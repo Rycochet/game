@@ -2,7 +2,6 @@ use super::*;
 
 #[test]
 fn the_frames_are_good_markup() {
-    INVENTORY.assert_good();
     BAG.assert_good();
     GROWING_BAG.assert_good();
 }
