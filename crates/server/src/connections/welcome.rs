@@ -1,6 +1,7 @@
 //! A new character's first sheet and clothes, and welcoming a character into the world.
 
 use shared::creature::CreatureKind;
+use shared::gender::Gender;
 use shared::item::{Inventory, Item, ItemKind, MadeAt, Quality, StackLimits};
 use shared::item_form::{ItemOrder, make_item};
 use shared::protocol::ServerMessage;
@@ -44,18 +45,18 @@ pub(crate) fn made_for(
 /// didn't ask, plain for their kind.
 pub(super) fn start_sheet(
     saved: Option<Sheet>,
-    asked: Option<(CreatureKind, Appearance, Build)>,
+    asked: Option<(CreatureKind, Gender, Appearance, Build)>,
     inventory: &mut Inventory,
 ) -> Sheet {
     if let Some(sheet) = saved {
         return sheet.settled(inventory.creature);
     }
     match asked {
-        Some((kind, appearance, build)) => {
+        Some((kind, gender, appearance, build)) => {
             inventory.change_body(kind, StackLimits::NONE);
             Sheet {
                 appearance,
-                ..Sheet::built(kind, build)
+                ..Sheet::built(kind, gender, build)
             }
         }
         None => Sheet::new(inventory.creature),

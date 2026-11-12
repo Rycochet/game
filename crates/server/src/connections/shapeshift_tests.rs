@@ -18,7 +18,7 @@ fn a_shapeshift_takes_the_forms_body_row_and_changes_back() {
     test.send(&[change(CreatureKind::Horse, KindChange::Temporary)]);
     assert_eq!(test.client.inventory.creature, CreatureKind::Horse);
     let sheet = &test.client.sheet;
-    let horse = Attributes::for_kind(CreatureKind::Horse, &sheet.build);
+    let horse = Attributes::for_kind(CreatureKind::Horse, sheet.gender, &sheet.build);
     for which in Row::Body.attributes() {
         assert_eq!(sheet.attributes.get(which), horse.get(which));
     }

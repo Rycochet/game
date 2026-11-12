@@ -133,6 +133,7 @@ fn a_look_reads_back_from_a_message() {
     let look = EntityLook {
         id: Id::for_test(9),
         kind: CreatureKind::Kobold,
+        gender: Gender::Female,
         name: None,
         appearance: Appearance::default(),
         feeling: Feeling::Unfriendly,
@@ -172,4 +173,21 @@ fn keener_noses_and_stronger_trails_last_longer() {
 fn carrying_nothing_leaves_the_weakest_trail() {
     let nothing = Inventory::default();
     assert_eq!(scent_strength(&nothing), BASE_SCENT);
+}
+
+#[test]
+fn mobs_genders_spread_roughly_45_45_10() {
+    let level = room();
+    let mut counts = [0usize; 3];
+    for seed in 0..200 {
+        for mob in spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &[]) {
+            counts[mob.gender as usize] += 1;
+        }
+    }
+    let total: usize = counts.iter().sum();
+    assert!(total > 1000, "{total}");
+    let share = |count: usize| count * 100 / total;
+    assert!((38..=52).contains(&share(counts[0])), "{counts:?}");
+    assert!((38..=52).contains(&share(counts[1])), "{counts:?}");
+    assert!((5..=15).contains(&share(counts[2])), "{counts:?}");
 }

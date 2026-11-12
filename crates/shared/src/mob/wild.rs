@@ -6,6 +6,7 @@ use super::{Spawn, looks, roll_gear};
 use crate::climate::Biome;
 use crate::creature::CreatureKind;
 use crate::dungeon::{Cell, Level};
+use crate::gender::Gender;
 use crate::id::Id;
 use crate::rng::Seed;
 use crate::sheet::{Attributes, Build};
@@ -96,12 +97,18 @@ pub fn wild_spawns(seed: Seed, block: BlockPos, level: &Level, biome: Biome) -> 
         let Some(position) = spot else {
             continue;
         };
+        let gender = Gender::rolled(own(61));
         mobs.push(Spawn {
             number: own(50) as u32,
             kind,
             position,
             appearance: looks(&own, kind),
-            attributes: Attributes::for_kind(kind, &Build::rolled(&mut Seed::new(own(60)).rng())),
+            gender,
+            attributes: Attributes::for_kind(
+                kind,
+                gender,
+                &Build::rolled(&mut Seed::new(own(60)).rng()),
+            ),
             gear: roll_gear(&own, kind),
         });
     }

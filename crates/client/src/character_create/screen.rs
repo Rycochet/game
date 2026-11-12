@@ -36,6 +36,12 @@ pub(super) static CHARACTER_CREATE: Template = html!(
           </span>
           <label class="field" for="kind">Kind</label>
           <select id="kind"><option>Human</option></select>
+          <label class="field" for="gender">Gender</label>
+          <toggle-row id="gender">
+            <option>Male</option>
+            <option>Female</option>
+            <option selected>Neutral</option>
+          </toggle-row>
           <canvas id="looks"/>
           <label class="field">Difficulty</label>
           <canvas id="difficulty_box"/>

@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::energy::Energy;
+use shared::gender::Gender;
 use shared::id::Id;
 use shared::item::Inventory;
 use shared::poi::ChunkPos;
@@ -182,7 +183,7 @@ pub struct Client {
     /// Its open practice windows, by skill and by kind of foe.
     learning: crate::combat::Learning,
     /// What a character being made here asked to be, for when they first join.
-    starting_as: Option<(CreatureKind, Appearance, Build)>,
+    starting_as: Option<(CreatureKind, Gender, Appearance, Build)>,
     /// Its character's difficulty: from `Hello`, making them or their save.
     pub(crate) difficulty: Option<shared::difficulty::Difficulty>,
     /// Killed on Ironman: deleted once the mobs' turn is done (`systems`).

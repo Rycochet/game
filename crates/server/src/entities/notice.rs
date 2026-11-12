@@ -23,6 +23,7 @@ pub(crate) struct Someone {
     /// Their character's name.
     pub(super) name: String,
     pub(super) look: (CreatureKind, Appearance),
+    pub(super) gender: shared::gender::Gender,
     /// What can be seen of what they wear.
     pub(super) worn: Vec<WornLook>,
     /// The mark before their name (`Client::mark`).
@@ -70,6 +71,7 @@ pub(super) fn everyone_playing(clients: &mut [Client]) -> Vec<Someone> {
                 character: client.character_id,
                 name: client.name.clone(),
                 look: (client.inventory.creature, client.sheet.appearance.clone()),
+                gender: client.sheet.gender,
                 worn: client.inventory.shown(),
                 mark: client.mark(),
                 level,

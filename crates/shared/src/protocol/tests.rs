@@ -66,6 +66,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::CreateCharacter(super::NewCharacter {
             name: "Some One".into(),
             kind: CreatureKind::Kobold,
+            gender: crate::gender::Gender::Female,
             appearance: Appearance::default(),
             build: crate::sheet::Build::CENTRED,
             difficulty: crate::difficulty::Difficulty::Ironman,
@@ -484,6 +485,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::EntitySeen(EntityLook {
             id: Id(uuid::Uuid::from_u128(4)),
             kind: CreatureKind::Giant,
+            gender: crate::gender::Gender::Male,
             name: Some("Brin".into()),
             appearance: Appearance::default(),
             feeling: crate::sheet::Feeling::Friendly,

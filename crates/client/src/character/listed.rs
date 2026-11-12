@@ -10,7 +10,10 @@ use shared::sheet::Row;
 pub fn describe_listed(listed: &ListedCharacter) -> String {
     let (sheet, kind) = (&listed.sheet, listed.kind);
     let def = kind.def();
-    let mut lines = vec![format!("{}, {:?}", def.name, def.size), String::new()];
+    let mut lines = vec![
+        format!("{} {}, {:?}", sheet.gender.name(), def.name, def.size),
+        String::new(),
+    ];
     for row in Row::ALL {
         let values: Vec<_> = row
             .attributes()

@@ -145,6 +145,8 @@ pub enum Doing {
 pub(crate) struct Mob {
     pub id: Id,
     pub kind: CreatureKind,
+    /// Rolled with it (`Spawn::gender`), for others to be told.
+    pub gender: shared::gender::Gender,
     pub appearance: Appearance,
     /// The cell it thinks in: always the one under `spot` (`place`).
     pub position: (i64, i64),

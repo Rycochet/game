@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
+use crate::gender::Gender;
 use crate::item::Inventory;
 use crate::movement::{FULL, MOVEMENT_SKILLS};
 use crate::skill::Skills;
@@ -144,6 +145,11 @@ pub struct Sheet {
     /// How its attributes were chosen, kept to show and to work them out again.
     #[serde(default)]
     pub build: Build,
+    /// Its gender (`shared::gender`), whose bonus is in its attributes. Neutral in
+    /// a save from before genders, whose attributes are kept with no bonus added
+    /// (owner, 2026-11-12).
+    #[serde(default)]
+    pub gender: Gender,
     /// What it has learned (`skill::Skills`): saves from before the tree are read
     /// by the old names.
     pub skills: Skills,
@@ -166,17 +172,18 @@ impl Default for Sheet {
 }
 
 impl Sheet {
-    /// A plain one of this kind: its dots in the middle, Body at the top.
+    /// A plain one of this kind: Neutral, its dots in the middle, Body at the top.
     pub fn new(kind: CreatureKind) -> Self {
-        Self::built(kind, Build::CENTRED)
+        Self::built(kind, Gender::default(), Build::CENTRED)
     }
 
-    /// One of this kind, its attributes chosen with these triangles, which must be
-    /// valid (`Build::is_valid`).
-    pub fn built(kind: CreatureKind, build: Build) -> Self {
+    /// One of this kind and gender, its attributes chosen with these triangles,
+    /// which must be valid (`Build::is_valid`).
+    pub fn built(kind: CreatureKind, gender: Gender, build: Build) -> Self {
         Self {
-            attributes: Attributes::for_kind(kind, &build),
+            attributes: Attributes::for_kind(kind, gender, &build),
             build,
+            gender,
             skills: Skills::starting(kind),
             appearance: Appearance::default(),
             vitals: Vitals::default(),
@@ -195,7 +202,7 @@ impl Sheet {
             // Its own kind's, shapeshifted again if it was.
             let own = self.own_kind(kind);
             self.true_form = None;
-            self.attributes = Attributes::for_kind(own, &self.build);
+            self.attributes = Attributes::for_kind(own, self.gender, &self.build);
             if own != kind {
                 self.shapeshift(own, kind);
             }

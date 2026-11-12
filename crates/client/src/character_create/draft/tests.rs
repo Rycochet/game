@@ -32,3 +32,23 @@ fn it_needs_a_name_and_sends_it_trimmed() {
     assert_eq!(made.name, "Brin");
     assert_eq!(made.build, Build::CENTRED);
 }
+
+#[test]
+fn the_gender_chosen_is_sent_and_its_bonus_shown() {
+    let mut draft = Draft::default();
+    assert_eq!(draft.gender, Gender::Neutral);
+    draft.name = "Brin".into();
+    draft.gender = Gender::Female;
+    let ClientMessage::CreateCharacter(made) = draft.message() else {
+        panic!("not making a character");
+    };
+    assert_eq!(made.gender, Gender::Female);
+    // The bonus layer is the kind's and the gender's together.
+    let kind = draft.kind.def().bonus();
+    let bonus = draft.bonus();
+    assert_eq!(
+        bonus.intellect,
+        kind.intellect + shared::gender::GENDER_BONUS
+    );
+    assert_eq!(bonus.strength, kind.strength);
+}

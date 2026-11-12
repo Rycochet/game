@@ -1,7 +1,8 @@
 //! A body changing into another kind's for a while (owner, 2026-11-06): the form's
 //! Body row (Strength, Agility, Toughness) takes over, leaned by the creature's own
 //! triangle, while Mind and Spirit, its triangles, looks and skills stay its own. Its
-//! own kind and Body row are kept, so changing back gives exactly what it had.
+//! own kind and Body row are kept, so changing back gives exactly what it had. Its
+//! gender stays, with its bonus: a man shapeshifted into a horse keeps his Body bonus.
 
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +33,7 @@ impl Sheet {
             self.true_form = None;
             return;
         }
-        let shaped = Attributes::for_kind(form, &self.build);
+        let shaped = Attributes::for_kind(form, self.gender, &self.build);
         for which in body {
             self.attributes.set(which, shaped.get(which));
         }

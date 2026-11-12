@@ -15,7 +15,7 @@ fn every_kind_has_attributes_and_looks() {
         assert_eq!(sheet.build, Build::CENTRED);
         assert_eq!(
             sheet.attributes,
-            Attributes::for_kind(kind, &Build::CENTRED)
+            Attributes::for_kind(kind, crate::gender::Gender::Neutral, &Build::CENTRED)
         );
         assert_eq!(sheet.skills, crate::skill::Skills::starting(kind));
         assert!(sheet.appearance.suits(kind));
@@ -167,4 +167,17 @@ fn weight_training_adds_its_value_to_what_can_be_carried() {
     sheet.skills.practise(node, 2_000_000);
     assert_eq!(sheet.capacity(Size::Medium), 60_000);
     assert_eq!(sheet.load(&stones(7)), Load::Burdened);
+}
+
+#[test]
+fn a_save_from_before_genders_is_neutral_and_keeps_its_attributes() {
+    // Attributes with no gender's bonus in them, as saved before genders.
+    let grown = median_human();
+    let saved = ron::to_string(&grown).unwrap();
+    let old = saved.replace("gender:Neutral,", "");
+    assert_ne!(old, saved, "the field should be in the save: {saved}");
+    let loaded: Sheet = ron::from_str(&old).unwrap();
+    assert_eq!(loaded.gender, crate::gender::Gender::Neutral);
+    let settled = loaded.settled(CreatureKind::Human);
+    assert_eq!(settled.attributes, Attributes::all(100));
 }

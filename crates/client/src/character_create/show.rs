@@ -27,7 +27,7 @@ pub(super) fn draw_triangles(
         return;
     }
     let attributes = draft.attributes();
-    let bonus = draft.kind.def().bonus();
+    let bonus = draft.bonus();
     let drawn = Drawn {
         build: &draft.build,
         attributes: &attributes,

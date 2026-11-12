@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use shared::creature::CreatureKind;
 use shared::difficulty::Difficulty;
+use shared::gender::Gender;
 use shared::protocol::{ClientMessage, NewCharacter};
 use shared::sheet::{Appearance, Attributes, Build, Row};
 
@@ -14,6 +15,8 @@ pub(super) struct Draft {
     /// The last name suggested, to tell whether the player has typed their own.
     pub suggested: String,
     pub kind: CreatureKind,
+    /// Neutral until chosen.
+    pub gender: Gender,
     pub appearance: Appearance,
     pub build: Build,
     /// The triangle the keys move the dot of.
@@ -28,6 +31,7 @@ impl Default for Draft {
             name: String::new(),
             suggested: String::new(),
             kind: CreatureKind::Human,
+            gender: Gender::Neutral,
             appearance: Appearance::default(),
             build: Build::CENTRED,
             chosen: Row::Body,
@@ -47,7 +51,17 @@ impl Draft {
 
     /// What these choices give, worked out as the server will.
     pub fn attributes(&self) -> Attributes {
-        Attributes::for_kind(self.kind, &self.build)
+        Attributes::for_kind(self.kind, self.gender, &self.build)
+    }
+
+    /// What the kind and gender add on top, for the charts' bonus layer.
+    pub fn bonus(&self) -> Attributes {
+        let (kind, gender) = (self.kind.def().bonus(), self.gender.bonus());
+        let mut bonus = Attributes::default();
+        for which in shared::sheet::Attribute::ALL {
+            bonus.set(which, kind.get(which) + gender.get(which));
+        }
+        bonus
     }
 
     /// Another kind: its looks start again, as each kind has its own.
@@ -67,6 +81,7 @@ impl Draft {
         ClientMessage::CreateCharacter(NewCharacter {
             name: shared::name::checked(&self.name).unwrap_or_default(),
             kind: self.kind,
+            gender: self.gender,
             appearance: self.appearance.clone(),
             build: self.build,
             difficulty: self.difficulty,

@@ -1,6 +1,7 @@
 //! Making a new guest's or single player's character with the client's screen.
 
 use shared::creature::CreatureKind;
+use shared::gender::Gender;
 use shared::protocol::{ClientLink, ClientMessage, ServerMessage, local_pair};
 use shared::sheet::{Appearance, Build, Dot, Sheet};
 use shared::world::WorldSeed;
@@ -20,6 +21,7 @@ fn make(name: &str, kind: CreatureKind, build: Build) -> ClientMessage {
     ClientMessage::CreateCharacter(shared::protocol::NewCharacter {
         name: name.into(),
         kind,
+        gender: Gender::Male,
         appearance: Appearance::default(),
         build,
         difficulty: shared::difficulty::Difficulty::Normal,
@@ -67,7 +69,15 @@ fn a_new_guest_makes_their_character_before_joining() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(
         sheet_in(&told),
-        Some(Sheet::built(CreatureKind::Dwarf, strong()))
+        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()))
+    );
+    // The server added a man's bonus to Body itself.
+    let sheet = sheet_in(&told).unwrap();
+    let neutral = Sheet::built(CreatureKind::Dwarf, Gender::Neutral, strong());
+    assert_eq!(sheet.gender, Gender::Male);
+    assert_eq!(
+        sheet.attributes.strength,
+        neutral.attributes.strength + shared::gender::GENDER_BONUS
     );
     // Their one character has the name they chose.
     let account = connections.clients[0].account.unwrap();
@@ -130,7 +140,14 @@ fn the_single_player_makes_theirs_too() {
     (connections, _) = tick(connections, world);
     let told = answers(&end);
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
-    assert_eq!(sheet_in(&told), Some(Sheet::new(CreatureKind::Elf)));
+    assert_eq!(
+        sheet_in(&told),
+        Some(Sheet::built(
+            CreatureKind::Elf,
+            Gender::Male,
+            Build::CENTRED
+        ))
+    );
     assert_eq!(connections.clients.len(), 1);
 }
 
@@ -165,7 +182,7 @@ fn deleting_a_character_offers_the_rest_and_a_new_one_has_a_new_id() {
     assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
     assert_eq!(
         sheet_in(&told),
-        Some(Sheet::built(CreatureKind::Dwarf, strong()))
+        Some(Sheet::built(CreatureKind::Dwarf, Gender::Male, strong()))
     );
     let new = connections.clients[0].character_id.unwrap();
     assert_ne!(new, old);

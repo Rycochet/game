@@ -19,6 +19,7 @@ pub mod dungeon;
 pub mod energy;
 pub mod facing;
 pub mod footwear;
+pub mod gender;
 pub mod ground;
 pub mod hall;
 pub mod id;

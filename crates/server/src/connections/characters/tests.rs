@@ -14,6 +14,7 @@ fn make(name: &str) -> ClientMessage {
     ClientMessage::CreateCharacter(NewCharacter {
         name: name.into(),
         kind: CreatureKind::Dwarf,
+        gender: shared::gender::Gender::Neutral,
         appearance: Appearance::default(),
         build: Build::CENTRED,
         difficulty: shared::difficulty::Difficulty::Hard,
