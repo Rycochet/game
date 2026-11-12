@@ -48,7 +48,8 @@ const NEXT_AT: Vec2 = Vec2::new(36.0, 36.0);
 /// The panels open, in the order they were opened.
 #[derive(Resource, Default)]
 pub(super) struct OpenGrids {
-    /// Each with the size its grid was drawn at.
+    /// Each with its document, whose panel it is, and the size its grid was
+    /// drawn at.
     open: Vec<(Holder, Entity, (u8, u8))>,
     opened: u32,
     /// The tab it shows, or will open on: the last chosen.

@@ -5,7 +5,7 @@ use crate::dom::build::tests::{app, find};
 use crate::dom::parts::{AlwaysBars, ControlOf, Element};
 use crate::dom::{Dom, Template, UiEvent, UiValue, document};
 use crate::html;
-use crate::widgets::ButtonPressed;
+use crate::widgets::{ButtonPressed, MoveablePanel, PanelPlace, PanelTitleOf, RaisePanel};
 
 static SURFACES: Template = html!(
     "surfaces",
@@ -134,4 +134,30 @@ fn a_panel_that_moves_needs_an_id() {
     };
     let error = template.checked().unwrap_err();
     assert_eq!(error.what, "`<panel>` needs an `id`");
+}
+
+#[test]
+fn a_moving_panel_takes_its_title_and_start_from_its_element() {
+    let (mut app, _) = built();
+    let panel = find(&mut app, "a/moves");
+    let starts = |app: &App| app.world().get::<MoveablePanel>(panel).unwrap().starts_at();
+    assert_eq!(
+        starts(&app),
+        Some(PanelPlace::TopLeft(Vec2::new(40.0, 60.0)))
+    );
+    let change = |mut dom: Dom| {
+        dom.set("a/moves", "title", "Renamed");
+        dom.set("a/moves", "left", "25%");
+        dom.set("a/moves", "top", "50%");
+        dom.raise("a/moves");
+    };
+    app.world_mut().run_system_once(change).unwrap();
+    app.update();
+    assert_eq!(starts(&app), Some(PanelPlace::Share(Vec2::new(0.25, 0.5))));
+    let world = app.world_mut();
+    let mut titles = world.query::<(&PanelTitleOf, &Text)>();
+    let title = titles.iter(world).find(|(of, _)| of.0 == panel).unwrap().1;
+    assert_eq!(title.0, "Renamed");
+    let mut raised = world.resource_mut::<Messages<RaisePanel>>();
+    assert!(raised.drain().any(|raise| raise.0 == panel));
 }

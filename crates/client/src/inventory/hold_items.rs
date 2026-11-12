@@ -24,8 +24,9 @@ use crate::common::{
     StockCell, TakesGifts, TakesItemText, TookItem, TouchGesture, UiPointer,
 };
 use crate::connection::ToServer;
+use crate::dom::Dom;
 use crate::dom::{Dropped, HeldObject};
-use crate::widgets::{ButtonPressed, RaisePanel};
+use crate::widgets::ButtonPressed;
 
 /// Whether it is worth asking to wear something: the server may know of magic this
 /// client doesn't, which would make it fit.
@@ -94,7 +95,7 @@ pub(super) fn hold_items(
     mut carried: ResMut<Carried>,
     mut open: ResMut<OpenGrids>,
     mut commands: Commands,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: Dom,
     keys: Res<ButtonInput<KeyCode>>,
     mut split: ResMut<Split>,
     time: Res<Time<Real>>,
@@ -121,7 +122,7 @@ pub(super) fn hold_items(
         &carried,
         &mut open,
         &mut commands,
-        &mut raise,
+        &mut dom,
         &mut last_press,
         (now, new_press, gesture.tap, pointer.0, shift),
     );

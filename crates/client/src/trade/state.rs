@@ -11,6 +11,7 @@ use crate::widgets::StockGrid;
 
 /// A trading panel, with who it is with: never two for the same one.
 pub(super) struct OpenTrade {
+    /// Its document, which its panel goes with.
     pub(super) panel: Entity,
     /// What the player must stay near.
     pub(super) place: (i64, i64),
@@ -24,9 +25,8 @@ pub(super) struct OpenTrade {
 pub(super) struct OpenTrades(pub(super) Vec<OpenTrade>);
 
 impl OpenTrades {
-    pub(super) fn panel_with(&self, with: Id) -> Option<Entity> {
-        let open = self.0.iter().find(|open| open.grid.with == with);
-        open.map(|open| open.panel)
+    pub(super) fn is_open_with(&self, with: Id) -> bool {
+        self.0.iter().any(|open| open.grid.with == with)
     }
 }
 

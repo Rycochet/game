@@ -6,9 +6,10 @@ use shared::protocol::ClientMessage;
 use super::{Heading, Keepers, OpenTrades, beside, front_of};
 use crate::common::{CurrentDungeon, MapPosition, Truesight};
 use crate::connection::ToServer;
+use crate::dom::Dom;
 use crate::dungeon_map::DoorClicked;
 use crate::player::{Arrived, Player, TakeStep, TravelTo};
-use crate::widgets::RaisePanel;
+use crate::widgets::UiId;
 
 /// Walking anywhere else, or a step of their own: they aren't going to the shop.
 pub(super) fn change_of_mind(
@@ -37,7 +38,7 @@ pub(super) fn follow_clicked_door(
     player: Single<&MapPosition, With<Player>>,
     mut heading: ResMut<Heading>,
     mut travel: MessageWriter<TravelTo>,
-    mut raise: MessageWriter<RaisePanel>,
+    mut dom: Dom,
     mut to_server: MessageWriter<ToServer>,
 ) {
     for click in clicks.read() {
@@ -54,8 +55,8 @@ pub(super) fn follow_clicked_door(
             });
             continue;
         };
-        if let Some(panel) = open.panel_with(with) {
-            raise.write(RaisePanel(panel));
+        if open.is_open_with(with) {
+            dom.raise(&UiId::of("trade", with, "panel").to_string());
         } else if beside(**player, building.door) {
             heading.0 = None;
             to_server.write(ToServer(ClientMessage::OpenTrade { with }));
@@ -94,7 +95,7 @@ pub(super) fn open_on_arrival(
     };
     if let Some((with, front)) = heading.0.take()
         && front == (x, y)
-        && open.panel_with(with).is_none()
+        && !open.is_open_with(with)
     {
         // After the steps there, so the server has the player at it.
         to_server.write(ToServer(ClientMessage::OpenTrade { with }));

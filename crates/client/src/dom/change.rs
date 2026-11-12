@@ -32,6 +32,8 @@ pub(super) enum Change {
     Empty,
     /// A `select`'s options, each its value and its words.
     Options(Vec<(String, String)>),
+    /// A panel that moves, brought in front of the others.
+    Raise,
 }
 
 /// How systems change documents. Ids are as written, `form/name`, with
@@ -85,6 +87,18 @@ impl Dom<'_> {
     /// Takes out everything in an element, to fill it again.
     pub fn empty(&mut self, id: &str) {
         self.ask(id, Change::Empty);
+    }
+
+    /// Where a panel that moves starts, in the interface's pixels: only
+    /// until it is first placed, so for one just spawned.
+    pub fn start_at(&mut self, id: &str, at: Vec2) {
+        self.set(id, "left", &at.x.to_string());
+        self.set(id, "top", &at.y.to_string());
+    }
+
+    /// Brings a panel that moves in front of the others.
+    pub fn raise(&mut self, id: &str) {
+        self.ask(id, Change::Raise);
     }
 
     /// Gives a `select` these options instead of its own, each its value

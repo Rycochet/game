@@ -33,8 +33,12 @@ fn pixels(length: Option<Length>) -> Option<f32> {
 }
 
 /// Where a panel that moves starts: by its `left` and `top`, or its `right`
-/// and `bottom` from the window's far corner.
-fn place_of(attrs: &Attrs) -> PanelPlace {
+/// and `bottom` from the window's far corner. A `left` and `top` in `%` are
+/// shares of the window, as a place the player left it at is saved.
+pub(in crate::dom) fn place_of(attrs: &Attrs) -> PanelPlace {
+    if let (Some(Length::Percent(left)), Some(Length::Percent(top))) = (attrs.left, attrs.top) {
+        return PanelPlace::Share(Vec2::new(left, top) / 100.0);
+    }
     match (pixels(attrs.right), pixels(attrs.bottom)) {
         (None, None) => {
             let corner = |side| pixels(side).unwrap_or(START);

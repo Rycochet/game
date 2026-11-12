@@ -3,48 +3,51 @@
 use bevy::prelude::*;
 use shared::item::{Holder, Inventory};
 
-use super::frame::spawn_grid;
-use super::pages::spawn_pages;
+use super::super::ui_ids::grid_id;
+use super::frame::spawn_bag;
+use super::pages::CHARACTER;
 use super::shown::{grows, shown_size};
 use super::{FIRST_AT, NEXT_AT, OpenGrids};
-use crate::widgets::{RaisePanel, spawn_moveable_panel};
+use crate::dom::{Dom, document, top_strip};
 
 impl OpenGrids {
-    /// Opens this grid's panel, or brings it to the front if it is open.
+    /// Opens this grid's panel, or brings it to the front if it is open. The
+    /// panel is its document's (`inventory/panel`, `bag#<id>/panel`).
     pub(in crate::inventory) fn open(
         &mut self,
         holder: Holder,
         carried: &Inventory,
         commands: &mut Commands,
-        raise: &mut MessageWriter<RaisePanel>,
+        dom: &mut Dom,
     ) {
-        if let Some(&(_, panel, _)) = self.open.iter().find(|(open, ..)| *open == holder) {
-            raise.write(RaisePanel(panel));
+        let panel = grid_id(Some(holder), "panel").to_string();
+        if self.open.iter().any(|(open, ..)| *open == holder) {
+            dom.raise(&panel);
             return;
         }
-        let Some((width, height)) = shown_size(carried, holder) else {
+        let Some(size) = shown_size(carried, holder) else {
             return;
-        };
-        let grows = grows(carried, holder);
-        let title = match holder {
-            Holder::Inventory => "Character",
-            Holder::Inside(id) => carried.find(id).map_or("", |item| item.kind.def().name),
         };
         let at = FIRST_AT + NEXT_AT * (self.opened % 8) as f32;
         self.opened += 1;
-        let (panel, content) = spawn_moveable_panel(commands, title, at);
-        let id = super::super::ui_ids::grid_id(Some(holder), "panel");
-        commands.entity(panel).insert(id);
-        match holder {
+        let document = match holder {
             // Tabs for what they are like, what they wear and carry, and what
-            // they can do (whoever opens it shows the page: `Page::show`).
-            Holder::Inventory => spawn_pages(commands, content),
-            Holder::Inside(_) => {
-                let mut content = commands.entity(content);
-                content.with_children(|content| spawn_grid(content, holder, grows));
+            // they can do, on the page last shown.
+            Holder::Inventory => {
+                self.page.show(dom);
+                // (On a strip: its own node takes no room over the view.)
+                let mut character = commands.spawn(document(&CHARACTER));
+                character.insert(top_strip()).id()
             }
-        }
-        self.open.push((holder, panel, (width, height)));
+            Holder::Inside(bag) => {
+                let name = carried.find(bag).map_or("", |item| item.kind.def().name);
+                dom.set(&panel, "title", name);
+                spawn_bag(commands, bag, grows(carried, holder))
+            }
+        };
+        // (Made at the end of the frame, once the panel is built.)
+        dom.start_at(&panel, at);
+        self.open.push((holder, document, size));
     }
 
     /// Whether the inventory's panel is open.
@@ -58,7 +61,7 @@ impl OpenGrids {
         &mut self,
         carried: &Inventory,
         commands: &mut Commands,
-        raise: &mut MessageWriter<RaisePanel>,
+        dom: &mut Dom,
     ) {
         let open = self
             .open
@@ -66,10 +69,11 @@ impl OpenGrids {
             .position(|(open, ..)| *open == Holder::Inventory);
         match open {
             Some(index) => {
-                let (_, panel, _) = self.open.remove(index);
-                commands.entity(panel).despawn();
+                // Its panel goes with its document.
+                let (_, document, _) = self.open.remove(index);
+                commands.entity(document).despawn();
             }
-            None => self.open(Holder::Inventory, carried, commands, raise),
+            None => self.open(Holder::Inventory, carried, commands, dom),
         }
     }
 }
