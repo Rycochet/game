@@ -5,6 +5,8 @@ use bevy::mesh::{MeshVertexAttribute, VertexFormat};
 use bevy::prelude::*;
 use shared::body::{Layout, MAX_BONES};
 
+use super::super::body::neck_root;
+
 /// On every vertex of a creature model's parts: the `BodyPart` it moves with.
 pub const ATTRIBUTE_BODY_PART: MeshVertexAttribute =
     MeshVertexAttribute::new("Vertex_BodyPart", 0x484f_5701, VertexFormat::Uint32);
@@ -62,7 +64,8 @@ impl Bones {
 /// One body's bones, numbered from `first`.
 fn add(bones: &mut Vec<(u32, Vec3, Vec3)>, layout: &Layout, first: u32) {
     let spine = &layout.spine;
-    let neck_base = point(spine.at(spine.neck_base));
+    // Where the neck is drawn from, which a measured beast's trunk climbs to.
+    let neck_base = neck_root(layout);
     bones.push((first + BodyPart::TRUNK, point(spine.at(0)), neck_base));
     if layout.head.length > 0 {
         let chin = point(layout.chin());

@@ -5,6 +5,7 @@
 //! on the forms themselves. Blend layouts at their real sizes (`Layout::at_size`).
 
 use super::layout::{Head, Layout, Neck, Spine, Station, Upper};
+use super::rings::Ring;
 
 mod frame;
 mod limbs;
@@ -71,6 +72,15 @@ fn mix_spine(a: &Spine, b: &Spine, t: i32) -> Spine {
         chest: station(a.chest, b.chest),
         shoulders: mix(a.shoulders, b.shoulders, t),
         neck_base: mix(a.neck_base, b.neck_base, t),
+        rings: std::array::from_fn(|at| {
+            let (a, b) = (a.rings[at], b.rings[at]);
+            Ring {
+                along: mix(a.along, b.along, t),
+                half: mix(a.half, b.half, t),
+                belly: mix(a.belly, b.belly, t),
+                back: mix(a.back, b.back, t),
+            }
+        }),
     }
 }
 

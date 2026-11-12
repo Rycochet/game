@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Wings};
 
-use super::trunk::Axes;
+use super::trunk::{self, Axes};
 use super::{Triangle, blob, limb, point};
 
 /// An abdomen and a tail, if it has them.
@@ -176,12 +176,18 @@ pub(super) fn tail_path(layout: &Layout, length: f32) -> [(Vec3, f32); 4] {
     let level = layout.spine.pitch >= 45;
     // From the end of an abdomen, if it has one.
     let behind = f(layout.parts.abdomen) * 0.95;
-    let base = Axes::of(layout).at(-behind) - Vec3::Z * deep * 0.8
-        + if level {
-            Vec3::Y * deep * 0.5
-        } else {
-            Vec3::ZERO
-        };
+    let axes = Axes::of(layout);
+    let base = if level && layout.parts.abdomen == 0 {
+        // At the rump's tip, where the trunk's outline begins.
+        trunk::middle_of(&axes, &layout.spine.rings[0])
+    } else {
+        axes.at(-behind) - Vec3::Z * deep * 0.8
+            + if level {
+                Vec3::Y * deep * 0.5
+            } else {
+                Vec3::ZERO
+            }
+    };
     // Down is negative for a sting curling up over the back, ending forwards.
     let shape = if layout.parts.sting {
         [(-0.3, 0.25), (-0.7, 0.2), (-0.8, -0.1)]

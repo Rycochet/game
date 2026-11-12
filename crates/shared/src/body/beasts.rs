@@ -4,6 +4,7 @@
 //! usual size, in millimetres: it fills its picture whatever its size.
 
 use super::Layout;
+use super::measured::{COW, DOG, HORSE, Measured};
 use super::parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 use crate::creature::CreatureKind;
 
@@ -18,12 +19,18 @@ pub struct Fourfoot {
     pub body: i32,
     /// The chest's half width and half depth.
     pub barrel: (i32, i32),
-    /// The upper legs' thickness, as a radius.
-    pub leg: i32,
+    /// The forelegs' and hind legs' thickness as radii, where each hangs from and at
+    /// each joint down to the last above the ground, measured with the trunk.
+    pub fore: [i32; 4],
+    pub hind: [i32; 4],
+    /// How long a foot is along the ground.
+    pub foot: i32,
     /// The neck's length, its lean forwards from upright in degrees, and its radius.
     pub neck: (i32, i32, i32),
     /// The head's length from chin to crown, and its half width and depth.
     pub head: (i32, (i32, i32)),
+    /// The trunk's shape, as measured, scaled to this size.
+    pub measured: &'static Measured,
 }
 
 /// A bird on two legs, its back leaning forwards.
@@ -65,9 +72,12 @@ pub const BEASTS: [Beast; 4] = [
             withers: 1580,
             body: 1100,
             barrel: (270, 340),
-            leg: 125,
+            fore: [100, 79, 50, 45],
+            hind: [145, 125, 70, 50],
+            foot: 100,
             neck: (800, 50, 125),
             head: (380, (140, 180)),
+            measured: &HORSE,
         }),
         parts: Parts {
             snout: Snout::Muzzle,
@@ -86,9 +96,12 @@ pub const BEASTS: [Beast; 4] = [
             withers: 740,
             body: 720,
             barrel: (110, 160),
-            leg: 55,
+            fore: [55, 42, 28, 30],
+            hind: [70, 51, 38, 36],
+            foot: 110,
             neck: (260, 60, 65),
             head: (170, (75, 85)),
+            measured: &DOG,
         }),
         parts: Parts {
             snout: Snout::Long,
@@ -105,9 +118,12 @@ pub const BEASTS: [Beast; 4] = [
             withers: 1350,
             body: 1250,
             barrel: (320, 380),
-            leg: 130,
+            fore: [105, 78, 46, 42],
+            hind: [130, 103, 58, 51],
+            foot: 104,
             neck: (480, 70, 160),
             head: (360, (150, 170)),
+            measured: &COW,
         }),
         parts: Parts {
             snout: Snout::Muzzle,

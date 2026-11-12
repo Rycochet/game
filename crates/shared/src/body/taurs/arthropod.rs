@@ -5,6 +5,7 @@
 use super::super::layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,
 };
+use super::super::rings::{RINGS, Ring, from_stations};
 use super::super::{Parts, Side};
 
 /// The measurements of an eight-legged lower body, in millimetres.
@@ -73,7 +74,7 @@ impl Arthropod {
             along,
             half: (share(across, hundredths), share(deep, hundredths)),
         };
-        Layout {
+        let mut layout = Layout {
             spine: Spine {
                 base: [0, self.height, -self.front / 2],
                 pitch: 90,
@@ -82,6 +83,7 @@ impl Arthropod {
                 chest: station(share(self.front, 55), 100),
                 shoulders: share(self.front, 80),
                 neck_base: self.front,
+                rings: [Ring::default(); RINGS],
             },
             neck: Neck {
                 length: 0,
@@ -95,6 +97,8 @@ impl Arthropod {
             limbs,
             parts,
             upper: None,
-        }
+        };
+        layout.spine.rings = from_stations(&layout);
+        layout
     }
 }

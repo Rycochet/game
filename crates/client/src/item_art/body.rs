@@ -29,7 +29,7 @@ pub(super) use hair::{Cover, hair};
 #[cfg(test)]
 pub(super) use morph::placed as morph_placed;
 pub(super) use morph::{morph_parts, pieces as bare_pieces};
-pub(super) use trunk::{trunk_depth, trunk_half};
+pub(super) use trunk::{neck_root, trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions
 /// matter. An animal's is square, as its token is.
@@ -165,7 +165,7 @@ fn limbs(triangles: &mut Vec<Triangle>, layout: &Layout) {
 fn neck_and_head(triangles: &mut Vec<Triangle>, layout: &Layout) {
     // The neck, a little into the trunk and the head.
     let axes = trunk::Axes::of(layout);
-    let neck_base = axes.at(layout.spine.neck_base as f32);
+    let neck_base = trunk::neck_root(layout);
     let chin = point(layout.chin());
     let up_neck = (chin - neck_base).normalize_or(Vec3::Y);
     let neck = layout.neck.radius as f32;
