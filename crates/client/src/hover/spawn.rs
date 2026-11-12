@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::dom::{Template, document};
+use crate::dom::{Template, bottom_strip, document};
 use crate::html;
 
 /// How far above the bottom of the window the box sits, or above whatever the
@@ -14,12 +14,11 @@ pub(super) const LOWEST: f32 = 32.0;
 
 /// The box: a tooltip's dark box in the middle of a row across the window,
 /// with the staff mark (`common::StaffMark`: a gold laurel crown) before the
-/// name of a marked player. The pointer is never on it (`inert`). The form
-/// fills the window, as the row is placed from its bottom.
+/// name of a marked player. The pointer is never on it (`inert`).
 pub(super) static HOVER: Template = html!(
     "hover",
     r#"
-<form id="hover" fills>
+<form id="hover">
   <div id="row" bottom="32" left="0" right="0" align="center" inert hidden>
     <span id="box" class="tip" valign="middle">
       <img id="mark" class="gold" src="icon:lorc/laurel-crown" width="20" height="20" hidden/>
@@ -31,15 +30,10 @@ pub(super) static HOVER: Template = html!(
 );
 
 pub(super) fn spawn_box(mut commands: Commands) {
-    // Over the whole window, stacked, for the row to be placed in.
-    let fills = Node {
-        position_type: PositionType::Absolute,
-        width: percent(100),
-        height: percent(100),
-        flex_direction: FlexDirection::Column,
-        ..default()
-    };
-    // Above the maps.
+    // Along the bottom of the window, for the row to be placed from. Above
+    // the maps.
     let over = GlobalZIndex(10);
-    commands.spawn((document(&HOVER), over)).insert(fills);
+    commands
+        .spawn((document(&HOVER), over))
+        .insert(bottom_strip());
 }
