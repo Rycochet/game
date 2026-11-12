@@ -8,7 +8,9 @@ use bevy::input::touch::Touches;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::common::{PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface};
+use crate::common::{
+    PointerOverride, PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface,
+};
 
 /// A finger moving further than this (logical pixels) from where it landed is
 /// dragging, so lifting it is no longer a tap.
@@ -31,6 +33,10 @@ impl Plugin for TouchPlugin {
         app.add_systems(
             PreUpdate,
             read_touches.in_set(PointerSystems).after(InputSystems),
+        )
+        .configure_sets(
+            PreUpdate,
+            PointerOverride.in_set(PointerSystems).after(read_touches),
         );
     }
 }

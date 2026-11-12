@@ -5,7 +5,7 @@ use bevy::window::PrimaryWindow;
 use serde::Deserialize;
 use server::debug_api::{BrpResult, Value, params, refused};
 
-use super::super::{Forced, turn_camera};
+use super::super::{FakeCursor, turn_camera};
 use super::done;
 use crate::common::{DisplayInUse, DisplayMode, InterfaceSize, Preferences, RememberWindow};
 use crate::view3d::OrbitCamera;
@@ -99,10 +99,12 @@ pub(super) struct CursorParams {
     y: Option<f32>,
 }
 
-/// `client.cursor { "x": 400, "y": 300 }`: holds the mouse cursor there, in
-/// logical pixels, until `client.cursor {}` lets it go (`HOW_DEBUG_CURSOR`).
-pub(super) fn cursor(In(request): In<Option<Value>>, mut forced: ResMut<Forced>) -> BrpResult {
+/// `client.cursor { "x": 400, "y": 300 }`: the game points there in place of
+/// the mouse, in logical pixels, until `client.cursor {}` lets it go
+/// (`HOW_DEBUG_CURSOR`). The real pointer doesn't move.
+pub(super) fn cursor(In(request): In<Option<Value>>, mut cursor: ResMut<FakeCursor>) -> BrpResult {
     let CursorParams { x, y } = params(request)?;
-    forced.cursor = x.zip(y).map(|(x, y)| Vec2::new(x, y));
+    cursor.let_go();
+    cursor.at = x.zip(y).map(|(x, y)| Vec2::new(x, y));
     done()
 }

@@ -9,16 +9,21 @@ use server::debug_api::{BrpResult, Value, params};
 use super::{FakeInput, Step, queued};
 
 #[derive(Deserialize)]
-pub(super) struct At {
-    x: f32,
-    y: f32,
+pub(super) struct MoveParams {
+    x: Option<f32>,
+    y: Option<f32>,
 }
 
-/// `client.move { "x": 400, "y": 300 }`: the mouse cursor goes there
-/// (logical pixels), for what hovering shows.
+/// `client.move { "x": 400, "y": 300 }`: the game's pointer goes there
+/// (logical pixels), for what hovering shows; the real one doesn't move.
+/// `client.move {}` gives the pointer back to the real mouse, as a minute
+/// with no fake input does.
 pub(super) fn move_to(In(request): In<Option<Value>>, mut fake: ResMut<FakeInput>) -> BrpResult {
-    let At { x, y } = params(request)?;
-    queued(&mut fake, [Step::MoveTo(Vec2::new(x, y))])
+    let MoveParams { x, y } = params(request)?;
+    let step = x
+        .zip(y)
+        .map_or(Step::LetGo, |(x, y)| Step::MoveTo(Vec2::new(x, y)));
+    queued(&mut fake, [step])
 }
 
 #[derive(Deserialize)]

@@ -62,8 +62,8 @@
 //!   things that are magical, blessed and cursed, to look at how they glow.
 //! - `HOW_DEBUG_BAGS=true`: two seconds after starting, show a bag of every look in
 //!   a row east from the player, only to look at (in a site).
-//! - `HOW_DEBUG_CURSOR=x,y`: hold the mouse cursor here (logical pixels), to look
-//!   at what hovering shows.
+//! - `HOW_DEBUG_CURSOR=x,y`: the game points here (logical pixels) in place of
+//!   the mouse, to look at what hovering shows; the real pointer doesn't move.
 //! - `HOW_DEBUG_SCREENSHOT=path.png`: save a screenshot after `HOW_DEBUG_SCREENSHOT_DELAY`
 //!   seconds (default 5), then quit. Lets tools check visuals without a person.
 //! - `HOW_DEBUG_SKIP_MENU=true`: straight past the startup menu into the game, as
@@ -87,6 +87,7 @@ use crate::common::GameView;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod dev_area;
+mod fake_cursor;
 mod forced;
 mod inventory;
 mod keep_drawing;
@@ -101,6 +102,8 @@ mod view;
 mod window;
 mod world;
 
+#[cfg(feature = "debug-api")]
+use fake_cursor::FakeCursor;
 use forced::{Forced, apply_forced};
 #[cfg(feature = "debug-api")]
 use menus::open_map;
@@ -140,6 +143,7 @@ impl Plugin for DevToolsPlugin {
         start::add(app);
         dev_area::add(app);
         forced::read(app);
+        fake_cursor::add(app);
         menus::add(app);
         inventory::add(app);
         moving::add(app);

@@ -1,30 +1,21 @@
-//! What dev tools keep as they are while set: stairs' style, fields' stage, the cursor.
+//! What dev tools keep as they are while set: stairs' style, fields' stage.
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use shared::site::StairsStyle;
 use std::env;
 
-use super::parse_pos;
 use crate::common::CurrentDungeon;
 
 /// What dev tools keep as they are while set, however the game changes them:
 /// every stairs' style, every field's stage (`HOW_DEBUG_STAIRS`,
-/// `HOW_DEBUG_FIELDS`), and where the mouse cursor is (`HOW_DEBUG_CURSOR`).
-/// The debug API sets them too.
+/// `HOW_DEBUG_FIELDS`). The debug API sets them too.
 #[derive(Resource, Default)]
 pub(super) struct Forced {
     pub(super) stairs: Option<StairsStyle>,
     pub(super) fields: Option<u32>,
-    /// In logical pixels.
-    pub(super) cursor: Option<Vec2>,
 }
 
-pub(super) fn apply_forced(
-    forced: Res<Forced>,
-    mut dungeon: ResMut<CurrentDungeon>,
-    mut window: Single<&mut Window, With<PrimaryWindow>>,
-) {
+pub(super) fn apply_forced(forced: Res<Forced>, mut dungeon: ResMut<CurrentDungeon>) {
     if let Some(style) = forced.stairs
         && dungeon.stairs.iter().any(|stairs| stairs.style != style)
     {
@@ -39,14 +30,9 @@ pub(super) fn apply_forced(
             field.variety = variety;
         }
     }
-    if let Some(at) = forced.cursor
-        && window.cursor_position() != Some(at)
-    {
-        window.set_cursor_position(Some(at));
-    }
 }
 
-/// `HOW_DEBUG_STAIRS`, `HOW_DEBUG_FIELDS` and `HOW_DEBUG_CURSOR`.
+/// `HOW_DEBUG_STAIRS` and `HOW_DEBUG_FIELDS`.
 pub(super) fn read(app: &mut App) {
     let mut forced = app.world_mut().resource_mut::<Forced>();
     forced.stairs = env::var("HOW_DEBUG_STAIRS")
@@ -56,8 +42,4 @@ pub(super) fn read(app: &mut App) {
     forced.fields = env::var("HOW_DEBUG_FIELDS")
         .ok()
         .and_then(|n| n.trim().parse::<u32>().ok());
-    forced.cursor = env::var("HOW_DEBUG_CURSOR")
-        .ok()
-        .and_then(|pos| parse_pos(&pos))
-        .map(|(x, y)| Vec2::new(x as f32, y as f32));
 }
