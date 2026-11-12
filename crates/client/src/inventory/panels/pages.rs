@@ -9,11 +9,10 @@ use bevy::prelude::*;
 use super::super::body::spawn_rows;
 use super::super::ground::spawn_section;
 use super::super::wear_note::wear_note;
-use super::FONT;
-use crate::common::{AbilitiesPage, SheetText, SkillsPage};
+use crate::common::{AbilitiesPage, SkillsPage};
 use crate::dom::{Dom, Template, UiEvent, UiValue, document_in};
 use crate::html;
-use crate::widgets::{INK, UiId};
+use crate::widgets::UiId;
 
 /// The panel's contents: the tabs, then a page for each. The Inventory page is
 /// the clothes (with why something didn't go on under them), what is carried in
@@ -28,7 +27,7 @@ pub(super) static CHARACTER: Template = html!(
     <option>Abilities</option>
     <option>Skills</option>
   </tab-bar>
-  <canvas id="sheet"/>
+  <p id="sheet" class="medium"/>
   <span id="carried" class="labelled" valign="top">
     <div>
       <canvas id="clothes"/>
@@ -99,8 +98,8 @@ pub(super) fn spawn_pages(commands: &mut Commands, content: Entity) {
     commands.spawn(document_in(&CHARACTER, content));
 }
 
-/// Fills the pages' places once they are built: the sheet's words, the clothes,
-/// the ground's section, and the pages other modules fill. (The carried grid's
+/// Fills the pages' places once they are built: the clothes, the ground's
+/// section, and the pages other modules fill (`character` writes the sheet). (The carried grid's
 /// frame is `frame::bind_frames`'.)
 pub(in crate::inventory) fn bind_pages(
     new: Query<(Entity, &UiId), Added<UiId>>,
@@ -112,10 +111,6 @@ pub(in crate::inventory) fn bind_pages(
         };
         let mut place = commands.entity(entity);
         match name {
-            "sheet" => {
-                let words = (Text::default(), FONT.font(), TextColor(INK));
-                place.with_child((SheetText, words));
-            }
             "clothes" => {
                 spawn_rows(&mut commands, entity);
                 continue;

@@ -9,9 +9,11 @@ use shared::protocol::ServerMessage;
 use shared::sheet::{Row, Sheet};
 use shared::vitals::VitalNow;
 
-use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSpeed, SheetText};
+use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSpeed};
 use crate::connection::FromServer;
+use crate::dom::Dom;
 use crate::inventory::Carried;
+use crate::widgets::UiId;
 
 mod listed;
 mod vitals_lines;
@@ -94,18 +96,28 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
     lines.join("\n")
 }
 
+/// Writes the sheet (`inventory/sheet`, in the Character panel's markup) when
+/// what it says changes, or the panel opens.
 fn show_words(
     sheet: Res<CharacterSheet>,
     carried: Res<Carried>,
     own: Res<OwnVitals>,
-    mut texts: Query<&mut Text, With<SheetText>>,
+    ids: Query<&UiId>,
+    new: Query<&UiId, Added<UiId>>,
+    mut dom: Dom,
+    mut said: Local<String>,
 ) {
+    let id = UiId::new("inventory", "sheet");
     let most = own.0.map(|told| (told.health, told.mana));
-    for mut text in &mut texts {
-        let words = describe(&sheet.0, &carried.0, most);
-        if text.0 != words {
-            text.0 = words;
-        }
+    let words = describe(&sheet.0, &carried.0, most);
+    let opened = new.iter().any(|new| *new == id);
+    if !opened && *said == words {
+        return;
+    }
+    said.clone_from(&words);
+    // (Closed: it is written when it opens.)
+    if ids.iter().any(|built| *built == id) {
+        dom.set_text("inventory/sheet", words);
     }
 }
 

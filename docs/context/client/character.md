@@ -16,7 +16,7 @@ What the character is like: the Character panel's Character tab, which `inventor
 
 ## Depends on
 
-- `common` (`SheetText`, `PlayerSpeed`, `PlayerGait`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
+- `common` (`PlayerSpeed`, `PlayerGait`, `CarryLimit`, `OwnVitals`), `connection` (`FromServer`), `inventory` (`Carried`), `widgets`, `shared::sheet`, `shared::item`, `shared::protocol`.
 
 ## Used by
 
