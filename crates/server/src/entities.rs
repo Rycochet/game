@@ -30,6 +30,9 @@ mod dev_gift;
 mod dev_mob;
 mod doors;
 mod doubling_back;
+mod facing;
+#[cfg(test)]
+mod facing_tests;
 mod fight;
 mod gear;
 mod harmed_by;
@@ -146,6 +149,8 @@ pub(crate) struct Mob {
     pub position: (i64, i64),
     /// Where its body is, in units (240 a cell): the middle of its circle.
     pub spot: shared::spot::Spot,
+    /// The way it faces (`facing.rs`): not saved.
+    pub heading: shared::facing::Heading,
     /// Where it started, and goes back to.
     pub home: (i64, i64),
     pub doing: Doing,

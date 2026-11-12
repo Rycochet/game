@@ -225,6 +225,9 @@ pub(super) fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
     mob.kind = kind;
     mob.put((x + apart, y));
     mob.home = (x + apart, y);
+    // Facing each other: each in the other's cone.
+    mob.heading = shared::facing::Heading::WEST;
+    test.client.heading = shared::facing::Heading::EAST;
     test
 }
 

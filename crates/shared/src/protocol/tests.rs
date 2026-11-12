@@ -145,6 +145,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::Door(super::DoorAsk::Open { x: -2, y: 5 }),
         ClientMessage::Door(super::DoorAsk::CloseNear),
         ClientMessage::Door(super::DoorAsk::DevAll { open: false }),
+        ClientMessage::Face(crate::facing::Heading(40_000)),
         ClientMessage::TakeItem {
             with: Id::for_test(3),
             item: Id::for_test(4),
@@ -494,6 +495,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 name: "Moderator".into(),
                 title: None,
             }),
+            heading: crate::facing::Heading::WEST,
         }),
         ServerMessage::Moves(vec![crate::protocol::Stretch {
             id: Id(uuid::Uuid::from_u128(4)),
@@ -501,6 +503,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             to: (1200, -960),
             ticks: 12,
         }]),
+        ServerMessage::Turned(vec![(
+            Id(uuid::Uuid::from_u128(4)),
+            crate::facing::Heading::NORTH,
+        )]),
         ServerMessage::EntityGone {
             id: Id(uuid::Uuid::from_u128(4)),
             died: true,

@@ -54,14 +54,21 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         let my_hall = client.character.hall.filter(|_| client.visit.is_none());
         let my_kind = client.inventory.creature;
         let detect = client.detect_monsters;
+        // Only what is in the player's cone is told (`shared::facing`).
+        let cone = client.cone();
+        let ahead = |spot: Spot| cone.is_none_or(|cone| cone.sees(spot));
         let mut seen: Vec<Seen> = Vec::new();
         for someone in everyone.iter().chain(in_hall) {
             let in_sight = someone.id != client.entity_id()
                 && someone.level == here
                 && someone.in_hall == my_hall.is_some()
                 && match (&mut client.visit, my_hall) {
-                    (Some(visit), _) => visit.can_see(someone.position.0, someone.position.1),
-                    (None, Some(at)) => hall_gap(at, someone.position) <= HALL_SIGHT,
+                    (Some(visit), _) => {
+                        visit.can_see(someone.position.0, someone.position.1) && ahead(someone.spot)
+                    }
+                    (None, Some(at)) => {
+                        hall_gap(at, someone.position) <= HALL_SIGHT && ahead(someone.spot)
+                    }
                     (None, None) => world_gap(me, someone.position, width) <= WORLD_MAP_SIGHT,
                 };
             if in_sight {
@@ -90,6 +97,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     y,
                     worn: someone.worn.clone(),
                     mark: someone.mark.clone(),
+                    heading: someone.heading,
                 };
                 seen.push((look, someone.speed));
             }
@@ -98,7 +106,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
             && let Some(population) = world.populations.0.get(&level)
         {
             for mob in &population.mobs {
-                if detect || visit.can_see(mob.position.0, mob.position.1) {
+                if detect || (visit.can_see(mob.position.0, mob.position.1) && ahead(mob.spot)) {
                     let (x, y) = (mob.spot.x, mob.spot.y);
                     let look = EntityLook {
                         id: mob.id,
@@ -110,13 +118,15 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                         y,
                         worn: mob.shown.clone(),
                         mark: None,
+                        heading: mob.heading,
                     };
                     seen.push((look, mob.speed()));
                 }
             }
         }
         let on_level = here.is_some() || my_hall.is_some();
-        tell(client, seen, &world.died, on_level);
+        let newly_seen = tell(client, seen, &world.died, on_level);
+        client.practise_seeing(newly_seen, world.action_clock.ticks());
         tell_harmed(client, &world.harmed);
     }
     // Everyone who saw them die, or harmed, has been told.

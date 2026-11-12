@@ -49,7 +49,9 @@ impl Client {
             detect_monsters: false,
             god_mode: false,
             truesight: false,
+            heading: shared::facing::Heading::SOUTH,
             seen_entities: BTreeMap::new(),
+            seen_headings: BTreeMap::new(),
             seen_feelings: BTreeMap::new(),
             seen_worn: BTreeMap::new(),
             seen_marks: BTreeMap::new(),
@@ -108,6 +110,7 @@ impl Client {
         self.waiting.clear();
         // The client forgets them too.
         self.seen_entities.clear();
+        self.seen_headings.clear();
         self.seen_feelings.clear();
         self.seen_worn.clear();
         self.ground_told = GroundTold::default();

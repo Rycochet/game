@@ -32,6 +32,7 @@ mod delete_character;
 mod dev_audit;
 mod dev_skills;
 pub(crate) mod difficulty;
+mod facing;
 mod for_others;
 mod give_items;
 mod heal;
@@ -235,8 +236,12 @@ pub struct Client {
     pub(crate) god_mode: bool,
     /// Dev tools: it is told items' secrets, without them being found out.
     pub(crate) truesight: bool,
+    /// The way the character faces (`facing.rs`): not saved.
+    pub(crate) heading: shared::facing::Heading,
     /// Who the client has been told is in sight, and where.
     pub(crate) seen_entities: BTreeMap<Id, (i64, i64)>,
+    /// The way each was last told facing (`EntityLook::heading`, `Turned`).
+    pub(crate) seen_headings: BTreeMap<Id, shared::facing::Heading>,
     /// How the client has been told they feel.
     pub(crate) seen_feelings: BTreeMap<Id, Feeling>,
     /// What each could be seen wearing when last told, to tell again on a change.

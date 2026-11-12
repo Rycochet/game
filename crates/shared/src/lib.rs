@@ -17,6 +17,7 @@ pub mod difficulty;
 pub mod door;
 pub mod dungeon;
 pub mod energy;
+pub mod facing;
 pub mod footwear;
 pub mod ground;
 pub mod hall;

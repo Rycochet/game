@@ -66,10 +66,17 @@ pub(super) fn memory<'a>(client: &'a mut Client, visit: &Visit) -> &'a mut CellM
 /// Works out what the player sees (remembered from now on) and what they
 /// could see within `LEVEL_PRELOAD_STEPS`, and sends the cells of that the
 /// client doesn't have yet.
-pub(super) fn update_sight(client: &mut Client) -> bool {
+pub(crate) fn update_sight(client: &mut Client) -> bool {
+    let cone = client.cone();
     let Some(mut visit) = client.visit.take() else {
         return true;
     };
+    if let Some(cone) = cone
+        && visit.further != cone.field.further
+    {
+        visit.further = cone.field.further;
+        visit.view_from = None;
+    }
     if visit.is_town() {
         // The client has it all, except any cell that has just changed.
         let mut new = all_cells(&visit.level.level);
@@ -88,9 +95,12 @@ pub(super) fn update_sight(client: &mut Client) -> bool {
     let (x, y) = visit.position();
     let (looked_from, loaded) = (&mut visit.looked_from, &mut visit.loaded);
     let level = &visit.level.level;
-    // What the client draws: glimpses, the more generous sight.
+    // What the client draws: glimpses, the more generous sight, in the cone.
     let mut seen = Sight::new(level);
-    seen.add_glimpses(level, x, y, reach);
+    match &cone {
+        Some(cone) => seen.add_glimpses_in(level, x, y, reach, cone),
+        None => seen.add_glimpses(level, x, y, reach),
+    }
     for (nx, ny) in nearby_cells(level, (x, y), LEVEL_PRELOAD_STEPS) {
         if !looked_from.is_seen(nx, ny) {
             looked_from.insert(nx, ny);

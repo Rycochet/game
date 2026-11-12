@@ -74,6 +74,23 @@ impl CreatureKind {
         }
     }
 
+    /// How wide its eyes see ahead, in degrees: the field of view's cone
+    /// (`facing::Field`), from the research's "wide field of view" for prey.
+    /// About 120° for people; first guesses (owner, 2026-11-12).
+    pub const fn field_of_view(self) -> u16 {
+        use CreatureKind::*;
+        match self {
+            Horse => 350,
+            Cattle => 330,
+            Chicken => 300,
+            Minotaur => 240,
+            Wolf => 240,
+            Birdfolk | Drider | Lizardfolk => 180,
+            Beggar | Centaur | Dwarf | Elf | Giant | Goblin | Halfling | Human | Kobold | Orc
+            | ScorpionMan => 120,
+        }
+    }
+
     /// How well it senses what is round it.
     pub const fn senses(self) -> Senses {
         use Acuity::{Keen, Normal, Poor};

@@ -1,6 +1,7 @@
 //! What can be seen from a cell, and how far light reaches.
 
 use super::{CELL_UNITS, Level, clear_line};
+use crate::facing::Cone;
 
 /// The cells that can be seen (or lit) from one or more points in a level.
 /// A wall is seen when an open cell touching it (corners too) is.
@@ -53,7 +54,14 @@ impl Sight {
     /// when a straight line between the centres misses every wall, so seeing
     /// is symmetric (if A sees B, B sees A): the rule for the game.
     pub fn add_view(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
-        self.add(level, x, y, radius, false);
+        self.add(level, x, y, radius, None, false);
+    }
+
+    /// As `add_view`, but only open cells whose middle is inside `cone` (its
+    /// heading's cone or its near circle): what a creature facing a way sees,
+    /// by the game's rule. Still symmetric along each line; the cone is not.
+    pub fn add_view_in(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>, cone: &Cone) {
+        self.add(level, x, y, radius, Some(cone), false);
     }
 
     /// As `add_view`, but open cells count as seen when a line reaches near
@@ -61,10 +69,30 @@ impl Sight {
     /// corridor. Not symmetric, so only for drawing what a viewer can make
     /// out, never for game rules.
     pub fn add_glimpses(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>) {
-        self.add(level, x, y, radius, true);
+        self.add(level, x, y, radius, None, true);
     }
 
-    fn add(&mut self, level: &Level, x: i64, y: i64, radius: Option<u32>, partly: bool) {
+    /// As `add_glimpses`, inside `cone` only (`add_view_in`), for drawing.
+    pub fn add_glimpses_in(
+        &mut self,
+        level: &Level,
+        x: i64,
+        y: i64,
+        radius: Option<u32>,
+        cone: &Cone,
+    ) {
+        self.add(level, x, y, radius, Some(cone), true);
+    }
+
+    fn add(
+        &mut self,
+        level: &Level,
+        x: i64,
+        y: i64,
+        radius: Option<u32>,
+        cone: Option<&Cone>,
+        partly: bool,
+    ) {
         // Nothing can be seen from inside a wall or outside the level.
         if !level.is_open(x, y) {
             return;
@@ -74,7 +102,8 @@ impl Sight {
             for cx in self.min_x..self.min_x + self.width {
                 let (dx, dy) = (cx - x, cy - y);
                 let in_reach = radius.is_none_or(|r| dx * dx + dy * dy <= i64::from(r).pow(2));
-                if !in_reach || !level.is_open(cx, cy) || self.is_seen(cx, cy) {
+                let ahead = cone.is_none_or(|cone| cone.sees_cell((cx, cy)));
+                if !in_reach || !ahead || !level.is_open(cx, cy) || self.is_seen(cx, cy) {
                     continue;
                 }
                 let centre = (cx * CELL_UNITS, cy * CELL_UNITS);

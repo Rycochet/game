@@ -297,4 +297,8 @@ pub enum ClientMessage {
     WithdrawAbility,
     /// Open or close doors (`DoorAsk`), in turn with the player's steps.
     Door(DoorAsk),
+    /// The player has turned to face this way without moving (Turn Left or
+    /// Right, or facing a point): free and at once. Moving and using an
+    /// ability on someone turn them without it. Not answered.
+    Face(crate::facing::Heading),
 }

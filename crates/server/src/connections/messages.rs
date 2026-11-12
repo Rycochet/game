@@ -105,14 +105,19 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             break;
         };
         let map = client.map;
+        let from = client.standing();
         let (stayed, cost) = match action {
             Action::Step { number, step } => {
                 client.last_step = Some(number);
-                step_taken(client, world, step)
+                let taken = step_taken(client, world, step);
+                client.moved_from(from, map);
+                taken
             }
             Action::Move { number, to } => {
                 client.last_step = Some(number);
-                move_taken(client, world, to)
+                let taken = move_taken(client, world, to);
+                client.moved_from(from, map);
+                taken
             }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
             Action::EnterGate { entrance } => (gates::enter_gate(client, world, entrance), 0),

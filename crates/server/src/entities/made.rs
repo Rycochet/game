@@ -29,6 +29,8 @@ impl Mob {
             appearance: spawn.appearance.clone(),
             position: spawn.position,
             spot: Spot::middle_of(spawn.position),
+            // Each its own way to begin with.
+            heading: shared::facing::Heading(id.0.as_u128() as u16),
             home: spawn.position,
             doing: Doing::Idle,
             target: None,

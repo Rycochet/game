@@ -2,6 +2,7 @@
 //! sight, who went, and everyone's new stretches of movement in one message.
 
 use shared::energy::site_move_cost;
+use shared::facing::Heading;
 use shared::id::Id;
 use shared::mob::EntityLook;
 use shared::movement::step_cost;
@@ -22,7 +23,13 @@ pub(super) type Seen = (EntityLook, u32);
 /// positions in units, otherwise world map points). Everyone who moved is in
 /// one `Moves`. A client that has gone is noticed when its messages are next
 /// read.
-pub(super) fn tell(client: &mut Client, seen: Vec<Seen>, died: &BTreeSet<Id>, on_level: bool) {
+/// Returns how many mobs have just come into sight, for Observation.
+pub(super) fn tell(
+    client: &mut Client,
+    seen: Vec<Seen>,
+    died: &BTreeSet<Id>,
+    on_level: bool,
+) -> usize {
     let now_seen: BTreeSet<Id> = seen.iter().map(|(look, _)| look.id).collect();
     let feelings_changed: BTreeSet<Id> = seen
         .iter()
@@ -50,27 +57,47 @@ pub(super) fn tell(client: &mut Client, seen: Vec<Seen>, died: &BTreeSet<Id>, on
         stays
     });
     let mut moves = Vec::new();
+    let mut turned = Vec::new();
+    let mut newly_seen = 0;
+    let headings = std::mem::take(&mut client.seen_headings);
     for (look, speed) in seen {
         let at = (look.x, look.y);
+        let heading = look.heading;
+        client.seen_headings.insert(look.id, heading);
         let known = client.seen_entities.insert(look.id, at);
         // Told afresh, the token takes the new colour and the new picture.
         let known = known.filter(|_| !feelings_changed.contains(&look.id));
         match known {
             None => {
+                let mob = look.name.is_none();
+                newly_seen += usize::from(mob && !headings.contains_key(&look.id));
                 client.link.send(&ServerMessage::EntitySeen(look));
             }
-            Some(from) if from != at => moves.push(Stretch {
-                id: look.id,
-                from,
-                to: at,
-                ticks: ticks_for(from, at, speed, on_level),
-            }),
-            Some(_) => {}
+            Some(from) => {
+                // A stretch turns them the way it goes; any other turn is told.
+                let along = Heading::of(at.0 - from.0, at.1 - from.1);
+                if from != at {
+                    moves.push(Stretch {
+                        id: look.id,
+                        from,
+                        to: at,
+                        ticks: ticks_for(from, at, speed, on_level),
+                    });
+                }
+                let told = headings.get(&look.id).copied();
+                if told != Some(heading) && along != Some(heading) {
+                    turned.push((look.id, heading));
+                }
+            }
         }
     }
     if !moves.is_empty() {
         client.link.send(&ServerMessage::Moves(moves));
     }
+    if !turned.is_empty() {
+        client.link.send(&ServerMessage::Turned(turned));
+    }
+    newly_seen
 }
 
 /// How many ticks going from `from` to `to` takes someone of `speed`, walking
