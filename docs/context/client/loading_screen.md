@@ -15,7 +15,7 @@ The screen covering everything from the first frame until the game can take inpu
 
 ## Depends on
 
-- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`, `Session`, `MakingCharacter`, `CharacterSelect`), `dom` (`Template`, `Dom`, `document`, `DrawObjects` for ordering), `widgets` (`WidgetSystems`, for ordering; `layer_z`, `UiId`).
+- `common` (`LoadingStep`, `ServerStatus`, `GameView`, `TouchGesture`, `PointerSystems`, `frame_settings`, `KeepDrawing`, `Session`, `MakingCharacter`, `CharacterSelect`), `dom` (`Template`, `Dom`, `document`, `DrawObjects` for ordering), `dom` (`DomInput`, for ordering), `widgets` (`layer_z`, `UiId`).
 
 ## Used by
 

@@ -1,54 +1,54 @@
 # UI design
 
-The palette to plan screens from: what each piece is, how it should look and behave here, and whether we have it. It began as the owner's guide built on Material UI's components (2 November 2026), so it uses their names; the game keeps its own parchment look. Update it as needs change. How the code does it: `client/widgets.md`.
+The palette to plan screens from: what each piece is, how it should look and behave here, and whether we have it. It began as the owner's guide built on Material UI's components (2 November 2026), so it uses their names; the game keeps its own parchment look. Update it as needs change. Every piece is written as markup, its element named below (`client/dom.md`); the widgets drawing them are in `client/widgets.md`.
 
-Status: **have**, **PR** (planned in the widget cleanup, PR 2, 3 or 4), **later** (build when a screen needs it), **no** (no use in this game so far).
+Status: **have**, **later** (build when a screen needs it), **no** (no use in this game so far).
 
 ## Shared rules
 
-- **Colours:** named, in `widgets/theme.rs`. Parchment and ink, with raised, selected and disabled colours, green for allowed and red for refused. One look: no light and dark modes.
+- **Colours:** named, in `widgets/theme.rs`, and given to elements by `dom`'s theme table (`dom/theme.rs`) by element and `class`. Parchment and ink, with raised, selected and disabled colours, green for allowed and red for refused. One look: no light and dark modes.
 - **Text:** Lexend, in four named sizes (`TextSize`): small 13, medium 16, large 18, title 24. Words as written, not uppercase.
 - **Size:** everything is drawn at the player's interface size (Settings, Interface): Auto keeps its share of the window, with 100% in a 1920 × 1080 window; or 50% to 300%. "Enable Touch" keeps it at least 100%. The minimap and full map keep their share of the window instead. Design at 100%; check 50% and 200%.
 - **Spacing:** gaps and padding are multiples of 4 px. Edges are exempt.
 - **Shape:** square corners for now.
 - **Raised things:** lit along the top and left, shaded along the bottom and right. Panels, tooltips and open lists also have one soft shadow.
 - **Feedback:** every clickable thing has hovered and pressed looks, and a ripple from the point pressed. The hover look doubles as the focus look later.
-- **Ids:** every input widget has a `UiId` (`form/name`), unique among those on show, so the debug API can find it; give new ones their ids as they are made.
+- **Ids:** every control in markup has an `id` in a form (`form/name`), unique among those on show, so code and the debug API find it by that alone.
 - **Input:** whatever a mouse can do, a finger can do. Gamepad later. Tab focus and screen readers are not planned for now.
 
 ## Inputs
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Button | have | Normal, selected, active, disabled. A main style (one per area), a quiet one with no box until hovered, and a red danger one for what can't be undone (Delete), always asked about in a requester. No spinner. |
-| Hold button | have | A button pressed only while held by the mouse or a finger, let go when the pointer slides off or lets go (the movement pad). |
-| Icon button | have | Square, with padding and an optional tooltip naming it. |
-| Small icon button | have | 22 px, for controls on the edge of something, such as the sort and filter buttons above a grid. An icon dropdown is one, opening a list of options with their pictures, some greyed. |
-| Close button | have | A normal raised button, with a letter X. |
-| Checkbox | have | A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
-| Toggle row | have | Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
-| Colour picker | have | Square swatches edge to edge in a box like an active button, wrapping like words; one line as tall as a dropdown. A swatch is a colour or a picture (patterns, gradients). The chosen one has a flat border with a white one inside; each names itself in a tooltip, and the label above says what is chosen. For looks: hair, skin, coat, feathers. |
-| Slider | have | Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
-| Text box | have | Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. A thin caret anywhere in the writing, solid while typing and fading gently twice a second when idle; selection by keys, mouse or finger (double click a word, triple click all), kept paler without the keyboard; cut, copy and paste by keys; long writing slides. No right-click menu for now (owner, 2026-11-06: maybe after feedback). A box may take items: one dropped on it is written in at the caret, shown as its picture in its quality's frame, named on hovering, and one place for editing. |
-| Text with items | have | Writing to read with items in it, shown as in a box that takes them (`ItemText`). |
-| Dropdown | have | One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
-| Key box | have | A text box's look, showing a key binding ("Shift + G") or nothing, centred. A click or tap makes it wait ("Press key", or the modifiers held so far, "Shift + …") for the next key, with any modifiers held, or a modifier pressed and let go alone; Esc or a click elsewhere cancels, Backspace empties it. Disabled grey; an error edge when its binding was taken by another. Settings, Controls. A gamepad's box would wait for a button ("Press button"). |
-| Switch | have | A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
+| Button | have | `button`. Normal, selected, active, disabled. A main style (one per area), a quiet one with no box until hovered, and a red danger one for what can't be undone (Delete), always asked about in a requester. No spinner. |
+| Hold button | have | `button hold`. A button pressed only while held by the mouse or a finger, let go when the pointer slides off or lets go (the movement pad). |
+| Icon button | have | `button` holding an `img`. Square, with padding and an optional tooltip naming it. |
+| Small icon button | have | `button class="small"`. 22 px, for controls on the edge of something, such as the sort and filter buttons above a grid. An icon dropdown (`select class="small"`) is one, opening a list of options with their pictures, some greyed. |
+| Close button | have | A moving panel's, or a `dialog closable`'s. A normal raised button, with a letter X. |
+| Checkbox | have | `input type="checkbox"`, its words in a `label`. A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
+| Toggle row | have | `toggle-row` of `option`s. Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
+| Colour picker | have | `colour-picker` of `option`s. Square swatches edge to edge in a box like an active button, wrapping like words; one line as tall as a dropdown. A swatch is a colour or a picture (patterns, gradients). The chosen one has a flat border with a white one inside; each names itself in a tooltip, and the label above says what is chosen. For looks: hair, skin, coat, feathers. |
+| Slider | have | `input type="range"`. Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
+| Text box | have | `input type="text"`. Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. A thin caret anywhere in the writing, solid while typing and fading gently twice a second when idle; selection by keys, mouse or finger (double click a word, triple click all), kept paler without the keyboard; cut, copy and paste by keys; long writing slides. No right-click menu for now (owner, 2026-11-06: maybe after feedback). A box may take items: one dropped on it is written in at the caret, shown as its picture in its quality's frame, named on hovering, and one place for editing. |
+| Text with items | have | Any writing in markup with `${item:<uuid>}` in it, shown as in a box that takes them. |
+| Dropdown | have | `select` of `option`s. One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
+| Key box | have | `key-box`. A text box's look, showing a key binding ("Shift + G") or nothing, centred. A click or tap makes it wait ("Press key", or the modifiers held so far, "Shift + …") for the next key, with any modifiers held, or a modifier pressed and let go alone; Esc or a click elsewhere cancels, Backspace empties it. Disabled grey; an error edge when its binding was taken by another. Settings, Controls. A gamepad's box would wait for a button ("Press button"). |
+| Switch | have | `input type="checkbox" switch`. A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
 
 ## Showing things
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Text | have | `TextSize`. |
-| Tooltip | have | One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. Never the only way to learn something: fingers have no hover. |
-| Icon | have | Pictures, or drawn in code. |
-| Scroll area | have | Wheel, finger or bar. The bar shows only with more than fits, unless the area asks for it always, or the player turns on Always Show Scroll Bars (Settings, Interface: for accessibility, and for seeing what can scroll). |
+| Text | have | `p`, `h1`, `h2`, `small`, `label`: each a `TextSize`. |
+| Tooltip | have | `title` on any element. One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. Never the only way to learn something: fingers have no hover. |
+| Icon | have | `img`: `icon:<name>`, `picture:<name>` (drawn in code) or an asset. |
+| Scroll area | have | `scroll`. Wheel, finger or bar. The bar shows only with more than fits, unless the area asks for it always, or the player turns on Always Show Scroll Bars (Settings, Interface: for accessibility, and for seeing what can scroll). |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
 | Triangle chooser | have | Only in making a character (`character_create`): three triangles turning round a middle on a ring in a button's colour, with curved two-headed arrows in the gaps, always the same way up, a dot in each, each with a radar chart behind it (the kind's bonus as a gold inner layer, round-ended). Drawn into a picture; dots dragged, the whole turned by dragging beside them; keys 1–3, arrows, Q/E. |
 | Tree diagram | have | Only on the Skills page (`skills_page`): round nodes on rings round a middle, joined by thin lines, names under them; dragged to move and zoomed about the pointer or fingers (spreading apart, words staying sharp), deeper names hiding when far out; pointing at or choosing a node outlines it in orange, with details in a line under it; each node has a ring round the inside of its edge for how good the skill is, coloured by item quality in fifths. |
 | Badge | have | A stack's count: white with a black outline, bottom centre inside the item's frame. |
-| Table, Chip, Avatar, Divider | later | |
+| Table | have | `table` (`class="striped"` tints every other row): Settings, Controls. |
 
 ## Feedback
 
@@ -56,21 +56,21 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Dialog | have | `spawn_dialog` over full-screen layers: title, content, buttons. The quit question uses it. |
+| Dialog | have | `dialog`, its buttons in a `footer`: title, content, buttons. The quit question uses it. `modal` makes it a full-screen layer. |
 | Darkening | have | What is outside a layer; each layer's adds up. |
-| Progress bar | have | From the loading screen. A progress widget for actions that take a while (changing clothes under other things, later others) is to be designed (owner, 2026-11-09); for now `entities` shows the gold wind-up bar under the player's token. |
-| Snackbar | have | `notices`: a parchment strip at the top middle, under the status text, for a few seconds, taking no clicks ("Found: Fort"). |
+| Progress bar | have | `progress` with a `value`. From the loading screen. A progress widget for actions that take a while (changing clothes under other things, later others) is to be designed (owner, 2026-11-09); for now `entities` shows the gold wind-up bar under the player's token. |
+| Snackbar | have | `notices` (markup over the view): a parchment strip at the top middle, under the status text, for a few seconds, taking no clicks ("Found: Fort"). |
 | Alert | later | Likely soon: "Saved", "Connection lost". |
-| Spinner | have | A ring with a gap, turning on the real clock, for something under way that can't say how far it has got (Connect checking an address). Small, beside or in what it is about. |
+| Spinner | have | `progress` with no `value`. A ring with a gap, turning on the real clock, for something under way that can't say how far it has got (Connect checking an address). Small, beside or in what it is about. |
 | Skeleton | no | |
 
 ## Surfaces and moving about
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Panel | have | One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. A **grip panel** has no title or close button, only a narrow grip of thinner stripes along its top (the movement pad). |
-| Full-screen layer | have | 90% of the window, 75% for one above it. |
-| Tabs | have | Folder-style, for switching between views of one thing (Settings, the Character panel). |
+| Panel | have | `panel`, `panel moveable`, `panel grip`. One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. A **grip panel** has no title or close button, only a narrow grip of thinner stripes along its top (the movement pad). |
+| Full-screen layer | have | `dialog modal`: 90% of the window, 75% for one above it (`depth`). |
+| Tabs | have | `tab-bar` of `option`s. Folder-style, for switching between views of one thing (Settings, the Character panel). |
 | Menu | later | Right-click item menu: use, split, drop. |
 | Card, Accordion, AppBar, Drawer, Breadcrumbs, Pagination, Stepper, BottomNavigation, Link, ImageList | no | |
 
@@ -78,10 +78,10 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 
 | Piece | Status | Here |
 | --- | --- | --- |
-| Item | have | Any contiguous shape of cells, shown with a picture or colour, with an edge showing quality. Held at true size and solid, for now: the green and red cells already show where it goes. |
-| Ability | have | An ability's white icon, outlined in black, in a frame 1.5 cells across, named on hovering (`widgets::spawn_ability`), over the colour of the attributes it leans on (`widgets::attribute_colour`: Body red, Mind blue, Spirit green, blended; dark when active, pastel when passive): square if active, round if passive, greyed when it can't be used now. On the action bar (`abilities`), each in a slot with its key's short name over the bottom right in outlined words, and a sliding metal edge (as set items have) when used by itself; inside that, yellow and black hazard stripes chasing round while it waits its turn in the queue (`widgets::queued_stripe`). |
-| Item slot | have | Any size of item shrunk to fit. Hint icons come with type limits: leave room for them. |
-| Container | have | A grid in a panel (`widgets::spawn_container`). Fixed width; fixed height, or growing and scrolling for what has no limit, such as a shop or the ground. Its weight under it when it is carried or carriable (`12.34kg / 45.00kg`), never for stock. Controls (sort, filter) at its top right, slots (Drop, bin) at its bottom right. |
+| Item | have | `object type="item"`. Any contiguous shape of cells, shown with a picture or colour, with an edge showing quality. Held at true size and solid, for now: the green and red cells already show where it goes. |
+| Ability | have | An ability's white icon, outlined in black, in a frame 1.5 cells across, named on hovering (`object type="ability"`), over the colour of the attributes it leans on (`widgets::attribute_colour`: Body red, Mind blue, Spirit green, blended; dark when active, pastel when passive): square if active, round if passive, greyed when it can't be used now. On the action bar (`abilities`), each in a slot with its key's short name over the bottom right in outlined words, and a sliding metal edge (as set items have) when used by itself; inside that, yellow and black hazard stripes chasing round while it waits its turn in the queue (`widgets::queued_stripe`). |
+| Item slot | have | `object-slot`. Any size of item shrunk to fit. Hint icons come with type limits: leave room for them. |
+| Container | have | `container` round an `object-grid`. Fixed width; fixed height, or growing and scrolling for what has no limit, such as a shop or the ground. Its weight under it when it is carried or carriable (`12.34kg / 45.00kg`), never for stock. Controls (sort, filter) at its top right, slots (Drop, bin) at its bottom right. |
 | Stack | have | Items that look the same in one place, with a count; dropping on one joins it. Limits are the server's. Split by shift+click or a tap: a dark box with the name, a slider and the stack to pick up. A mixed stack has a red "!" in its corner, and any press opens the box with a row for each kind and one for all. |
 
 Rules:

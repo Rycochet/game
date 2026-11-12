@@ -18,7 +18,7 @@ Targeting creatures: a right click on one (or a finger held on it), Tab and Shif
 
 ## Depends on
 
-- `common` (`Target`, `Other`, `MapPosition`, `PointerPosition`, `TouchGesture`, `HoveredBag`, `HoveredOnMap`, `HoveredInSky`, `Preferences` for controls and Reduce Motion, `Action`, `GameView`), `connection` (`FromServer`), `player` (`Player`, `PlayerSystems`), `view3d` (`HoveredToken`, `View3dSystems`, `TokenView`, `TOKEN_DIAMETER`, `TOKEN_HALF_THICKNESS`), `widgets` (`OverInterface`), `shared::protocol`, `shared::sheet` (`Feeling`).
+- `common` (`Target`, `Other`, `MapPosition`, `PointerPosition`, `TouchGesture`, `HoveredBag`, `HoveredOnMap`, `HoveredInSky`, `Preferences` for controls and Reduce Motion, `Action`, `GameView`), `connection` (`FromServer`), `player` (`Player`, `PlayerSystems`), `view3d` (`HoveredToken`, `View3dSystems`, `TokenView`, `TOKEN_DIAMETER`, `TOKEN_HALF_THICKNESS`), `dom` (`Hit`), `shared::protocol`, `shared::sheet` (`Feeling`).
 
 ## Used by
 
@@ -28,4 +28,4 @@ Targeting creatures: a right click on one (or a finger held on it), Tab and Shif
 
 - Owner's rules: an enemy is a creature whose feeling is `Unfriendly`. Tab and Shift+Tab go through enemies only, unless none are in sight; a right click or long press can target anyone. A target going out of sight stays the target, its reticule hidden until it is seen again (after changing level too); a death out of sight is never told, so the id simply stays. Automatic picks treat a target out of sight as no target.
 - Being attacked with no target in sight makes the attacker the target (owner), so an automatic Attack answers them.
-- A right press is to open a menu of choices later, targeting among them (owner), so only a press and release that hardly moved counts. Whatever takes right presses for itself (the action bar, a held item, the maps) does so in `PreUpdate`, so they never reach here; the rest of the interface counts through `OverInterface`.
+- A right press is to open a menu of choices later, targeting among them (owner), so only a press and release that hardly moved counts. Whatever takes right presses for itself (the action bar, a held item, the maps) does so in `PreUpdate`, so they never reach here; anything of the interface under the pointer (`dom::Hit` has a target) stops it.
