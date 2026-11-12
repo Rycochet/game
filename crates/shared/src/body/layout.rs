@@ -5,6 +5,7 @@
 //! be blended into another by changing numbers. A `Frame` is the view of a layout that
 //! stands upright on two legs with two arms (`biped_view.rs`).
 
+use super::rings::{RINGS, Ring};
 use super::trig::{ONE, cos, sin};
 use super::{Beast, Biped, Frame, GIANT, PERSON, Parts, Side, Taur};
 use crate::creature::CreatureKind;
@@ -37,6 +38,9 @@ pub struct Spine {
     pub shoulders: i32,
     /// How far along the neck starts: the spine's length.
     pub neck_base: i32,
+    /// The trunk's outline, from the rump to the neck's base (`rings.rs`); the
+    /// stations stay, as what is worn is built on them.
+    pub rings: [Ring; RINGS],
 }
 
 /// The neck from the top of the spine to the chin, and the head above it.

@@ -1,6 +1,6 @@
 # Plan: more accurate creature models
 
-Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`) is built; nothing in the game has changed yet. Each PR keeps this file up to date.
+Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`) and PR 2 (animal trunks) are built. Each PR keeps this file up to date.
 
 ## Goal
 
@@ -15,7 +15,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 ## The approach
 
 - The skeleton stays: `shared::body::Layout` (spine, limbs, parts) and `Frame` keep their figures, so wearing rules and the ~290 places armour reads `Frame` don't change.
-- Add an outline: a fixed number of rings along the spine (about 10; the child of PR 2 settles the number), each a half width, how far the front (belly) is from the spine and how far the back is. Whole millimetres, in shared, as barding and armour weights will go by them (determinism rule).
+- Add an outline: a fixed number of rings along the spine (`shared::body::RINGS`, 10, settled in PR 2: `Spine::rings`, each a `Ring`), each a half width, how far the front (belly) is from the spine and how far the back is. Whole millimetres, in shared, as barding and armour weights will go by them (determinism rule).
 - The same number of rings on every body, so `Layout::blend` (shapeshifting) blends ring by ring.
 - Numbers are measured from MakeHuman meshes by an offline tool. The game never loads a mesh and gains no dependency.
 - Each animal keeps our own size (withers 740 mm wolf, 1350 mm cattle, 1580 mm horse); only proportions come from the meshes, whose size is arbitrary.
@@ -47,7 +47,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 | PR | What | Needs | Kind |
 | --- | --- | --- | --- |
 | 1 | Measuring tool and source files (built) | | blocking |
-| 2 | Trunk outlines for the four-legged animals | 1 | blocking |
+| 2 | Trunk outlines for the four-legged animals (built) | 1 | blocking |
 | 3 | Animal heads, ears, necks, tails | 2 | independent |
 | 4 | Humanoid trunk and limbs from the base human | 2 | independent |
 | 5 | Beast peoples' heads | 3 | waits for 3 |
@@ -71,14 +71,13 @@ How it measures, and what to know when using the figures:
 - It checks out: the dog's belly rises behind the ribs (about 520 at the chest to 770 at the loin), the cow's barely (about 390 to 500), the horse's a little (about 500 to 590).
 - Room left for later PRs: `ring()` takes any plane facing along the body's middle (`Plane::facing`), so a neck or head (PR 3) is rings along its own line, and an upright person (PR 4) rings up the spine, where "back" is backwards. The head targets are a person's body with an animal's head: measure them from the `neck` and `head` joints. Each new kind of measuring gets its own file beside `fourfoot.rs`, and its table in `table.rs`.
 
-### PR 2: animal trunks
-- Shared: the rings on `Spine`, filled for `Fourfoot` (`crates/shared/src/body/beasts.rs`, `beasts/build.rs`) from the measured cow, dog and horse, scaled to our heights. Bodies with no measurements get rings worked out from their 3 stations, so they look as now.
-- Client: `body/trunk.rs` draws from the rings.
-- `blend.rs` blends rings; tests that each end of a blend is exactly its own body.
-- Leg thickness figures re-measured (numbers only).
-- A check in `cargo xtask test` that the committed figures still match what `cargo xtask shapes` measures.
-- Once figures from JALdMIC's meshes are in the game, add an entry to `crates/client/assets/ATTRIBUTION.md` (the players' `docs/credits.md` already has one).
-- The centaur's lower body follows the horse.
+### PR 2: animal trunks (built)
+- Shared: `Spine::rings`, `RINGS` (10) `Ring`s (`along`, `half`, `belly`, `back`; `body/rings.rs`). The tool's tables are copied unchanged into `body/measured.rs` (`MEASURED`: `COW`, `DOG`, `HORSE`, in thousandths) and `Measured::rings` scales them to our beasts: along the spine by our hips-to-shoulders length over the measured one, everything else by our withers, belly and back from our own spine (a ring's `belly` is negative when it is wholly above a level spine, as the rump's tip). Bodies with no measurements get `rings::from_stations`: their six old trunk levels with rings halfway between, which the client leaves out, so they are drawn exactly as before (checked pixel by pixel in Item Pictures).
+- Client: `body/trunk.rs` lofts the rings, each an oval from its front to its back. The neck is drawn from the middle of the last ring (`trunk::neck_root`; the spine's end for other bodies, so unchanged), as the measured trunks already climb into the neck; the mane and the model's neck bone start there too. A level back's tail starts at the first ring.
+- `blend.rs` mixes rings one by one; the existing test that each end of a blend is its own body covers them. `scaled.rs` scales them.
+- Legs: `Fourfoot::fore` and `hind` (radius where each hangs from and at each joint) and `foot`, from the leg tables at our joints' heights, in place of one `leg` radius.
+- `cargo xtask test` checks `MEASURED` still matches what the tool measures (`xtask/src/shapes/check.rs`); `ATTRIBUTION.md` credits JALdMIC for the figures.
+- Left for PR 3: our necks start low on the spine while the measured trunks climb into theirs, so the wolf keeps a small rise where its neck meets its back; PR 3's necks should follow the last rings.
 
 ### PR 3: animal heads and details
 - A head outline for animals in place of oval plus cone: rings from the back of the skull to the nose.

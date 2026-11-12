@@ -15,8 +15,10 @@ mod blend;
 mod hair;
 mod layout;
 mod limbs;
+mod measured;
 mod parts;
 mod proportions;
+mod rings;
 mod scaled;
 mod taurs;
 mod trig;
@@ -29,8 +31,10 @@ pub use layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station, Upper,
 };
 pub use limbs::{has_hands, has_legs};
+pub use measured::{COW, DOG, HORSE, MEASURED, Measured, MeasuredRing};
 pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
 pub use proportions::{PERSON, Proportions};
+pub use rings::{RINGS, Ring};
 pub use taurs::{TAURS, Taur};
 
 /// Which side of the body, as its owner sees it: left is towards the picture's right.

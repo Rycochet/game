@@ -30,6 +30,15 @@ Artwork in this folder made by other people, with the licence it is used under. 
 - Licence: [Creative Commons Attribution 3.0](http://creativecommons.org/licenses/by/3.0/) (CC BY 3.0), or CC0 where marked.
 - Changes: `cargo xtask icons` draws the ones listed in `xtask/icons.txt` as 128 × 128 PNGs, white on a transparent background (the black square behind each left out), at `icons/<author>/<name>.png`.
 
+## Animals' body shapes (figures in the code): measured from JALdMIC's MakeHuman animals
+
+Not a file here, but figures in `crates/shared/src/body/measured.rs`: the outlines of the cow's, dog's and horse's trunks (and so the wolf's and the centaur's lower body), measured from these models.
+
+- Artist: **JALdMIC**, animal targets for MakeHuman's base mesh of a person (by the MakeHuman team, CC0)
+- Source: MakeHuman's `animal04` asset pack, <https://static.makehumancommunity.org/assets/index.html>; the files used are kept unchanged in `spare_assets/makehuman/` (never shipped), with their links in its `README.md`
+- Licence: [Creative Commons Attribution](https://creativecommons.org/licenses/by/4.0/) (CC BY)
+- Changes: only measurements are used: `cargo xtask shapes` applies each target to the base mesh and measures rings along the trunk, in thousandths of the height at the withers, which are scaled to the game's own animals. No mesh is shipped or read by the game.
+
 ## `monsters/`: Dungeon Odyssey monster tiles by David E. Gervais
 
 - Artist: **David E. Gervais**

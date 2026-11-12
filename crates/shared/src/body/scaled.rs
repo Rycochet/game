@@ -4,6 +4,7 @@
 
 use super::blend::{WHOLE, scaled_frame, scaled_parts};
 use super::layout::{Girdle, Layout, Upper};
+use super::rings::Ring;
 use super::{Frame, HUMAN};
 use crate::creature::CreatureKind;
 
@@ -30,6 +31,14 @@ impl Layout {
         }
         spine.shoulders = size(spine.shoulders);
         spine.neck_base = size(spine.neck_base);
+        for ring in &mut spine.rings {
+            *ring = Ring {
+                along: size(ring.along),
+                half: size(ring.half),
+                belly: size(ring.belly),
+                back: size(ring.back),
+            };
+        }
         layout.neck.length = size(layout.neck.length);
         layout.neck.radius = size(layout.neck.radius);
         layout.head.length = size(layout.head.length);

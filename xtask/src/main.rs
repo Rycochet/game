@@ -122,6 +122,7 @@ fn main() -> ExitCode {
             webgl::check(&workspace_root()),
             dockerfiles::check(&workspace_root()),
             icons::check(&workspace_root()),
+            shapes::check(&workspace_root()),
             no_temporary_methods(),
         ]),
         Some("lint") => all_passed([

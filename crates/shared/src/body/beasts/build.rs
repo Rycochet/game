@@ -5,6 +5,7 @@
 use super::super::layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,
 };
+use super::super::rings::{RINGS, Ring, from_stations};
 use super::super::{Feet, Parts, Side};
 use super::{Bird, Fourfoot};
 
@@ -65,8 +66,6 @@ fn slots(limbs: &[Limb]) -> [Option<Limb>; MAX_LIMBS] {
 pub(super) fn fourfoot(four: &Fourfoot, parts: Parts) -> Layout {
     let (across, deep) = four.barrel;
     let height = four.withers - deep;
-    let r = four.leg;
-    let thick = |hundredths: i32| share(r, hundredths);
     let hooves = parts.feet == Feet::Hooves;
     // Hind legs: thigh forwards, the hock bent back, then down to the hoof or the toes.
     let hind = if hooves {
@@ -80,24 +79,21 @@ pub(super) fn fourfoot(four: &Fourfoot, parts: Parts) -> Layout {
     } else {
         [(25, -150), (38, 0), (25, 0), (0, 250)]
     };
-    let radii = [
-        (r, thick(55)),
-        (thick(55), thick(40)),
-        (thick(45), thick(50)),
-        (thick(45), thick(40)),
-    ];
-    let bones = |shape: [(i32, i32); 4]| {
+    // Each bone from one joint's thickness to the next's; the last, to the ground,
+    // thinning a little.
+    let bones = |shape: [(i32, i32); 4], radii: [i32; 4]| {
         let mut bones = [(0, 0, (0, 0)); 4];
-        for (at, ((hundredths, forward), radius)) in shape.into_iter().zip(radii).enumerate() {
-            bones[at] = (hundredths, forward, radius);
+        for (at, (hundredths, forward)) in shape.into_iter().enumerate() {
+            let end = radii.get(at + 1).copied().unwrap_or(radii[3] * 8 / 10);
+            bones[at] = (hundredths, forward, (radii[at], end));
         }
         bones
     };
-    let foot = if hooves { thick(80) } else { r * 2 };
+    let foot = four.foot;
     let mut limbs = Vec::new();
     for side in Side::BOTH {
-        let hind_bones = bones(hind);
-        let fore_bones = bones(fore);
+        let hind_bones = bones(hind, four.hind);
+        let fore_bones = bones(fore, four.fore);
         limbs.push(leg(
             Role::Hindleg,
             Girdle::Hips,
@@ -130,6 +126,7 @@ pub(super) fn fourfoot(four: &Fourfoot, parts: Parts) -> Layout {
             chest: station(share(four.body, 80), 100),
             shoulders: four.body,
             neck_base: four.body + deep / 3,
+            rings: four.measured.rings(four.withers, four.body, height),
         },
         neck: neck(four.neck),
         head: head(four.head),
@@ -167,7 +164,7 @@ pub(super) fn bird(bird: &Bird, parts: Parts) -> Layout {
         along,
         half: (share(across, hundredths), share(deep, hundredths)),
     };
-    Layout {
+    let mut layout = Layout {
         spine: Spine {
             base: [0, bird.hips, 0],
             pitch,
@@ -176,13 +173,16 @@ pub(super) fn bird(bird: &Bird, parts: Parts) -> Layout {
             chest: station(share(length, 70), 100),
             shoulders: share(length, 85),
             neck_base: length,
+            rings: [Ring::default(); RINGS],
         },
         neck: neck(bird.neck),
         head: head(bird.head),
         limbs: slots(&limbs),
         parts,
         upper: None,
-    }
+    };
+    layout.spine.rings = from_stations(&layout);
+    layout
 }
 
 fn neck((length, pitch, radius): (i32, i32, i32)) -> Neck {
