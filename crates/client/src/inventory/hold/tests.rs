@@ -60,13 +60,13 @@ fn something_new_goes_by_cell_or_into_a_bag() {
 
 #[test]
 fn the_bin_isnt_a_move() {
-    let inventory = carrying(&[ItemKind::Coin]);
+    let inventory = carrying(&[ItemKind::CopperCoin]);
     assert_eq!(drop_move(&inventory, held(1), Target::Bin), None);
 }
 
 #[test]
 fn off_every_grid_it_snaps_back() {
-    let inventory = carrying(&[ItemKind::Coin]);
+    let inventory = carrying(&[ItemKind::CopperCoin]);
     let aim = target(&inventory, held(1), None, LIMITS);
     assert_eq!(aim, Target::Nowhere);
     assert_eq!(drop_move(&inventory, held(1), aim), None);
@@ -88,7 +88,7 @@ fn it_goes_where_the_gripped_cell_is_held() {
 
 #[test]
 fn hanging_off_the_grid_or_on_something_else_it_snaps_back() {
-    let inventory = carrying(&[ItemKind::Stone, ItemKind::Coin]);
+    let inventory = carrying(&[ItemKind::Stone, ItemKind::CopperCoin]);
     let grip = Held {
         grip: (1, 1),
         ..held(1)
@@ -165,7 +165,7 @@ fn something_that_looks_the_same_goes_on_its_stack() {
     );
     assert_eq!(stack_onto(aim), None);
     // Something different goes by cell as ever, and is refused.
-    let coin = Item::new(id(3), ItemKind::Coin);
+    let coin = Item::new(id(3), ItemKind::CopperCoin);
     let aim = target_for_new(
         &inventory,
         &coin,
@@ -179,11 +179,11 @@ fn something_that_looks_the_same_goes_on_its_stack() {
 #[test]
 fn on_a_closed_bag_it_goes_on_a_stack_inside_first() {
     let mut inventory = carrying(&[ItemKind::Pouch]);
-    let coin = Item::new(id(5), ItemKind::Coin);
+    let coin = Item::new(id(5), ItemKind::CopperCoin);
     inventory
         .add(coin, Holder::Inside(id(1)), 3, 3, Rotation::None)
         .unwrap();
-    let another = Item::new(id(6), ItemKind::Coin);
+    let another = Item::new(id(6), ItemKind::CopperCoin);
     let aim = target_for_new(
         &inventory,
         &another,

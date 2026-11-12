@@ -4,7 +4,7 @@ use shared::blade::limits_for_wielder;
 use shared::creature::CreatureKind;
 use shared::dungeon::line_is_clear;
 use shared::id::Id;
-use shared::item::{Inventory, ItemKind, MadeAt, Quality, StackLimits};
+use shared::item::{Inventory, ItemKind, MadeAt, Quality, StackLimits, coin_items};
 use shared::item_form::give_blade_within;
 use shared::mob::GIVE_REACH;
 use shared::sheet::Sheet;
@@ -12,13 +12,16 @@ use shared::sheet::Sheet;
 use super::cells_apart;
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::ids::new_id;
 use crate::storage::{MobRecord, SiteId};
 
 /// A new mob's belongings: it wears what it can, and keeps the rest in its
-/// inventory while there is room. Only what is worn or a blade is made to its size.
+/// inventory while there is room, its money last as the fewest coins. Only what is
+/// worn or a blade is made to its size.
 pub(super) fn dressed(
     kind: CreatureKind,
     gear: &[(ItemKind, Option<Quality>)],
+    coins: u64,
     made_at: MadeAt,
 ) -> Inventory {
     let mut carrying = Inventory {
@@ -52,6 +55,11 @@ pub(super) fn dressed(
             // Their own things don't stack.
             let _ = carrying.give(new, StackLimits::NONE);
         }
+    }
+    // Whole stacks, each put where it fits.
+    let most = StackLimits::default().most;
+    for coins in coin_items(coins, most, Some(made_at), &mut new_id) {
+        let _ = carrying.give(coins, StackLimits::NONE);
     }
     carrying
 }

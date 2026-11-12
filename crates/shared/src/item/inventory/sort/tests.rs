@@ -19,7 +19,7 @@ fn messy() -> Inventory {
     Inventory {
         items: vec![
             at(1, ItemKind::Apple, 0, 3, Rotation::None),
-            at(2, ItemKind::Coin, 5, 0, Rotation::None),
+            at(2, ItemKind::CopperCoin, 5, 0, Rotation::None),
             at(3, ItemKind::Sword, 0, 0, Rotation::Quarter),
             at(4, ItemKind::Apple, 5, 3, Rotation::None),
             at(5, ItemKind::Stone, 2, 1, Rotation::None),
@@ -103,7 +103,7 @@ fn nothing_changes_if_something_would_not_fit() {
     let mut inventory = Inventory {
         items: vec![
             at(1, ItemKind::Apple, 0, 0, Rotation::None),
-            at(2, ItemKind::Coin, 0, 0, Rotation::None),
+            at(2, ItemKind::CopperCoin, 0, 0, Rotation::None),
         ],
         size: (1, 1),
         ..Inventory::default()
@@ -121,8 +121,8 @@ fn nothing_changes_if_something_would_not_fit() {
 fn a_bag_inside_is_sorted_on_its_own() {
     let mut backpack = Item::new(id(10), ItemKind::Backpack);
     backpack.contents = vec![
-        at(11, ItemKind::Coin, 3, 3, Rotation::None),
-        at(12, ItemKind::Coin, 1, 2, Rotation::None),
+        at(11, ItemKind::CopperCoin, 3, 3, Rotation::None),
+        at(12, ItemKind::CopperCoin, 1, 2, Rotation::None),
     ];
     let mut inventory = Inventory {
         items: vec![Placed {

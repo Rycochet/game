@@ -16,7 +16,8 @@ impl Inventory {
         if item.holds_or_is(onto) {
             return Err(MoveRefused::IntoItself);
         }
-        let count = limits.room(&placed.item, item);
+        let plain = limits.room(&placed.item, item);
+        let count = self.coin_room(item, onto, holder, limits, plain);
         if count == 0 {
             return Err(MoveRefused::NoStackRoom);
         }
@@ -29,7 +30,8 @@ impl Inventory {
     }
 
     /// Puts as much of this carried stack as fits on the stack `onto`, from its top:
-    /// how many went. The rest stays where it was.
+    /// how many went. The rest stays where it was. Coins reaching 100 turn into
+    /// the next kind (`coins.rs`).
     pub fn stack_onto(
         &mut self,
         id: Id,
@@ -38,6 +40,8 @@ impl Inventory {
     ) -> Result<u32, MoveRefused> {
         let item = self.find(id).ok_or(MoveRefused::NoSuchItem)?;
         let count = self.stack_room(item, onto, limits)?;
+        let holder = self.placed(onto).map(|(holder, _)| holder);
+        let holder = holder.ok_or(MoveRefused::NoSuchGrid)?;
         let part = match count == item.count() {
             true => self.take(id),
             false => self.find_mut(id).map(|item| item.split_top(count)),
@@ -46,6 +50,8 @@ impl Inventory {
         self.find_mut(onto)
             .expect("checked above, and not inside what was lifted out")
             .put_on(part);
+        self.carry_coins(onto, holder, limits)
+            .expect("stack_room tried it on a copy");
         Ok(count)
     }
 
@@ -58,11 +64,15 @@ impl Inventory {
         limits: StackLimits,
     ) -> Result<Option<Item>, MoveRefused> {
         let count = self.stack_room(&item, onto, limits)?;
+        let holder = self.placed(onto).map(|(holder, _)| holder);
+        let holder = holder.ok_or(MoveRefused::NoSuchGrid)?;
         let (part, rest) = match count == item.count() {
             true => (item, None),
             false => (item.split_top(count), Some(item)),
         };
         self.find_mut(onto).expect("checked above").put_on(part);
+        self.carry_coins(onto, holder, limits)
+            .expect("stack_room tried it on a copy");
         Ok(rest)
     }
 

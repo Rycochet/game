@@ -16,6 +16,7 @@ use crate::wear::WornLook;
 
 mod chosen;
 mod memory;
+mod purse;
 mod scent;
 mod trail;
 mod wild;
@@ -23,6 +24,7 @@ pub use chosen::chosen_spawns;
 pub use memory::{
     Event, FIRST_HARM_OPINION, GIFT_OPINION, Memory, Regard, TRESPASS_FORGOTTEN_AFTER,
 };
+use purse::roll_coins;
 pub use scent::{BASE_SCENT, MOST_SCENT, SCENT_KEPT_FOR, can_smell, scent_strength, smells_for};
 pub use trail::{TRAIL_LONGEST, TRAIL_SHORTEST, wild_trail};
 pub use wild::{wild_mob_id, wild_spawns};
@@ -57,6 +59,8 @@ pub struct Spawn {
     pub attributes: Attributes,
     /// What it starts with, innermost clothes first: it wears what it can.
     pub gear: Vec<(ItemKind, Option<Quality>)>,
+    /// The money it starts with, in copper, which it carries as the fewest coins.
+    pub coins: u64,
 }
 
 /// How near someone must be to give something, in cells.
@@ -90,7 +94,7 @@ const GEAR_ROLLS: i64 = 1000;
 /// something there, the kinds it could be and how much each weighs. First guesses.
 fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
     use ItemKind::{
-        Apple, Axe, Belt, Boomerang, Boots, Cloak, Coin, Dagger, FullArmour, Gloves, Hat, Knife,
+        Apple, Axe, Belt, Boomerang, Boots, Cloak, Dagger, FullArmour, Gloves, Hat, Knife,
         Longsword, Pouch, Sandals, Shirt, Shoes, ShortSword, Socks, Spear, Stone, Sword, Trousers,
     };
     match kind {
@@ -98,14 +102,14 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
             (100, &[(Shirt, 1)]),
             (100, &[(Trousers, 1)]),
             (50, &[(Shoes, 2), (Sandals, 1), (Socks, 1), (Hat, 1)]),
-            (40, &[(Apple, 1), (Coin, 2), (Stone, 1)]),
+            (40, &[(Apple, 1), (Stone, 1)]),
         ],
         CreatureKind::Giant => &[
             (100, &[(Trousers, 1)]),
             (60, &[(Belt, 1), (Boots, 2), (Cloak, 1)]),
             (20, &[(FullArmour, 1)]),
             (40, &[(Sword, 2), (Longsword, 1), (Axe, 2), (Spear, 1)]),
-            (30, &[(Coin, 2), (Stone, 2), (Pouch, 1)]),
+            (30, &[(Stone, 2), (Pouch, 1)]),
         ],
         CreatureKind::Kobold => &[
             (50, &[(Shirt, 1), (Trousers, 1)]),
@@ -115,19 +119,19 @@ fn gear_of(kind: CreatureKind) -> &'static [(u64, &'static [(ItemKind, u64)])] {
                 70,
                 &[(Knife, 1), (Dagger, 2), (ShortSword, 1), (Boomerang, 2)],
             ),
-            (30, &[(Coin, 2), (Stone, 2), (Apple, 1), (Pouch, 1)]),
+            (30, &[(Stone, 2), (Apple, 1), (Pouch, 1)]),
         ],
         CreatureKind::Goblin => &[
             (50, &[(Shirt, 1), (Trousers, 1)]),
             (30, &[(Gloves, 1), (Boots, 1), (Hat, 1)]),
             (70, &[(Knife, 2), (Dagger, 2), (ShortSword, 1)]),
-            (30, &[(Coin, 1), (Stone, 2), (Apple, 1), (Pouch, 1)]),
+            (30, &[(Stone, 2), (Apple, 1), (Pouch, 1)]),
         ],
         CreatureKind::Orc => &[
             (100, &[(Trousers, 1)]),
             (60, &[(Belt, 1), (Boots, 2), (Cloak, 1)]),
             (70, &[(Axe, 2), (Sword, 2), (Spear, 1)]),
-            (30, &[(Coin, 2), (Stone, 1), (Pouch, 1)]),
+            (30, &[(Stone, 1), (Pouch, 1)]),
         ],
         _ => &[],
     }
@@ -220,6 +224,7 @@ pub fn spawns(
                 &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
             ),
             gear: roll_gear(&roll, kind),
+            coins: roll_coins(&roll, kind),
         });
     }
     mobs

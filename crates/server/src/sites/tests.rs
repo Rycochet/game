@@ -99,7 +99,7 @@ fn a_keeper_stays_and_takes_over_what_a_shop_had() {
 fn what_is_given_to_a_keeper_joins_the_stock_from_beside_the_door_only() {
     let (mut test, with, front) = in_a_village();
     let coin = ClientMessage::DevGiveItem {
-        kind: shared::item::ItemKind::Coin,
+        kind: shared::item::ItemKind::CopperCoin,
         size: None,
         magical: false,
         quality: Quality::Common,

@@ -1,6 +1,8 @@
 //! Mobs of a kind chosen by a developer (a Dev Area), put anywhere open.
 
-use super::{ATTRIBUTE_ROLL, FROM_STAIRS, GENDER_ROLL, PURPOSE, Spawn, TRIES, looks, roll_gear};
+use super::{
+    ATTRIBUTE_ROLL, FROM_STAIRS, GENDER_ROLL, PURPOSE, Spawn, TRIES, looks, roll_coins, roll_gear,
+};
 use crate::creature::CreatureKind;
 use crate::dungeon::Level;
 use crate::gender::Gender;
@@ -56,6 +58,7 @@ pub fn chosen_spawns(
                 &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
             ),
             gear: roll_gear(&roll, kind),
+            coins: roll_coins(&roll, kind),
         });
     }
     mobs

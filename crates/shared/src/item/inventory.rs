@@ -1,6 +1,7 @@
 //! `Inventory`: everything a character carries, in their own grid and what they wear.
 
 mod changes;
+mod coins;
 mod cost;
 mod lookup;
 mod parts;

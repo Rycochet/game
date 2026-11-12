@@ -340,7 +340,7 @@ fn items_move_by_the_rules_and_a_refused_move_is_put_right() {
 fn moves_between_containers_take_time_and_sorting_one_doesnt() {
     let mut test = TestClient::new();
     test.time_passes = false;
-    let answers = test.send(&[give(ItemKind::Pouch), give(ItemKind::Coin)]);
+    let answers = test.send(&[give(ItemKind::Pouch), give(ItemKind::CopperCoin)]);
     let carried = inventory(&answers);
     let (pouch, coin) = (carried.items[0].item.id, carried.items[1].item.id);
     let tick = test.world.action_clock.ticks();
@@ -366,7 +366,7 @@ fn moves_between_containers_take_time_and_sorting_one_doesnt() {
 #[test]
 fn destroying_takes_what_is_carried_and_only_that() {
     let mut test = TestClient::new();
-    let answers = test.send(&[give(ItemKind::Coin)]);
+    let answers = test.send(&[give(ItemKind::CopperCoin)]);
     let coin = inventory(&answers).items[0].item.id;
     let destroy = ClientMessage::BinItem { item: coin };
     assert!(
@@ -488,7 +488,7 @@ fn no_body_changes_on_the_world_map() {
 fn new_items_have_the_quality_asked_for_and_the_time_they_were_made() {
     let mut test = TestClient::new();
     // A dagger, as a long enough sword wouldn't fit in the inventory.
-    let answers = test.send(&[give(ItemKind::Dagger), give(ItemKind::Coin)]);
+    let answers = test.send(&[give(ItemKind::Dagger), give(ItemKind::CopperCoin)]);
     let carried = inventory(&answers);
     let (sword, coin) = (&carried.items[0].item, &carried.items[1].item);
     assert_eq!(sword.quality, Some(Quality::Rare));
@@ -618,7 +618,7 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     assert_eq!(hat.size, shared::creature::Size::Large);
     assert!(hat.magical);
     // Not something that comes in sizes, whoever asks or carries it.
-    let coin = made(ItemKind::Coin);
+    let coin = made(ItemKind::CopperCoin);
     assert_eq!(coin.size, shared::creature::Size::Medium);
 }
 
@@ -907,7 +907,7 @@ fn giving_an_item_needs_dev_tools_and_room() {
     test.dev_tools = false;
     // Not the host, who is the Owner and may use them anyway.
     test.client.host = false;
-    let give = give(ItemKind::Coin);
+    let give = give(ItemKind::CopperCoin);
     assert!(test.send(std::slice::from_ref(&give)).is_empty());
 
     test.dev_tools = true;
@@ -1595,9 +1595,9 @@ fn a_stack_goes_on_another_as_far_as_the_server_allows() {
     // Given apart, then allowed three to a stack.
     test.world.stacks = shared::item::StackLimits::NONE;
     let answers = test.send(&[
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
     ]);
     let carried = inventory(&answers);
     let coins: Vec<_> = carried.items.iter().map(|placed| placed.item.id).collect();
@@ -1619,9 +1619,9 @@ fn a_stack_goes_on_another_as_far_as_the_server_allows() {
 fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
     let mut test = TestClient::new();
     let answers = test.send(&[
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
-        give(ItemKind::Coin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
+        give(ItemKind::CopperCoin),
     ]);
     let coins = inventory(&answers).items[0].item.clone();
     let part = coins.above[0].id;
@@ -1694,7 +1694,7 @@ fn a_group_from_a_mixed_stack_moves_together() {
 #[test]
 fn a_grid_is_sorted_as_the_client_would_sort_it() {
     let mut test = TestClient::new();
-    let answers = test.send(&[give(ItemKind::Coin), give(ItemKind::Stone)]);
+    let answers = test.send(&[give(ItemKind::CopperCoin), give(ItemKind::Stone)]);
     let carried = inventory(&answers);
     let stone = carried
         .items

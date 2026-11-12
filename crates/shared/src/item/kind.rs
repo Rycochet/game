@@ -27,8 +27,12 @@ pub enum ItemKind {
     Cloak,
     Clogs,
     Coif,
-    Coin,
     Collar,
+    /// Saved items of the old `Coin` load as copper.
+    #[serde(alias = "Coin")]
+    CopperCoin,
+    GoldCoin,
+    SilverCoin,
     Corslet,
     CuirassierTassets,
     Dagger,
@@ -85,7 +89,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 73] = [
+    pub const ALL: [Self; 75] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -108,8 +112,8 @@ impl ItemKind {
         Self::Cloak,
         Self::Clogs,
         Self::Coif,
-        Self::Coin,
         Self::Collar,
+        Self::CopperCoin,
         Self::Corslet,
         Self::CuirassierTassets,
         Self::Dagger,
@@ -121,6 +125,7 @@ impl ItemKind {
         Self::Gauntlets,
         Self::Gem,
         Self::Gloves,
+        Self::GoldCoin,
         Self::Gorget,
         Self::HalfArmour,
         Self::Hat,
@@ -146,6 +151,7 @@ impl ItemKind {
         Self::Shoes,
         Self::ShortSword,
         Self::ShoulderArmour,
+        Self::SilverCoin,
         Self::Slippers,
         Self::SmallBox,
         Self::Socks,

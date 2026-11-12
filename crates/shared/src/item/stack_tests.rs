@@ -42,7 +42,7 @@ fn light_things_stack_until_the_count_limit() {
     let mut inventory = Inventory::default();
     for n in 1..=100 {
         inventory
-            .give(Item::new(id(n), ItemKind::Coin), limits)
+            .give(Item::new(id(n), ItemKind::GoldCoin), limits)
             .unwrap();
     }
     let counts: Vec<u32> = inventory.items.iter().map(|p| p.item.count()).collect();
@@ -53,7 +53,7 @@ fn light_things_stack_until_the_count_limit() {
 fn only_what_looks_the_same_stacks() {
     let apple = Item::new(id(1), ItemKind::Apple);
     assert!(apple.looks_like(&Item::new(id(2), ItemKind::Apple)));
-    assert!(!apple.looks_like(&Item::new(id(3), ItemKind::Coin)));
+    assert!(!apple.looks_like(&Item::new(id(3), ItemKind::CopperCoin)));
     let hat = |n, quality| Item {
         quality: Some(quality),
         ..Item::new(id(n), ItemKind::Hat)
@@ -104,10 +104,10 @@ fn a_stack_goes_on_another_as_far_as_it_fits() {
 fn a_whole_stack_joins_another_and_goes() {
     let limits = StackLimits::default();
     let mut inventory = Inventory::default();
-    let coins = Item::new(id(3), ItemKind::Coin);
+    let coins = Item::new(id(3), ItemKind::CopperCoin);
     inventory
         .add(
-            stack(1, ItemKind::Coin, 2),
+            stack(1, ItemKind::CopperCoin, 2),
             Holder::Inventory,
             0,
             0,
@@ -131,7 +131,7 @@ fn something_not_carried_joins_a_stack_and_the_rest_is_given_back() {
     let mut inventory = Inventory::default();
     inventory
         .add(
-            stack(1, ItemKind::Coin, 2),
+            stack(1, ItemKind::CopperCoin, 2),
             Holder::Inventory,
             0,
             0,
@@ -139,7 +139,7 @@ fn something_not_carried_joins_a_stack_and_the_rest_is_given_back() {
         )
         .unwrap();
     let rest = inventory
-        .add_to_stack(stack(10, ItemKind::Coin, 3), id(1), limits)
+        .add_to_stack(stack(10, ItemKind::CopperCoin, 3), id(1), limits)
         .unwrap();
     assert_eq!(ids(&rest.unwrap()), [id(10)]);
     assert_eq!(inventory.find(id(1)).unwrap().count(), 4);
@@ -207,12 +207,12 @@ fn wearing_a_stack_wears_only_its_top() {
 
 #[test]
 fn splitting_takes_the_top_in_order() {
-    let mut coins = stack(1, ItemKind::Coin, 5);
+    let mut coins = stack(1, ItemKind::CopperCoin, 5);
     let top = coins.split_top(2);
     assert_eq!(ids(&top), [id(4), id(5)]);
     assert_eq!(ids(&coins), [id(1), id(2), id(3)]);
     assert_eq!(coins.take_top().map(|one| one.id), Some(id(3)));
-    assert_eq!(coins.own_weight(), ItemKind::Coin.def().weight);
+    assert_eq!(coins.own_weight(), ItemKind::CopperCoin.def().weight);
 }
 
 #[test]
@@ -233,8 +233,8 @@ fn a_stack_with_something_known_to_differ_takes_no_more() {
     assert_eq!(limits.room(&hats, &Item::new(id(9), ItemKind::Hat)), 0);
     assert_eq!(
         StackLimits::NONE.room(
-            &stack(10, ItemKind::Coin, 1),
-            &Item::new(id(9), ItemKind::Coin)
+            &stack(10, ItemKind::CopperCoin, 1),
+            &Item::new(id(9), ItemKind::CopperCoin)
         ),
         0
     );
@@ -245,7 +245,7 @@ fn a_part_is_named_by_its_lowest_item_and_lifted_out_where_the_stack_lies() {
     let mut inventory = Inventory::default();
     inventory
         .add(
-            stack(1, ItemKind::Coin, 5),
+            stack(1, ItemKind::CopperCoin, 5),
             Holder::Inventory,
             2,
             1,
@@ -268,7 +268,7 @@ fn a_lifted_part_moves_like_anything_else_or_goes_back() {
     let mut inventory = Inventory::default();
     inventory
         .add(
-            stack(1, ItemKind::Coin, 5),
+            stack(1, ItemKind::CopperCoin, 5),
             Holder::Inventory,
             0,
             0,
@@ -332,7 +332,7 @@ fn a_mixed_stack_falls_into_groups_from_the_top() {
         .map(|group| group.iter().map(|one| one.id).collect())
         .collect();
     assert_eq!(groups, [vec![id(3), id(1)], vec![id(2)]]);
-    assert_eq!(stack(5, ItemKind::Coin, 2).groups().len(), 1);
+    assert_eq!(stack(5, ItemKind::CopperCoin, 2).groups().len(), 1);
 }
 
 #[test]
@@ -364,7 +364,7 @@ fn knowing_there_is_no_curse_looks_like_not_knowing() {
 #[test]
 fn the_most_in_a_stack_goes_by_weight_and_count_and_bags_never_stack() {
     let limits = StackLimits::default();
-    let coin = Item::new(id(1), ItemKind::Coin);
+    let coin = Item::new(id(1), ItemKind::CopperCoin);
     assert_eq!(limits.most_of(&coin), limits.most);
     let apple = Item::new(id(2), ItemKind::Apple);
     let room = limits.room(

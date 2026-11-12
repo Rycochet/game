@@ -168,7 +168,7 @@ fn spawned(world: &mut ServerWorld, seed: Seed, block: BlockPos, at: (i64, i64))
             let record = records.get(&id);
             let carrying = record
                 .and_then(|record| record.gear.clone())
-                .unwrap_or_else(|| dressed(spawn.kind, &spawn.gear, made_at));
+                .unwrap_or_else(|| dressed(spawn.kind, &spawn.gear, spawn.coins, made_at));
             let position = (spawn.position.0 + turns * width, spawn.position.1);
             let spawn = shared::mob::Spawn { position, ..spawn };
             Mob {

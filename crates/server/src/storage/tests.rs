@@ -177,7 +177,10 @@ fn saves_are_read_back() {
                 wild_blocks: BTreeMap::from([((2, 5), 77)]),
                 ground: [(
                     Spot::new(3, 4),
-                    vec![Item::new(Id::for_test(1), shared::item::ItemKind::Coin)],
+                    vec![Item::new(
+                        Id::for_test(1),
+                        shared::item::ItemKind::CopperCoin,
+                    )],
                 )]
                 .into_iter()
                 .collect(),
@@ -345,7 +348,7 @@ fn bags_saved_by_cell_load_at_their_middles() {
     assert_eq!(at, [Spot::new(480, -720)]);
 
     let mut level = LevelSave::default();
-    let coin = Item::new(Id::for_test(1), shared::item::ItemKind::Coin);
+    let coin = Item::new(Id::for_test(1), shared::item::ItemKind::CopperCoin);
     level.ground.insert(Spot::new(500, -730), vec![coin]);
     let text = ron::to_string(&level).unwrap();
     let old = text.replace("(x:500,y:-730)", "(2,-3)");

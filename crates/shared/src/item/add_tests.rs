@@ -5,7 +5,7 @@ use crate::id::Id;
 fn something_new_goes_by_the_same_rules_as_a_move() {
     let mut inventory = Inventory::default();
     let stone = Item::new(Id::for_test(1), ItemKind::Stone);
-    let coin = Item::new(Id::for_test(2), ItemKind::Coin);
+    let coin = Item::new(Id::for_test(2), ItemKind::CopperCoin);
     assert!(
         inventory
             .add(stone.clone(), Holder::Inventory, 0, 0, Rotation::None)

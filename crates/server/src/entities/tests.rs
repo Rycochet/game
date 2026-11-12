@@ -35,7 +35,7 @@ fn mobs_only_get_blades_they_can_carry_and_lift() {
         let (mut armed, tries) = (0, 200);
         for _ in 0..tries {
             let gear = [(ItemKind::Sword, Some(Quality::Common))];
-            let carrying = dressed(kind, &gear, made_at);
+            let carrying = dressed(kind, &gear, 0, made_at);
             assert!(carrying.total_weight() <= lifting);
             // Held when it can be, carried otherwise.
             armed += !(carrying.items.is_empty() && carrying.worn.is_empty()) as u32;
@@ -56,9 +56,9 @@ fn mobs_wear_clothes_made_for_them_and_carry_ordinary_things() {
         (ItemKind::Stone, None),
     ];
     // A beggar's trousers are bigger than its inventory.
-    let beggar = dressed(CreatureKind::Beggar, &gear, made_at);
+    let beggar = dressed(CreatureKind::Beggar, &gear, 0, made_at);
     assert_eq!(beggar.worn[0].kind, ItemKind::Trousers);
-    let giant = dressed(CreatureKind::Giant, &gear, made_at);
+    let giant = dressed(CreatureKind::Giant, &gear, 0, made_at);
     assert_eq!(giant.worn[0].made.size, Size::Giant);
     assert_eq!(giant.items[0].item.made.size, Size::Medium);
 }
@@ -546,7 +546,7 @@ fn a_mob_part_way_through_something_carries_on_after_a_restart() {
 fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
     let mut test = beside_a_mob(kind, 2);
     let answers = test.send(&[ClientMessage::DevGiveItem {
-        kind: shared::item::ItemKind::Coin,
+        kind: shared::item::ItemKind::CopperCoin,
         size: None,
         magical: false,
         quality: Default::default(),
@@ -638,7 +638,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
     population.mobs[0].put((x + 1, y));
     let mob = population.mobs[0].id;
     let answers = test.send(&[ClientMessage::DevGiveItem {
-        kind: shared::item::ItemKind::Coin,
+        kind: shared::item::ItemKind::CopperCoin,
         size: None,
         magical: false,
         quality: Default::default(),
@@ -702,7 +702,7 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
     )
     .unwrap();
     record.gear = Some(gear);
-    let given = shared::item::Item::new(Id::for_test(51), ItemKind::Coin);
+    let given = shared::item::Item::new(Id::for_test(51), ItemKind::CopperCoin);
     record.carried.push(given);
     // So that the player has been told of it.
     test.send(&[]);

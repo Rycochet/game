@@ -53,13 +53,13 @@ fn on_the_ground(test: &mut TestClient) -> Vec<Item> {
 #[test]
 fn identical_items_come_as_one_stack_no_bigger_than_allowed() {
     let mut test = TestClient::new();
-    test.send(&[give(ItemKind::Coin, 5, 5, true)]);
-    let coins = of_kind(&test.client.inventory, ItemKind::Coin);
+    test.send(&[give(ItemKind::CopperCoin, 5, 5, true)]);
+    let coins = of_kind(&test.client.inventory, ItemKind::CopperCoin);
     assert_eq!(coins.len(), 1);
     assert_eq!(coins[0].count(), 5);
     let mut test = TestClient::new();
-    test.send(&[give(ItemKind::Coin, 5, 100_000, true)]);
-    let coins = of_kind(&test.client.inventory, ItemKind::Coin);
+    test.send(&[give(ItemKind::CopperCoin, 5, 100_000, true)]);
+    let coins = of_kind(&test.client.inventory, ItemKind::CopperCoin);
     let most = test.world.stacks.most_of(coins[0]);
     assert_eq!(coins.iter().map(|coin| coin.count()).sum::<u32>(), most);
 }
@@ -85,7 +85,7 @@ fn on_the_world_map_nothing_is_given_unless_all_of_it_fits() {
     let before = test.client.inventory.items.len();
     test.send(&[give(ItemKind::FullArmour, 1, 99, false)]);
     assert_eq!(test.client.inventory.items.len(), before);
-    test.send(&[give(ItemKind::Coin, 1, 1, true)]);
+    test.send(&[give(ItemKind::CopperCoin, 1, 1, true)]);
     assert_eq!(test.client.inventory.items.len(), before + 1);
 }
 
@@ -221,19 +221,23 @@ fn a_target_mob_in_sight_gets_the_items_and_the_player_none() {
     let mut test = TestClient::new();
     let mob = beside_a_mob(&mut test);
     let before = carried_by(&mut test, mob).len();
-    test.send(&[give_to(ItemKind::Coin, 3, mob)]);
+    test.send(&[give_to(ItemKind::CopperCoin, 3, mob)]);
     let carried = carried_by(&mut test, mob);
     assert_eq!(carried.len(), before + 3);
-    assert!(carried.iter().any(|item| item.kind == ItemKind::Coin));
-    assert!(of_kind(&test.client.inventory, ItemKind::Coin).is_empty());
+    assert!(carried.iter().any(|item| item.kind == ItemKind::CopperCoin));
+    assert!(of_kind(&test.client.inventory, ItemKind::CopperCoin).is_empty());
 }
 
 #[test]
 fn a_target_that_is_no_mob_in_sight_is_left_for_other_players() {
     let mut test = TestClient::new();
     let _ = beside_a_mob(&mut test);
-    test.send(&[give_to(ItemKind::Coin, 3, shared::id::Id::for_test(999))]);
-    assert!(of_kind(&test.client.inventory, ItemKind::Coin).is_empty());
+    test.send(&[give_to(
+        ItemKind::CopperCoin,
+        3,
+        shared::id::Id::for_test(999),
+    )]);
+    assert!(of_kind(&test.client.inventory, ItemKind::CopperCoin).is_empty());
     // Left for the pass over other players, which finds nobody by it.
     assert_eq!(test.client.for_others.len(), 1);
 }
