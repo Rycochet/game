@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::super::item::{Floating, logical_rect};
+use super::super::item::logical_rect;
 use super::super::moveable::PanelPart;
 use super::super::theme::RIPPLE;
 use super::super::{BUTTON_BORDER, ButtonState, Pressable, Switch};
@@ -62,20 +62,16 @@ pub(in crate::widgets) fn track_pointer(
     let (corner, size) = logical_rect(node, transform);
     commands.entity(button).with_children(|inside| {
         inside
-            .spawn((
-                Floating,
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: px(0),
-                    top: px(0),
-                    width: percent(100),
-                    height: percent(100),
-                    overflow: Overflow::clip(),
-                    ..default()
-                },
-            ))
+            .spawn((Node {
+                position_type: PositionType::Absolute,
+                left: px(0),
+                top: px(0),
+                width: percent(100),
+                height: percent(100),
+                overflow: Overflow::clip(),
+                ..default()
+            },))
             .with_child((
-                Floating,
                 Ripple {
                     age: 0.0,
                     centre: at - corner - Vec2::splat(BUTTON_BORDER),

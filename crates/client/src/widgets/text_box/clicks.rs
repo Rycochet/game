@@ -10,6 +10,7 @@ use super::keys::{Held, current, keep};
 use super::layout::Labels;
 use super::{Cursor, TextBox, TextFocus};
 use crate::common::{TouchGesture, UiPointer, in_interface};
+use crate::dom::Finder;
 use crate::widgets::ButtonPressed;
 
 /// Clicks this close in time and place count as one double or triple click.
@@ -114,8 +115,8 @@ pub(in crate::widgets) fn drag_to_select(
     mut gesture: ResMut<TouchGesture>,
     pointer: Res<UiPointer>,
     ui_scale: Res<UiScale>,
-    mut boxes: Query<(&mut TextBox, &mut Cursor, &ComputedNode, &UiGlobalTransform)>,
-    labels: Labels,
+    mut boxes: Query<(&mut TextBox, &mut Cursor)>,
+    (labels, finder): (Labels, Finder),
     time: Res<Time<Real>>,
     mut started: Local<Option<(Vec2, usize)>>,
 ) {
@@ -126,11 +127,12 @@ pub(in crate::widgets) fn drag_to_select(
         *started = None;
         return;
     }
-    let Ok((mut text_box, mut cursor, node, transform)) = boxes.get_mut(entity) else {
+    let Ok((mut text_box, mut cursor)) = boxes.get_mut(entity) else {
         return;
     };
+    // Only where the box was what the finger landed on.
     let start = in_interface(gesture.drag_start, &ui_scale);
-    if !node.contains_point(*transform, start / node.inverse_scale_factor) {
+    if !finder.chain_at(start).contains(&entity) {
         return;
     }
     let mut edited = current(&text_box, &cursor);

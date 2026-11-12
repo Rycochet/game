@@ -4,12 +4,11 @@
 //! them go.
 
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::item::shown_at;
 use super::moveable::PanelPart;
 use super::{ButtonPressed, ButtonState, Pressable};
 use crate::common::{TouchGesture, UiPointer, in_interface};
+use crate::dom::Finder;
 
 /// Put this on a button (from `spawn_icon_button` or `spawn_button`) for it to
 /// be held rather than pressed. Becoming held also sends `ButtonPressed`, once;
@@ -46,40 +45,24 @@ pub(super) fn add(app: &mut App) {
     );
 }
 
-/// What a press or touch is on: every widget, so one in front hides a hold
-/// button behind it.
-type Widgets<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static ComputedStackIndex,
-        &'static ComputedNode,
-        &'static UiGlobalTransform,
-        &'static InheritedVisibility,
-        Option<&'static CalculatedClip>,
-    ),
-    Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>,
->;
+/// What a press or touch may be on: every widget, so one in front hides a
+/// hold button behind it.
+type Widgets<'w, 's> = Query<'w, 's, (), Or<(With<Pressable>, With<PanelPart>, With<ButtonState>)>>;
 
 /// Notes which hold buttons are held this frame. Before the press is taken
 /// (a press on one stops at its panel, as any press on a panel does).
 pub(super) fn hold_buttons(
     (mouse, pointer): (Res<ButtonInput<MouseButton>>, Res<UiPointer>),
     (gesture, scale): (Res<TouchGesture>, Res<UiScale>),
-    widgets: Widgets,
+    (finder, widgets): (Finder, Widgets),
     mut buttons: Query<(Entity, &mut HoldButton, &ButtonState)>,
     mut holding: ResMut<Holding>,
     mut pressed: MessageWriter<ButtonPressed>,
 ) {
+    // The nearest widget to what is in front there (`dom`'s one search).
     let front_at = |at: Vec2| {
-        widgets
-            .iter()
-            .filter(|(_, _, node, transform, visible, clip)| {
-                visible.get() && shown_at(at, node, transform, *clip)
-            })
-            .max_by_key(|(_, stack, ..)| stack.0)
-            .map(|(entity, ..)| entity)
+        let chain = finder.chain_at(at);
+        chain.into_iter().find(|&entity| widgets.contains(entity))
     };
     let usable = |entity: Entity| {
         buttons

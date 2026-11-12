@@ -12,7 +12,6 @@ use bevy::render::render_resource::{
 use bevy::shader::ShaderRef;
 use shared::item::{Favour, Item, Shape};
 
-use super::Floating;
 use super::item::{CELL, PICTURE_PIXELS_PER_CELL};
 use crate::item_art::{ItemPictures, Look};
 
@@ -77,7 +76,6 @@ pub struct AuraGlow {
 pub fn aura_glow(aura: Aura, mask: AuraMask, node: Node) -> impl Bundle {
     (
         AuraGlow { aura, mask },
-        Floating,
         Node {
             position_type: PositionType::Absolute,
             ..node

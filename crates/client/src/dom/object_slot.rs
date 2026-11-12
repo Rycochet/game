@@ -8,12 +8,14 @@
 //! node a screen not yet moved to markup spawns.
 
 use bevy::prelude::*;
+
+use super::Solid;
 use shared::item::{Item, Rotation, Shape};
 
 use super::object_grid::ThingCell;
 use crate::item_art::{ItemPicture, look_of};
 use crate::widgets::{
-    ALLOWED, Aura, AuraMask, CELL, Floating, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ITEM_LABEL_FONT,
+    ALLOWED, Aura, AuraMask, CELL, GRID_COLOUR, GRID_LINE, ITEM_EDGE, ITEM_LABEL_FONT,
     PICTURE_PIXELS_PER_CELL, Pressable, REFUSED, aura_glow, item_colour, item_edge,
     item_edge_width, item_label, item_picture, picture_in_square, set_edge,
 };
@@ -47,7 +49,7 @@ pub struct SlotThing {
 
 /// What a slot shows, set by its owner. It is drawn again when this changes.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
-#[require(Node)]
+#[require(Node, Solid)]
 pub struct SlotShown {
     pub look: SlotLook,
     /// The picture of an empty slot saying what it is for.
@@ -165,7 +167,7 @@ fn spawn_worn(inside: &mut ChildSpawnerCommands, slot: Entity, thing: &SlotThing
         };
         let pixels = PICTURE_PIXELS_PER_CELL;
         let image = ImageNode::default().with_color(Color::WHITE.with_alpha(alpha));
-        worn.with_child((Floating, ItemPicture { look, pixels }, image, node));
+        worn.with_child((ItemPicture { look, pixels }, image, node));
     }
     if item.set {
         worn.with_child(set_edge(item.quality, UiRect::all(px(width)), width));

@@ -108,6 +108,6 @@ fn a_grid_taking_gifts_says_so_on_its_cells() {
     app.world_mut().spawn((Node::default(), shown));
     app.update();
     let mut takers = app.world_mut().query::<&TakesGifts>();
-    // The grid and both cells' lines.
-    assert_eq!(takers.iter(app.world()).filter(|to| to.0 == who).count(), 3);
+    // The grid, its box of cells and both cells' lines.
+    assert_eq!(takers.iter(app.world()).filter(|to| to.0 == who).count(), 4);
 }

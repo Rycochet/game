@@ -10,7 +10,6 @@ use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::shader::ShaderRef;
 use shared::item::Quality;
 
-use super::Floating;
 use crate::common::{BandShift, quality_colour};
 
 /// The value a full ring stands for, and how much more a specialisation's does.
@@ -89,7 +88,6 @@ impl UiMaterial for SkillRingMaterial {
 pub fn skill_ring(ring: SkillRing) -> impl Bundle {
     (
         ring,
-        Floating,
         Node {
             position_type: PositionType::Absolute,
             left: px(0),

@@ -12,6 +12,8 @@ mod slot;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+
+use super::Solid;
 use shared::ability::Ability;
 pub(super) use slot::draw_ability_slots;
 
@@ -46,7 +48,7 @@ impl KnownAbilities {
 /// A list of abilities, set by its owner. They have no shape: each takes one
 /// place, `columns` to a row. It is drawn again when this changes.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
-#[require(Node)]
+#[require(Node, Solid)]
 pub struct AbilityGridShown {
     pub columns: u8,
     pub things: Vec<AbilityThing>,
@@ -55,7 +57,7 @@ pub struct AbilityGridShown {
 /// What a slot for an ability shows, set by its owner. It is drawn again when
 /// this changes.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
-#[require(Node)]
+#[require(Node, Solid)]
 pub struct AbilitySlotShown {
     pub thing: Option<AbilityThing>,
     /// Its key's short name, over its bottom right.
@@ -75,6 +77,7 @@ pub struct AbilitySlotShown {
 /// On each ability drawn in a list or a slot: which list or slot, and which
 /// ability.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(Solid)]
 pub struct AbilityCell {
     pub of: Entity,
     pub ability: Ability,

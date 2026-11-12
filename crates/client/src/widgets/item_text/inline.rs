@@ -13,6 +13,7 @@ pub(super) const GAP: f32 = 2.0;
 
 /// How tall the items in some writing are, in interface pixels: on the writing.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(crate::dom::Solid)]
 pub(in crate::widgets) struct InlineHeight(pub f32);
 
 /// An item in writing: a child of its text, in among its spans.

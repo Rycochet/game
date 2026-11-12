@@ -64,6 +64,15 @@ impl Finder<'_, '_> {
             .map(|(_, entity)| entity)
     }
 
+    /// The thing in front at `at`, then everything it is in, out to the
+    /// root: empty where the pointer is on nothing. For asking what a
+    /// finger, or a point other than the pointer's, is on.
+    pub fn chain_at(&self, at: Vec2) -> Vec<Entity> {
+        self.target_at(at)
+            .map(|target| self.chain_of(target))
+            .unwrap_or_default()
+    }
+
     /// `target`, then everything it is in, out to the root.
     pub fn chain_of(&self, target: Entity) -> Vec<Entity> {
         let mut chain = vec![target];

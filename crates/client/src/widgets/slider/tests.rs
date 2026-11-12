@@ -26,6 +26,8 @@ fn test_at(scale: f32) -> (App, Entity) {
         .world_mut()
         .spawn((
             Slider(0.5),
+            // What the search for what a finger is on looks for.
+            (Node::default(), crate::dom::Solid),
             ComputedNode {
                 size: size * scale,
                 inverse_scale_factor: 1.0 / scale,

@@ -1,14 +1,14 @@
 //! Tooltips over items and over what is held, and the inventory button.
 
 use bevy::prelude::*;
-use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
 use super::super::body::worn_notes;
 use super::super::hold::Target;
 use super::super::{Carried, Holding, item_cell_in_front};
 use super::{HELD_NAME_ABOVE, InventoryButton, ItemCell, OpenGrids, TOOLTIP_OFFSET};
 use crate::common::{GROUND, GameView, UiPointer};
-use crate::widgets::{CELL, Floating, ItemTip, ItemTooltip};
+use crate::dom::Hit;
+use crate::widgets::{CELL, ItemTip, ItemTooltip};
 
 /// The name of what is under the pointer, or of what is held.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -17,16 +17,7 @@ pub(in crate::inventory) fn show_tooltip(
     holding: Res<Holding>,
     pointer: Res<UiPointer>,
     open: Res<OpenGrids>,
-    nodes: Query<
-        (
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&ItemCell>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
+    (hit, cells): (Res<Hit>, Query<&ItemCell>),
     mut tooltip: ResMut<ItemTooltip>,
     split: Res<super::super::split::Split>,
 ) {
@@ -36,10 +27,7 @@ pub(in crate::inventory) fn show_tooltip(
         // The split box names the stack itself.
         None
     } else {
-        pointer
-            .0
-            .and_then(|at| item_cell_in_front(at, nodes.iter()))
-            .map(|cell| cell.id)
+        item_cell_in_front(&hit.chain, &cells).map(|cell| cell.id)
     };
     let name = shown.and_then(|id| {
         let item = match holding.held {

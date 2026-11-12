@@ -1,16 +1,15 @@
 //! The box naming the item under the pointer.
 
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 
 use super::super::set_edge::{SetEdge, set_edge};
 use super::super::spawn_tooltip;
 use super::{
-    Floating, ItemName, ItemTip, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText,
-    TOOLTIP_OFFSET, shown_at,
+    ItemName, ItemTip, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText, TOOLTIP_OFFSET,
 };
-use crate::common::{NO_QUALITY_NAME, UiPointer, interface_area, quality_colour};
+use crate::common::{NO_QUALITY_NAME, interface_area, quality_colour};
+use crate::dom::Hit;
 
 /// The widest a tooltip grows before its words wrap, in the interface's pixels.
 const TIP_WIDTH: f32 = 420.0;
@@ -19,7 +18,6 @@ pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
     commands
         .spawn((
             NameBox,
-            Floating,
             Node {
                 position_type: PositionType::Absolute,
                 // Long words (a setting's) wrap; names fit.
@@ -40,34 +38,18 @@ pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
         });
 }
 
-/// Asks for the name of the `ItemName` in front at the pointer, unless a name has
-/// been asked for already.
-#[allow(clippy::type_complexity)]
+/// Asks for the name of the `ItemName` in front at the pointer (`dom::Hit`:
+/// the thing in front, or the nearest thing it is in), unless a name has been
+/// asked for already.
 pub(in crate::widgets) fn name_item_at_pointer(
-    pointer: Res<UiPointer>,
-    nodes: Query<
-        (
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&ItemName>,
-            Option<&CalculatedClip>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
+    hit: Res<Hit>,
+    names: Query<&ItemName>,
     mut tooltip: ResMut<ItemTooltip>,
 ) {
-    let Some(at) = pointer.0.filter(|_| tooltip.0.is_none()) else {
+    let Some(at) = hit.at.filter(|_| tooltip.0.is_none()) else {
         return;
     };
-    let front = nodes
-        .iter()
-        .filter(|(_, node, transform, visible, _, clip)| {
-            visible.get() && shown_at(at, node, transform, *clip)
-        })
-        .max_by_key(|(stack, ..)| stack.0);
-    if let Some((.., Some(name), _)) = front {
+    if let Some(name) = hit.first(|entity| names.get(entity).ok()) {
         tooltip.0 = Some(ItemTip {
             words: name.words.clone(),
             quality: name.quality,

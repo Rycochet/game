@@ -3,10 +3,9 @@
 //! it for a moment, even over a part that is disabled.
 
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 
-use super::item::{Floating, ItemTip, ItemTooltip, shown_at};
-use crate::common::UiPointer;
+use super::item::{ItemTip, ItemTooltip};
+use crate::dom::{Hit, Solid};
 
 /// How long the pointer stays before the words show, in seconds.
 const DELAY: f32 = 0.5;
@@ -15,46 +14,24 @@ const OFFSET: Vec2 = Vec2::new(16.0, 16.0);
 /// What this node and everything in it is, shown on hovering (nothing while
 /// it is empty).
 #[derive(Component, Clone, Debug)]
+#[require(Solid)]
 pub struct HoverTip(pub String);
 
 /// Asks for the words of the `HoverTip` holding what is in front at the
-/// pointer, once it has stayed there, unless something else has been named.
-#[allow(clippy::type_complexity)]
+/// pointer (`dom::Hit`), once it has stayed there, unless something else has
+/// been named.
 pub(in crate::widgets) fn show_hover_tips(
     time: Res<Time<Real>>,
-    pointer: Res<UiPointer>,
-    nodes: Query<
-        (
-            Entity,
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&CalculatedClip>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
-    parents: Query<&ChildOf>,
+    hit: Res<Hit>,
     tips: Query<&HoverTip>,
     mut tooltip: ResMut<ItemTooltip>,
     mut since: Local<Option<(Entity, f32)>>,
 ) {
-    let Some(at) = pointer.0 else {
+    let Some(at) = hit.at else {
         *since = None;
         return;
     };
-    let front = nodes
-        .iter()
-        .filter(|(_, _, node, transform, visible, clip)| {
-            visible.get() && shown_at(at, node, transform, *clip)
-        })
-        .max_by_key(|(_, stack, ..)| stack.0)
-        .map(|(entity, ..)| entity);
-    let holder = front.and_then(|front| {
-        std::iter::once(front)
-            .chain(parents.iter_ancestors(front))
-            .find(|&entity| tips.contains(entity))
-    });
+    let holder = hit.first(|entity| tips.contains(entity).then_some(entity));
     let Some(holder) = holder else {
         *since = None;
         return;

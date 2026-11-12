@@ -1,35 +1,20 @@
 //! Picking things up with a finger: a press held on an item.
 
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::wear::Remover;
 
 use super::hold::Held;
 use super::panels::ItemCell;
 use super::{Carried, Hand, Holding};
 use crate::common::{GodMode, StockCell, TouchGesture, in_interface};
-use crate::dom::HeldObject;
-use crate::widgets::{Floating, shown_at};
+use crate::dom::{Finder, HeldObject};
 
-/// The item cell in front of everything else at this point, if one is.
-pub(super) fn item_cell_in_front<'a>(
-    at: Vec2,
-    nodes: impl Iterator<
-        Item = (
-            &'a ComputedStackIndex,
-            &'a ComputedNode,
-            &'a UiGlobalTransform,
-            &'a InheritedVisibility,
-            Option<&'a ItemCell>,
-        ),
-    >,
-) -> Option<ItemCell> {
-    nodes
-        .filter(|(_, node, transform, visible, _)| {
-            visible.get() && node.contains_point(**transform, at / node.inverse_scale_factor)
-        })
-        .max_by_key(|(stack, ..)| stack.0)
-        .and_then(|(.., cell)| cell.copied())
+/// The item cell in front of everything else, if one is: the nearest to
+/// what is in front (`chain`: `dom::Hit`'s, or `dom::Finder`'s for a finger).
+pub(super) fn item_cell_in_front(chain: &[Entity], cells: &Query<&ItemCell>) -> Option<ItemCell> {
+    chain
+        .iter()
+        .find_map(|&entity| cells.get(entity).ok().copied())
 }
 
 /// A finger staying still on an item picks it up, once for each contact: a tap shows
@@ -37,27 +22,7 @@ pub(super) fn item_cell_in_front<'a>(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(super) fn pick_up_by_finger(
     mut gesture: ResMut<TouchGesture>,
-    nodes: Query<
-        (
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&ItemCell>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
-    stock: Query<
-        (
-            &ComputedStackIndex,
-            &ComputedNode,
-            &UiGlobalTransform,
-            &InheritedVisibility,
-            Option<&StockCell>,
-            Option<&CalculatedClip>,
-        ),
-        (With<Node>, Without<Floating>),
-    >,
+    (finder, cells, stock): (Finder, Query<&ItemCell>, Query<&StockCell>),
     (mut holding, mut object): (ResMut<Holding>, ResMut<HeldObject>),
     carried: Res<Carried>,
     god: Res<GodMode>,
@@ -83,7 +48,8 @@ pub(super) fn pick_up_by_finger(
         return;
     };
     *decided = Some(start);
-    if let Some(cell) = item_cell_in_front(start, nodes.iter())
+    let chain = finder.chain_at(start);
+    if let Some(cell) = item_cell_in_front(&chain, &cells)
         && (god.0 || carried.0.may_remove(cell.id, Remover::Wearer))
     {
         // A mixed stack is chosen from first: see `split`.
@@ -103,13 +69,7 @@ pub(super) fn pick_up_by_finger(
         }
         return;
     }
-    let front = stock
-        .iter()
-        .filter(|(_, node, transform, visible, _, clip)| {
-            visible.get() && shown_at(start, node, transform, *clip)
-        })
-        .max_by_key(|(stack, ..)| stack.0);
-    if let Some((.., Some(cell), _)) = front {
+    if let Some(cell) = chain.iter().find_map(|&entity| stock.get(entity).ok()) {
         let held = Held {
             id: cell.item.id,
             rotation: cell.rotation,

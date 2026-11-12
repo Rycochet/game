@@ -15,7 +15,6 @@ use crate::common::{Other, OwnVitals};
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::view3d::{TOKEN_DIAMETER, TokenView, ViewCamera};
-use crate::widgets::Floating;
 
 const RED: Color = Color::srgb(0.8, 0.1, 0.08);
 const EMPTY: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
@@ -148,7 +147,7 @@ pub(super) fn show_health_bars(
     }
     for (owner, node, share) in placed {
         commands
-            .spawn((HealthBar(owner), Floating, node, BackgroundColor(EMPTY)))
+            .spawn((HealthBar(owner), node, BackgroundColor(EMPTY)))
             .with_child((
                 HealthFill,
                 Node {

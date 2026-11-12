@@ -1,12 +1,13 @@
 //! What is held follows the pointer or finger, turns, and is let go.
 
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
+use bevy::ui::UiGlobalTransform;
 
 use super::{Dropped, Hand, HeldObject, HeldOver, HeldWhat};
 use crate::common::{Action, Preferences, TouchGesture, UiPointer, in_interface};
+use crate::dom::Finder;
 use crate::dom::object_grid::GridBox;
-use crate::widgets::{CELL, Floating, logical_rect, shown_at};
+use crate::widgets::{CELL, logical_rect};
 
 /// A press and release this quick, this close together, is a click: what it
 /// picked up stays held until the next.
@@ -18,14 +19,6 @@ pub fn is_click(from: Vec2, to: Vec2, seconds: f64) -> bool {
     seconds < CLICK_SECONDS && from.distance(to) < CLICK_PIXELS
 }
 
-type Rect<'a> = (
-    &'a ComputedStackIndex,
-    &'a ComputedNode,
-    &'a UiGlobalTransform,
-    &'a InheritedVisibility,
-    Option<&'a CalculatedClip>,
-);
-
 /// Turns what is held, moves it to the pointer or finger, says what it is
 /// over, and lets go of it when its hand does.
 #[allow(clippy::too_many_arguments)]
@@ -36,8 +29,8 @@ pub(super) fn follow_held(
     mut gesture: ResMut<TouchGesture>,
     (mut keys, preferences): (ResMut<ButtonInput<KeyCode>>, Res<Preferences>),
     time: Res<Time<Real>>,
-    grids: Query<(Entity, &GridBox)>,
-    nodes: Query<(Entity, Rect), Without<Floating>>,
+    grids: Query<&GridBox>,
+    (finder, boxes): (Finder, Query<(&ComputedNode, &UiGlobalTransform)>),
     mut dropped: MessageWriter<Dropped>,
     mut was_down: Local<bool>,
 ) {
@@ -70,7 +63,9 @@ pub(super) fn follow_held(
         Hand::Mouse | Hand::Clicked | Hand::Kept => pointer.0.or(held.at),
     };
     held.at = at;
-    let over = at.map(|at| over(at, &grids, &nodes)).unwrap_or_default();
+    let over = at
+        .map(|at| over(at, &finder, &grids, &boxes))
+        .unwrap_or_default();
     held.over = over;
 
     let released = !mouse.pressed(MouseButton::Left);
@@ -96,32 +91,28 @@ pub(super) fn follow_held(
     }
 }
 
-/// What is in front at this point: any node, and the grid of things there.
+/// What is in front at this point (what the pointer would be on, were
+/// nothing held), and the grid of things it is or is in, with the cell there.
 fn over(
     at: Vec2,
-    grids: &Query<(Entity, &GridBox)>,
-    nodes: &Query<(Entity, Rect), Without<Floating>>,
+    finder: &Finder,
+    grids: &Query<&GridBox>,
+    boxes: &Query<(&ComputedNode, &UiGlobalTransform)>,
 ) -> HeldOver {
-    let cell = grids
-        .iter()
-        .filter_map(|(grid, GridBox(cells))| {
-            let (_, (stack, node, transform, visible, _)) = nodes.get(*cells).ok()?;
-            let inside = node.contains_point(*transform, at / node.inverse_scale_factor);
-            (visible.get() && inside).then_some((grid, stack.0, node, transform))
-        })
-        .max_by_key(|(_, stack, ..)| *stack)
-        .map(|(grid, _, node, transform)| {
-            let (corner, _) = logical_rect(node, transform);
-            let cell = ((at - corner) / CELL).floor();
-            (grid, cell.x as i32, cell.y as i32)
-        });
-    // Only what is in front counts.
-    let front = nodes
-        .iter()
-        .filter(|(_, (_, node, transform, visible, clip))| {
-            visible.get() && shown_at(at, node, transform, *clip)
-        })
-        .max_by_key(|(_, (stack, ..))| stack.0)
-        .map(|(entity, _)| entity);
-    HeldOver { front, cell }
+    let chain = finder.chain_at(at);
+    let cell = chain.iter().find_map(|&grid| {
+        let GridBox(cells) = grids.get(grid).ok()?;
+        let (node, transform) = boxes.get(*cells).ok()?;
+        // On the grid's own cells, not the room round them.
+        if !node.contains_point(*transform, at / node.inverse_scale_factor) {
+            return None;
+        }
+        let (corner, _) = logical_rect(node, transform);
+        let cell = ((at - corner) / CELL).floor();
+        Some((grid, cell.x as i32, cell.y as i32))
+    });
+    HeldOver {
+        front: chain.first().copied(),
+        cell,
+    }
 }

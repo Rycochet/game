@@ -7,7 +7,6 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::shader::ShaderRef;
 
-use super::Floating;
 use crate::common::Preferences;
 
 /// How fast the stripes chase round, in pixels a second: quickly, to catch
@@ -49,7 +48,6 @@ pub(super) struct QueuedStripes(Handle<QueuedStripeMaterial>);
 pub fn queued_stripe(width: f32, inset: f32) -> impl Bundle {
     (
         QueuedStripe,
-        Floating,
         Node {
             position_type: PositionType::Absolute,
             left: px(inset),

@@ -3,13 +3,12 @@
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use bevy::ui::{CalculatedClip, ComputedStackIndex, UiGlobalTransform};
 use shared::ability::Ability;
 
 use super::bar::SlotNode;
 use super::page::PageAbility;
 use crate::common::AbilitiesPage;
-use crate::widgets::{Floating, shown_at};
+use crate::dom::Finder;
 
 /// Where something can be picked up or dropped.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -22,20 +21,11 @@ pub(super) enum Spot {
     Page,
 }
 
-/// What is needed of a node to tell whether a point is on it, and what is in front.
-type NodeParts = (
-    Entity,
-    &'static ComputedStackIndex,
-    &'static ComputedNode,
-    &'static UiGlobalTransform,
-    &'static InheritedVisibility,
-    Option<&'static CalculatedClip>,
-);
-
-/// Finds the spot at a point: whatever is in front there, or holds it.
+/// Finds the spot at a point: whatever is in front there (`dom`'s one
+/// search), or holds it.
 #[derive(SystemParam)]
 pub(super) struct Spots<'w, 's> {
-    nodes: Query<'w, 's, NodeParts, (With<Node>, Without<Floating>)>,
+    finder: Finder<'w, 's>,
     parents: Query<'w, 's, &'static ChildOf>,
     slots: Query<'w, 's, &'static SlotNode>,
     listed: Query<'w, 's, &'static PageAbility>,
@@ -45,15 +35,7 @@ pub(super) struct Spots<'w, 's> {
 impl Spots<'_, '_> {
     /// The spot at `at` (in interface pixels), if there is one.
     pub(super) fn at(&self, at: Vec2) -> Option<Spot> {
-        let front = self
-            .nodes
-            .iter()
-            .filter(|(_, _, node, transform, visible, clip)| {
-                visible.get() && shown_at(at, node, transform, *clip)
-            })
-            .max_by_key(|(_, stack, ..)| stack.0)
-            .map(|(entity, ..)| entity)?;
-        self.of(front)
+        self.of(self.finder.target_at(at)?)
     }
 
     /// The spot this node, in front somewhere, is or is in.

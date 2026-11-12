@@ -9,10 +9,6 @@ use super::{CELL_BORDER, QUALITY_BORDER};
 use crate::common::quality_colour;
 use crate::item_art::{Look, look_of};
 
-/// Follows the pointer above everything: not what the pointer is on.
-#[derive(Component, Clone, Copy)]
-pub struct Floating;
-
 /// The name to show this frame, if any. Whoever knows what the pointer is on sets
 /// it in `Update`, and it is cleared once shown.
 #[derive(Resource, Default)]
@@ -30,6 +26,7 @@ pub struct ItemTip {
 /// On an item's cells and label for its name to show when the pointer is on it,
 /// for items whose owner has nothing more to say about them.
 #[derive(Component, Clone)]
+#[require(crate::dom::Solid)]
 pub struct ItemName {
     pub words: String,
     pub quality: Option<Quality>,

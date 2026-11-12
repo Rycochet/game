@@ -7,7 +7,6 @@ use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::shader::ShaderRef;
 use shared::item::Quality;
 
-use super::Floating;
 use crate::common::{BandShift, quality_colour};
 
 /// How fast the bands drift by themselves, in pixels a second: slowly, so they
@@ -56,7 +55,7 @@ impl SetEdges {
 /// inside of on each side it has, so a shape's cells join up. It is not what the
 /// pointer is on.
 pub fn set_edge(quality: Option<Quality>, border: UiRect, out: f32) -> impl Bundle {
-    (SetEdge(quality), Floating, edge_node(border, out))
+    (SetEdge(quality), edge_node(border, out))
 }
 
 /// The node `set_edge` draws: standing out only where it has a side.

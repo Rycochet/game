@@ -8,9 +8,7 @@ use shared::item::{ItemKind, Rotation};
 use super::tiles::UNKNOWN;
 use crate::common::KnownItem;
 use crate::item_art::{Look, look_of};
-use crate::widgets::{
-    Floating, PICTURE_PIXELS_PER_CELL, item_colour, item_picture, picture_in_square,
-};
+use crate::widgets::{PICTURE_PIXELS_PER_CELL, item_colour, item_picture, picture_in_square};
 
 /// The tint of an item being asked after.
 const LOADING: Color = Color::srgba(0.25, 0.17, 0.1, 0.18);
@@ -46,13 +44,13 @@ impl Shows {
         };
         match self {
             Self::Loading => {
-                frame.spawn((Floating, filling, BackgroundColor(LOADING)));
+                frame.spawn((filling, BackgroundColor(LOADING)));
             }
             Self::Unknown => {
-                frame.spawn((Floating, filling, ImageNode::new(UNKNOWN)));
+                frame.spawn((filling, ImageNode::new(UNKNOWN)));
             }
             Self::Plain(kind) => {
-                frame.spawn((Floating, filling, BackgroundColor(item_colour(*kind))));
+                frame.spawn((filling, BackgroundColor(item_colour(*kind))));
             }
             Self::Picture(look) => {
                 let node = picture_in_square(look);

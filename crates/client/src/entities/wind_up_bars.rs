@@ -16,7 +16,6 @@ use crate::common::{Other, OwnAbility};
 use crate::connection::FromServer;
 use crate::player::Player;
 use crate::view3d::{TokenView, ViewCamera};
-use crate::widgets::Floating;
 
 /// Wind-ups at least this long, in seconds, get a bar.
 const LONG: f64 = 1.0;
@@ -116,7 +115,7 @@ pub(super) fn show_wind_up_bars(
     }
     for (owner, node, done) in placed {
         commands
-            .spawn((WindUpBar(owner), Floating, node, BackgroundColor(EMPTY)))
+            .spawn((WindUpBar(owner), node, BackgroundColor(EMPTY)))
             .with_child((
                 WindUpFill,
                 Node {

@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 
 use super::{HeldObject, HeldWhat};
-use crate::widgets::{ABILITY, CELL, Floating, HELD_ITEM_Z, ItemLook, spawn_item_cells};
+use crate::dom::Inert;
+use crate::widgets::{ABILITY, CELL, HELD_ITEM_Z, ItemLook, spawn_item_cells};
 
 /// The node what is held is drawn in.
 #[derive(Component)]
@@ -15,7 +16,8 @@ pub(super) fn spawn_held(mut commands: Commands) {
         ..default()
     };
     let above = GlobalZIndex(HELD_ITEM_Z);
-    commands.spawn((HeldNode, Floating, node, above, Visibility::Hidden));
+    // Inert: what is held is never what the pointer is on.
+    commands.spawn((HeldNode, Inert, node, above, Visibility::Hidden));
 }
 
 /// The held thing: an item at its true size, with the cell it was picked up
@@ -61,7 +63,7 @@ fn draw(parent: &mut ChildSpawnerCommands, what: &HeldWhat) {
         HeldWhat::Item(held) => {
             let look = ItemLook::of(&held.item).turned(held.rotation);
             let shape = held.item.shape().turned(held.rotation);
-            spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| Floating);
+            spawn_item_cells(parent, look, shape, (0.0, 0.0), false, |_, _| ());
         }
         HeldWhat::Ability(thing) => {
             // Its icon over the colour of what it leans on, as where it
@@ -74,7 +76,7 @@ fn draw(parent: &mut ChildSpawnerCommands, what: &HeldWhat) {
                 ..default()
             };
             let icon = ImageNode::new(thing.look.icon.clone());
-            parent.spawn((Floating, icon, BackgroundColor(thing.look.colour), node));
+            parent.spawn((icon, BackgroundColor(thing.look.colour), node));
         }
     }
 }

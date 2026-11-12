@@ -5,8 +5,8 @@ use bevy::prelude::*;
 
 use super::{AbilityCell, AbilitySlotShown, SlotPart};
 use crate::widgets::{
-    ABILITY, ALLOWED, Floating, GRID_LINE, REFUSED, TextSize, queued_stripe, set_edge,
-    spawn_ability, spawn_outlined_text,
+    ABILITY, ALLOWED, GRID_LINE, REFUSED, TextSize, queued_stripe, set_edge, spawn_ability,
+    spawn_outlined_text,
 };
 
 const EMPTY_EDGE: f32 = 2.0;
@@ -46,7 +46,7 @@ fn edge(colour: Color) -> impl Bundle {
         border_radius: BorderRadius::all(px(4.0)),
         ..default()
     };
-    (Floating, node, BorderColor::from(colour))
+    (node, BorderColor::from(colour))
 }
 
 fn draw(inside: &mut ChildSpawnerCommands, slot: Entity, shown: &AbilitySlotShown) {
@@ -85,7 +85,7 @@ fn draw(inside: &mut ChildSpawnerCommands, slot: Entity, shown: &AbilitySlotShow
             border_radius: BorderRadius::all(px(4.0)),
             ..default()
         };
-        let shade = (SlotPart::Shade(slot), Floating, node);
+        let shade = (SlotPart::Shade(slot), node);
         inside.spawn((shade, BackgroundColor(SHADE)));
     }
     if shown.auto {
@@ -108,7 +108,7 @@ fn draw(inside: &mut ChildSpawnerCommands, slot: Entity, shown: &AbilitySlotShow
             bottom: px(1.0),
             ..default()
         };
-        inside.spawn((Floating, corner)).with_children(|corner| {
+        inside.spawn(corner).with_children(|corner| {
             spawn_outlined_text(corner, &shown.key, TextSize::Small);
         });
     }

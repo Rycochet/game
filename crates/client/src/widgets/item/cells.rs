@@ -6,7 +6,6 @@ use shared::item::Shape;
 use super::super::aura::{AuraMask, aura_glow};
 use super::super::set_edge::set_edge;
 use super::super::{ITEM_EDGE, Pressable};
-use super::Floating;
 use super::count::spawn_count;
 use super::mixed::spawn_mixed_mark;
 use super::{
@@ -110,7 +109,7 @@ pub fn spawn_item_cells<B: Bundle>(
         // Last, so over all of it: the grid's colour, mostly hiding it.
         for (x, y) in shape.cells() {
             let cell = at_cell(corner.0 + x as f32, corner.1 + y as f32);
-            parent.spawn((cell, BackgroundColor(DIMMING), Floating));
+            parent.spawn((cell, BackgroundColor(DIMMING)));
         }
     }
 }
