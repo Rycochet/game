@@ -9,10 +9,16 @@ pub(super) struct File {
     pub text: &'static str,
 }
 
-const ENGLISH: &[File] = &[File {
-    name: "en/common.ftl",
-    text: include_str!("en/common.ftl"),
-}];
+const ENGLISH: &[File] = &[
+    File {
+        name: "en/common.ftl",
+        text: include_str!("en/common.ftl"),
+    },
+    File {
+        name: "en/story.ftl",
+        text: include_str!("en/story.ftl"),
+    },
+];
 
 pub(super) fn files(language: Language) -> &'static [File] {
     match language {

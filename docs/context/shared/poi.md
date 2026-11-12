@@ -21,7 +21,7 @@ World map pois: the world grid is cut into chunks, and each chunk has at most on
 
 ## Used by
 
-- `shared::road` (towns), `shared::site` (`PoiKind` picks the generator), `shared::protocol` (`WorldChunk`), `server` (`ServerWorld::pois`: what it sends); client `common` (`KnownPois`, `Portal`), `world_map` (poi tokens), `site` (entering).
+- `shared::road` (towns), `shared::story` (`PlaceKind::of_poi`, `CHUNK_SIZE` for distance bands), `shared::site` (`PoiKind` picks the generator), `shared::protocol` (`WorldChunk`), `server` (`ServerWorld::pois`: what it sends); client `common` (`KnownPois`, `Portal`), `world_map` (poi tokens), `site` (entering).
 
 ## Notes
 
