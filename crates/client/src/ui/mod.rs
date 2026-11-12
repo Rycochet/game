@@ -10,7 +10,7 @@ use crate::common::{
     ClickMode, DebugInfo, DebugTools, FreezeMobs, GameClock, GameView, GodMode, MapPosition,
     ServerClock, Truesight, ViewStats,
 };
-use crate::dom::{Dom, Template, document};
+use crate::dom::{Dom, Template, document, top_strip};
 use crate::html;
 use crate::player::Player;
 
@@ -58,15 +58,8 @@ const GOD_MODE_ICON: &str = "\u{1F47B}";
 const TRUESIGHT_ICON: &str = "\u{1F440}";
 
 fn spawn_status_text(mut commands: Commands) {
-    // Over the whole window, stacked, for the text to be placed in.
-    let fills = Node {
-        position_type: PositionType::Absolute,
-        width: percent(100),
-        height: percent(100),
-        flex_direction: FlexDirection::Column,
-        ..default()
-    };
-    commands.spawn(document(&STATUS)).insert(fills);
+    // Along the top of the window, for the text to be placed from.
+    commands.spawn(document(&STATUS)).insert(top_strip());
 }
 
 /// What the status text last said, and where it was.

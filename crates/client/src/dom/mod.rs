@@ -23,6 +23,7 @@ mod parts;
 mod pictures;
 mod popup;
 mod restyle;
+mod strip;
 mod surfaces;
 mod tag;
 mod template;
@@ -44,6 +45,7 @@ pub use object_slot::{SlotLook, SlotShown, SlotThing};
 pub use parts::{AlwaysBars, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
 pub use popup::ClosePopups;
+pub use strip::{bottom_strip, top_strip};
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
 #[allow(unused_imports)]

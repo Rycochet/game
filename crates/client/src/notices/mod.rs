@@ -7,7 +7,7 @@ use shared::protocol::ServerMessage;
 
 use crate::common::words;
 use crate::connection::FromServer;
-use crate::dom::{Dom, Template, document};
+use crate::dom::{Dom, Template, document, top_strip};
 use crate::html;
 
 /// How long a notice shows, in seconds.
@@ -42,16 +42,8 @@ static NOTICES: Template = html!(
 struct Shown(f32);
 
 fn spawn_notice(mut commands: Commands) {
-    // Over the whole window, for the row to be placed in.
-    let fills = Node {
-        position_type: PositionType::Absolute,
-        width: percent(100),
-        height: percent(100),
-        // (Stacked, so the form in it is as wide as the window.)
-        flex_direction: FlexDirection::Column,
-        ..default()
-    };
-    commands.spawn(document(&NOTICES)).insert(fills);
+    // Along the top of the window, for the row to be placed from.
+    commands.spawn(document(&NOTICES)).insert(top_strip());
 }
 
 /// What a found poi's notice says.
