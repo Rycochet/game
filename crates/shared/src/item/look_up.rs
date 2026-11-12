@@ -23,6 +23,7 @@ impl Item {
         Item {
             contents: Vec::new(),
             above: Vec::new(),
+            count: 1,
             ..self.clone()
         }
     }

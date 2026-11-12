@@ -146,6 +146,12 @@ impl Batch {
     ) -> Option<String> {
         let mut inventory = carried.clone();
         let mut fits = true;
+        // Only a trial, so stand-ins name any new coin stacks.
+        let mut stand_ins = 0;
+        let mut stand_in = || {
+            stand_ins += 1;
+            Id::stand_in(stand_ins)
+        };
         for n in 0..self.count {
             if has_ground && (self.identical || n == 0) {
                 continue;
@@ -154,7 +160,7 @@ impl Batch {
                 Ok(item) => item,
                 Err(Refused(field)) => return Some(format!("No such {}", &any(field)[4..])),
             };
-            fits = fits && (has_ground || inventory.give(item, limits).is_ok());
+            fits = fits && (has_ground || inventory.give(item, limits, &mut stand_in).is_ok());
         }
         (!fits).then(|| "No space".to_owned())
     }

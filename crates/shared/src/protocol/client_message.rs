@@ -3,14 +3,15 @@
 use serde::{Deserialize, Serialize};
 
 use super::login::{CharacterId, Credentials, NewCharacter};
-use super::{DevAlignment, DevMobTool, DevSkills, DevVitals, DoorAsk, KindChange, OnlineSettings};
+use super::{
+    DevAlignment, DevGive, DevMobTool, DevSkills, DevVitals, DoorAsk, KindChange, OnlineSettings,
+};
 use crate::ability::{Ability, BarChange};
-use crate::creature::{CreatureKind, Size};
+use crate::creature::CreatureKind;
 use crate::difficulty::{Difficulties, Difficulty};
 use crate::dungeon::Cell;
 use crate::id::Id;
-use crate::item::{Favour, Holder, ItemKind, Quality, Rotation};
-use crate::item_form::RollRequest;
+use crate::item::{Holder, Rotation};
 use crate::movement::Step;
 use crate::poi::{ChunkPos, PoiKind};
 use crate::site::DevArea;
@@ -109,6 +110,15 @@ pub enum ClientMessage {
         items: Vec<Id>,
         then: Box<ClientMessage>,
     },
+    /// The top `count` of a carried stack lifted out on its own: `then` is what to
+    /// do with it, as for `FromStack`. For a counted stack (coins), whose part is
+    /// new: the server gives it an id and puts that in `then` in place of the one
+    /// it names (the client's stand-in). Answered as `then` is.
+    PartOfStack {
+        stack: Id,
+        count: u32,
+        then: Box<ClientMessage>,
+    },
     /// Throws something the character carries in their bin, with all in it,
     /// destroying what was there, answered with `Inventory`.
     BinItem { item: Id },
@@ -157,32 +167,7 @@ pub enum ClientMessage {
     BinFromGround { item: Id },
     /// Developer tools: new items of this kind for the character or `to`, made for this size
     /// (or the one getting them's own) and their fingers, answered with `Inventory`.
-    DevGiveItem {
-        kind: ItemKind,
-        size: Option<Size>,
-        magical: bool,
-        /// Ignored for kinds without quality.
-        quality: Quality,
-        /// Part of a set, if it has quality.
-        set: bool,
-        /// Blessed or cursed. It and `magical` are as secret as on anything else.
-        favour: Option<Favour>,
-        /// What it is rolled from (`item_form::make_item`), so it is what Give Item
-        /// showed; `None` for a random one.
-        seed: Option<u64>,
-        /// How many: kept to what the server allows (`StackLimits`).
-        count: u32,
-        /// All alike, in one stack; otherwise each rolled from its own seed
-        /// (`item_form::batch_seed`). What doesn't fit goes on the ground in a site,
-        /// and on the world map nothing is given unless all of it fits.
-        identical: bool,
-        /// What their form must be like (`item_form::RollRequest`); refused, giving
-        /// nothing, if any of them can't keep to it (`try_make_item`).
-        request: RollRequest,
-        /// Who gets them: a mob or another player in sight (the target), or
-        /// `None` for the character. Nothing is given if `to` isn't in sight.
-        to: Option<Id>,
-    },
+    DevGiveItem(DevGive),
     /// Developer tools: be told of every mob on the level, seen or not, or not.
     DevDetectMonsters(bool),
     /// Developer tools: truesight on or off. The client is told what is secret about

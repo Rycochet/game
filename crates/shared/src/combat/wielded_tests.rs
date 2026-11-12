@@ -32,7 +32,9 @@ fn carrying(kind: CreatureKind, items: Vec<Item>) -> Inventory {
         ..Inventory::default()
     };
     for item in items {
-        inventory.give(item, StackLimits::NONE).expect("room");
+        inventory
+            .give(item, StackLimits::NONE, &mut crate::id::stand_ins())
+            .expect("room");
     }
     inventory
 }

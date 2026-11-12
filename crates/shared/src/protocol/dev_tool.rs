@@ -23,7 +23,7 @@ impl ClientMessage {
             Self::DevMobs(DevMobTool::Delete(_)) => DebugTool::DestroyMob,
             Self::DevMobs(DevMobTool::Freeze(_)) => DebugTool::FreezeMobs,
             Self::DevKillMob { .. } => DebugTool::KillMob,
-            Self::DevGiveItem { .. } => DebugTool::GiveItem,
+            Self::DevGiveItem(..) => DebugTool::GiveItem,
             Self::DevSetCreature { .. } => DebugTool::ChangeCreature,
             Self::DevDetectMonsters(_) => DebugTool::DetectMobs,
             Self::DevTruesight(_) => DebugTool::Truesight,

@@ -5,7 +5,7 @@ use shared::wear::WearRefused;
 use super::tests::TestClient;
 
 fn hat(seed: u64, favour: Option<Favour>) -> ClientMessage {
-    ClientMessage::DevGiveItem {
+    ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind: ItemKind::Hat,
         size: None,
         magical: false,
@@ -17,7 +17,7 @@ fn hat(seed: u64, favour: Option<Favour>) -> ClientMessage {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }
+    })
 }
 
 /// The carried hats' ids, in the order they are carried.

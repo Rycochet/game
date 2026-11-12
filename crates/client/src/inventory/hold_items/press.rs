@@ -2,7 +2,8 @@
 //! a press on anything else picks it up.
 
 use bevy::prelude::*;
-use shared::item::Holder;
+use shared::id::Id;
+use shared::item::{Holder, Inventory};
 
 use super::super::hold::Held;
 use super::super::panels::{ItemCell, OpenGrids};
@@ -81,7 +82,8 @@ pub(super) fn take_presses(
             // The stack in the split box: that many from its top, picked up as anything
             // is, a tap or quick click holding it until the next.
             if let Some(splitting) = split.0.take()
-                && let Some(part) = carried.0.part_of(splitting.stack, splitting.count)
+                && let Some(part) =
+                    part_to_hold(&carried.0, holding, splitting.stack, splitting.count)
                 && let Some((_, placed)) = carried.0.placed(splitting.stack)
             {
                 let held = Held {
@@ -145,4 +147,18 @@ pub(super) fn take_presses(
         holding.pick_up(object, item, held, Hand::Mouse, picked);
     }
     false
+}
+
+/// The id of the top `count` of a carried stack, to hold. Part of a counted stack
+/// is new: a stand-in names it until the server does (`PartOfStack`), noted in
+/// `Holding::counted`.
+fn part_to_hold(carried: &Inventory, holding: &mut Holding, stack: Id, count: u32) -> Option<Id> {
+    if let Some(part) = carried.part_of(stack, count) {
+        return Some(part);
+    }
+    if !carried.find(stack)?.is_counted() {
+        return None;
+    }
+    holding.counted = Some((stack, count));
+    Some(holding.stand_in())
 }

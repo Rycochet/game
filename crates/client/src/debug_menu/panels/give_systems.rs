@@ -127,18 +127,20 @@ pub(in crate::debug_menu) fn press_give_button(
             continue;
         };
         let order = form.order();
-        to_server.write(ToServer(ClientMessage::DevGiveItem {
-            kind: order.kind,
-            size: order.size,
-            magical: order.magical,
-            quality: order.quality,
-            set: order.set,
-            favour: order.favour,
-            seed: Some(seed),
-            count: form.count,
-            identical: form.identical || form.count == 1,
-            request: order.request,
-            to: to.0.map(|(id, _)| id),
-        }));
+        to_server.write(ToServer(ClientMessage::DevGiveItem(
+            shared::protocol::DevGive {
+                kind: order.kind,
+                size: order.size,
+                magical: order.magical,
+                quality: order.quality,
+                set: order.set,
+                favour: order.favour,
+                seed: Some(seed),
+                count: form.count,
+                identical: form.identical || form.count == 1,
+                request: order.request,
+                to: to.0.map(|(id, _)| id),
+            },
+        )));
     }
 }

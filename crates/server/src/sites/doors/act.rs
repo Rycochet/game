@@ -186,7 +186,10 @@ pub(crate) fn dev_key(client: &mut Client, world: &mut ServerWorld) -> bool {
     for lock in chosen {
         let mut key = shared::item::Item::new(crate::ids::new_id(), shared::item::ItemKind::Key);
         key.form = Some(shared::item_form::ItemForm::Key(lock));
-        if let Err(key) = client.inventory.give(key, world.stacks) {
+        if let Err(key) = client
+            .inventory
+            .give(key, world.stacks, &mut crate::ids::new_id)
+        {
             crate::ground::put_down(client, world, key);
         }
     }

@@ -54,7 +54,9 @@ fn stones(count: u128) -> Inventory {
     };
     for n in 0..count {
         let stone = Item::new(Id::for_test(n), ItemKind::Stone);
-        inventory.give(stone, StackLimits::NONE).unwrap();
+        inventory
+            .give(stone, StackLimits::NONE, &mut crate::id::stand_ins())
+            .unwrap();
     }
     inventory
 }

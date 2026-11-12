@@ -119,10 +119,10 @@ impl ItemKind {
                     (1, 0),
                     false,
                 )),
-                // 100 of one make one of the next (`coin.rs`).
-                Self::CopperCoin => plain("Copper Coin", 1, square).without_quality(),
-                Self::SilverCoin => plain("Silver Coin", 3, square).without_quality(),
-                Self::GoldCoin => plain("Gold Coin", 5, square).without_quality(),
+                // 100 of one make one of the next (`coin.rs`), held as a number.
+                Self::CopperCoin => plain("Copper Coin", 1, square).without_quality().counted(),
+                Self::SilverCoin => plain("Silver Coin", 3, square).without_quality().counted(),
+                Self::GoldCoin => plain("Gold Coin", 5, square).without_quality().counted(),
                 Self::Key => plain("Key", 30, square).without_quality(),
                 // Laminated to the knee, wrapping the thighs: Waist and Legs (the owner's
                 // decision). Its form says its cells and weight.

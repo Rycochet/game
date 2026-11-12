@@ -30,7 +30,10 @@ pub(super) fn change_kind(
             && client.send_inventory();
     }
     let was = client.inventory.creature;
-    for item in client.inventory.change_body(kind, world.stacks) {
+    for item in client
+        .inventory
+        .change_body(kind, world.stacks, &mut crate::ids::new_id)
+    {
         crate::ground::put_down(client, world, item);
     }
     client.ground_told.again = true;

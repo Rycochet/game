@@ -39,7 +39,9 @@ fn an_inventory_finds_what_is_stacked_worn_or_binned() {
     let mut inventory = Inventory::default();
     let mut stack = item(2, ItemKind::Ring);
     stack.above.push(item(3, ItemKind::Ring));
-    inventory.give(stack, StackLimits::NONE).unwrap();
+    inventory
+        .give(stack, StackLimits::NONE, &mut crate::id::stand_ins())
+        .unwrap();
     inventory.bin = Some(item(4, ItemKind::Pouch));
     for n in 2..=4 {
         assert!(inventory.find_within(Id::for_test(n)).is_some(), "{n}");

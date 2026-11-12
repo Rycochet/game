@@ -63,19 +63,21 @@ pub(super) fn add(app: &mut App) {
                             (ItemKind::Hat, false, bless),
                             (ItemKind::Socks, false, curse),
                         ] {
-                            to_server.write(ToServer(ClientMessage::DevGiveItem {
-                                kind,
-                                size: None,
-                                magical,
-                                quality: Quality::Rare,
-                                set: false,
-                                favour,
-                                seed: None,
-                                count: 1,
-                                identical: true,
-                                request: shared::item_form::RollRequest::NONE,
-                                to: None,
-                            }));
+                            to_server.write(ToServer(ClientMessage::DevGiveItem(
+                                shared::protocol::DevGive {
+                                    kind,
+                                    size: None,
+                                    magical,
+                                    quality: Quality::Rare,
+                                    set: false,
+                                    favour,
+                                    seed: None,
+                                    count: 1,
+                                    identical: true,
+                                    request: shared::item_form::RollRequest::NONE,
+                                    to: None,
+                                },
+                            )));
                         }
                     }
                     if let Some(kind) = creature {
@@ -85,19 +87,21 @@ pub(super) fn add(app: &mut App) {
                         }));
                     }
                     for kind in [ItemKind::Backpack, ItemKind::Pouch, ItemKind::Boomerang] {
-                        to_server.write(ToServer(ClientMessage::DevGiveItem {
-                            kind,
-                            size: None,
-                            magical: false,
-                            quality: Default::default(),
-                            set: false,
-                            favour: None,
-                            seed: None,
-                            count: 1,
-                            identical: true,
-                            request: shared::item_form::RollRequest::NONE,
-                            to: None,
-                        }));
+                        to_server.write(ToServer(ClientMessage::DevGiveItem(
+                            shared::protocol::DevGive {
+                                kind,
+                                size: None,
+                                magical: false,
+                                quality: Default::default(),
+                                set: false,
+                                favour: None,
+                                seed: None,
+                                count: 1,
+                                identical: true,
+                                request: shared::item_form::RollRequest::NONE,
+                                to: None,
+                            },
+                        )));
                     }
                 } else if *step == 1 && time.elapsed_secs() > 2.0 {
                     *step = 2;

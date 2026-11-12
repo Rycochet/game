@@ -62,7 +62,7 @@ fn into_inventory(owner: &mut Client, world: &mut ServerWorld, items: Vec<Item>,
     let mut inventory = owner.inventory.clone();
     let mut left = Vec::new();
     for item in items {
-        if let Err(item) = inventory.give(item, world.stacks) {
+        if let Err(item) = inventory.give(item, world.stacks, &mut new_id) {
             left.push(item);
         }
     }
@@ -121,7 +121,9 @@ fn on_the_ground(mut left: Vec<Item>, identical: bool) -> Vec<Item> {
         return left;
     }
     let mut bottom = left.remove(0);
-    bottom.above.extend(left);
+    for one in left {
+        bottom.put_on(one);
+    }
     vec![bottom]
 }
 

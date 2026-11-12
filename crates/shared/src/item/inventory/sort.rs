@@ -62,7 +62,10 @@ fn stacked(grid: &[Placed], limits: StackLimits) -> Vec<Placed> {
                 continue;
             }
             if room < adding.count() {
-                stack.item.put_on(adding.split_top(room));
+                // The part joins the stack straight away, so its id is never kept.
+                stack
+                    .item
+                    .put_on(adding.split_top(room, &mut || Id::NOBODY));
             } else {
                 stack.item.put_on(item.take().expect("checked above"));
             }

@@ -261,7 +261,7 @@ pub(super) const GUEST: ClientMessage =
 /// new id, so each run gets a different item, and some (about 1 sword in 30) don't fit
 /// what a new character carries, so on the world map nothing is given.
 fn give(kind: ItemKind) -> ClientMessage {
-    ClientMessage::DevGiveItem {
+    ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind,
         size: None,
         magical: false,
@@ -273,7 +273,7 @@ fn give(kind: ItemKind) -> ClientMessage {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }
+    })
 }
 
 /// What the last `Inventory` among these answers says.
@@ -501,18 +501,20 @@ fn new_items_have_the_quality_asked_for_and_the_time_they_were_made() {
 #[test]
 fn only_things_with_quality_can_be_part_of_a_set() {
     let mut test = TestClient::new();
-    let give = |kind| ClientMessage::DevGiveItem {
-        kind,
-        size: None,
-        magical: false,
-        quality: Quality::Poor,
-        set: true,
-        favour: None,
-        seed: Some(1),
-        count: 1,
-        identical: true,
-        request: shared::item_form::RollRequest::NONE,
-        to: None,
+    let give = |kind| {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
+            kind,
+            size: None,
+            magical: false,
+            quality: Quality::Poor,
+            set: true,
+            favour: None,
+            seed: Some(1),
+            count: 1,
+            identical: true,
+            request: shared::item_form::RollRequest::NONE,
+            to: None,
+        })
     };
     test.send(&[give(ItemKind::Hat), give(ItemKind::Apple)]);
     let set_of = |kind| {
@@ -527,18 +529,20 @@ fn only_things_with_quality_can_be_part_of_a_set() {
 #[test]
 fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
     let mut test = TestClient::new();
-    let give = |kind| ClientMessage::DevGiveItem {
-        kind,
-        size: None,
-        magical: false,
-        quality: Quality::Rare,
-        set: false,
-        favour: None,
-        seed: Some(1),
-        count: 1,
-        identical: true,
-        request: shared::item_form::RollRequest::NONE,
-        to: None,
+    let give = |kind| {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
+            kind,
+            size: None,
+            magical: false,
+            quality: Quality::Rare,
+            set: false,
+            favour: None,
+            seed: Some(1),
+            count: 1,
+            identical: true,
+            request: shared::item_form::RollRequest::NONE,
+            to: None,
+        })
     };
     let carried = inventory(&test.send(&[give(ItemKind::Ring)]));
     let ring = &carried.items[0].item;
@@ -556,7 +560,7 @@ fn a_new_ring_has_a_form_and_fits_its_wearer_and_a_new_gem_rolls_its_size() {
 #[test]
 fn artifacts_are_always_named() {
     let mut test = TestClient::new();
-    let artifact = ClientMessage::DevGiveItem {
+    let artifact = ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind: ItemKind::Sword,
         size: None,
         magical: false,
@@ -568,7 +572,7 @@ fn artifacts_are_always_named() {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    };
+    });
     let carried = inventory(&test.send(&[artifact]));
     assert_eq!(carried.items.len(), 1, "the sword fits, with this seed");
     let name = carried.items[0].item.name();
@@ -597,18 +601,20 @@ fn items_are_made_for_the_wearer_or_the_size_asked_for() {
     let gloves = inventory(&answers).items.last().unwrap().item.made;
     assert_eq!(gloves.size, shared::creature::Size::Giant);
     assert_eq!(gloves.fingers, Some(10));
-    let large = |kind| ClientMessage::DevGiveItem {
-        kind,
-        size: Some(shared::creature::Size::Large),
-        magical: true,
-        quality: Quality::Epic,
-        set: false,
-        favour: None,
-        seed: Some(1),
-        count: 1,
-        identical: true,
-        request: shared::item_form::RollRequest::NONE,
-        to: None,
+    let large = |kind| {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
+            kind,
+            size: Some(shared::creature::Size::Large),
+            magical: true,
+            quality: Quality::Epic,
+            set: false,
+            favour: None,
+            seed: Some(1),
+            count: 1,
+            identical: true,
+            request: shared::item_form::RollRequest::NONE,
+            to: None,
+        })
     };
     let mut made = |kind| {
         let answers = test.send(&[large(kind)]);
@@ -630,7 +636,7 @@ pub(super) fn given(
     magical: bool,
     favour: Option<Favour>,
 ) -> Id {
-    let answers = test.send(&[ClientMessage::DevGiveItem {
+    let answers = test.send(&[ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind,
         size,
         magical,
@@ -642,7 +648,7 @@ pub(super) fn given(
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }]);
+    })]);
     inventory(&answers).items.last().unwrap().item.id
 }
 
@@ -757,7 +763,7 @@ fn wrong_sized_magic_gives_itself_away_by_fitting() {
 fn asking_for_magic_on_something_plain_raises_its_quality() {
     let mut test = TestClient::new();
     test.send(&[ClientMessage::DevTruesight(true)]);
-    let answers = test.send(&[ClientMessage::DevGiveItem {
+    let answers = test.send(&[ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind: ItemKind::Hat,
         size: None,
         magical: true,
@@ -769,7 +775,7 @@ fn asking_for_magic_on_something_plain_raises_its_quality() {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }]);
+    })]);
     let hat = inventory(&answers).items.last().unwrap().item.clone();
     assert!(hat.is_magical());
     assert_eq!(hat.quality, Some(Quality::Uncommon));
@@ -1628,12 +1634,12 @@ fn a_stack_goes_on_another_as_far_as_the_server_allows() {
 fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
     let mut test = TestClient::new();
     let answers = test.send(&[
-        give(ItemKind::CopperCoin),
-        give(ItemKind::CopperCoin),
-        give(ItemKind::CopperCoin),
+        give(ItemKind::Apple),
+        give(ItemKind::Apple),
+        give(ItemKind::Apple),
     ]);
-    let coins = inventory(&answers).items[0].item.clone();
-    let part = coins.above[0].id;
+    let apples = inventory(&answers).items[0].item.clone();
+    let part = apples.above[0].id;
     let move_to = |x| ClientMessage::MoveItem {
         item: part,
         to: Holder::Inventory,
@@ -1644,10 +1650,10 @@ fn part_of_a_stack_moves_on_its_own_and_goes_back_if_refused() {
     // Onto its own stack's place: refused, and nothing changes.
     let carried = inventory(&test.send(&[move_to(0)]));
     assert_eq!(carried.items.len(), 1);
-    assert_eq!(carried.find(coins.id).map(Item::count), Some(3));
+    assert_eq!(carried.find(apples.id).map(Item::count), Some(3));
     // Elsewhere: the top two go.
     let carried = inventory(&test.send(&[move_to(4)]));
-    assert_eq!(carried.find(coins.id).map(Item::count), Some(1));
+    assert_eq!(carried.find(apples.id).map(Item::count), Some(1));
     assert_eq!(carried.find(part).map(Item::count), Some(2));
 }
 

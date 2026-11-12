@@ -56,24 +56,20 @@ pub fn coin_stacks(copper: u64, most: u32) -> Vec<(ItemKind, u32)> {
     stacks
 }
 
-/// Coins worth `copper` as items, in the stacks `coin_stacks` gives, each coin
-/// with a new id: for the server, which alone makes ids.
+/// Coins worth `copper` as items, in the stacks `coin_stacks` gives, each stack
+/// one item with a count and a new id: for the server, which alone makes ids.
 pub fn coin_items(
     copper: u64,
     most: u32,
     made_at: Option<MadeAt>,
     new_id: &mut impl FnMut() -> Id,
 ) -> Vec<Item> {
-    let mut coin = |kind| Item {
-        made_at,
-        ..Item::new(new_id(), kind)
-    };
     coin_stacks(copper, most)
         .into_iter()
-        .map(|(kind, count)| {
-            let mut stack = coin(kind);
-            stack.above = (1..count).map(|_| coin(kind)).collect();
-            stack
+        .map(|(kind, count)| Item {
+            made_at,
+            count,
+            ..Item::new(new_id(), kind)
         })
         .collect()
 }

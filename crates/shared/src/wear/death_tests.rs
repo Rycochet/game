@@ -17,7 +17,9 @@ fn dressed(kinds: &[ItemKind]) -> Inventory {
             made: Made::for_body(kind, def.size, def.fingers(), false),
             ..Item::new(Id::for_test(index as u128 + 1), kind)
         };
-        inventory.give(item, StackLimits::NONE).expect("room");
+        inventory
+            .give(item, StackLimits::NONE, &mut crate::id::stand_ins())
+            .expect("room");
     }
     for index in 0..kinds.len() {
         let _ = inventory.wear(Id::for_test(index as u128 + 1));

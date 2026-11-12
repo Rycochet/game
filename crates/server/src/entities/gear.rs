@@ -54,13 +54,13 @@ pub(super) fn dressed(
             let _ = carrying.wear_new(new);
         } else {
             // Their own things don't stack.
-            let _ = carrying.give(new, StackLimits::NONE);
+            let _ = carrying.give(new, StackLimits::NONE, &mut crate::ids::new_id);
         }
     }
     // Whole stacks, each put where it fits.
     let most = StackLimits::default().most;
     for coins in coin_items(coins, most, Some(made_at), &mut new_id) {
-        let _ = carrying.give(coins, StackLimits::NONE);
+        let _ = carrying.give(coins, StackLimits::NONE, &mut crate::ids::new_id);
     }
     carrying
 }

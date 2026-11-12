@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::armour::set::SetKind;
 use crate::creature::{Location, Size};
 use crate::id::Id;
-use crate::item::{Favour, ItemKind, Known, Made, Placed, Quality, Shape};
+use crate::item::{Favour, ItemKind, Known, Made, Placed, Quality, Saved, Shape};
 use crate::item_form::ItemForm;
 use crate::world::WorldId;
 
@@ -18,8 +18,10 @@ pub struct MadeAt {
     pub minute: u64,
 }
 
-/// One item: it keeps its id for good, wherever it goes.
+/// One item: it keeps its id for good, wherever it goes. Read through `Saved`,
+/// which folds an old save's stacked coins into a count.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "Saved")]
 pub struct Item {
     pub id: Id,
     pub kind: ItemKind,
@@ -49,9 +51,19 @@ pub struct Item {
     #[serde(default)]
     pub known: Known,
     /// The items stacked on this one, the top last: see `stack`. Each of them has
-    /// nothing above it.
+    /// nothing above it. Always empty for a counted kind, which has `count`.
     #[serde(default)]
     pub above: Vec<Item>,
+    /// How many it is, for a counted kind (`ItemDef::counted`): a stack of coins is
+    /// one item with a count. Always 1 for any other kind. `count()` is how many a
+    /// whole stack holds, of either sort.
+    #[serde(default = "one")]
+    pub count: u32,
+}
+
+/// What `count` is when a save doesn't say.
+pub(super) fn one() -> u32 {
+    1
 }
 
 impl Item {
@@ -69,6 +81,7 @@ impl Item {
             favour: None,
             known: Known::default(),
             above: Vec::new(),
+            count: 1,
         }
     }
 
@@ -115,16 +128,23 @@ impl Item {
         shape.scaled(self.made.size)
     }
 
-    /// What it weighs with everything in it and stacked on it, in grams.
+    /// What it weighs with everything in it and stacked on it, in grams: all of
+    /// a counted one.
     pub fn total_weight(&self) -> u32 {
         let stacked: u32 = self.above.iter().map(Item::total_weight).sum();
+        self.own_weight() * self.count + stacked
+    }
+
+    /// What one item of it weighs, with anything in it, but not what is stacked on
+    /// it: one of a counted one.
+    pub fn own_weight(&self) -> u32 {
         let set: u32 = self.set_gems().map(Item::total_weight).sum();
         let own = self
             .form
             .as_ref()
             .and_then(|form| form.grams_at(self.made.size));
         let own = own.unwrap_or(self.kind.def().weight);
-        own + weight_of(&self.contents) + set + stacked
+        own + weight_of(&self.contents) + set
     }
 
     /// Where it also takes the Middle layer: its kind's padding, or torso armour that

@@ -38,19 +38,21 @@ pub(super) fn give_item(
         set,
         favour,
     } = params(request)?;
-    to_server.write(ToServer(ClientMessage::DevGiveItem {
-        kind,
-        size: None,
-        magical,
-        quality,
-        set,
-        favour,
-        seed: None,
-        count: 1,
-        identical: true,
-        request: shared::item_form::RollRequest::NONE,
-        to: None,
-    }));
+    to_server.write(ToServer(ClientMessage::DevGiveItem(
+        shared::protocol::DevGive {
+            kind,
+            size: None,
+            magical,
+            quality,
+            set,
+            favour,
+            seed: None,
+            count: 1,
+            identical: true,
+            request: shared::item_form::RollRequest::NONE,
+            to: None,
+        },
+    )));
     done()
 }
 

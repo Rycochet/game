@@ -2,8 +2,9 @@
 //! whenever a copper or silver stack would reach 100, each 100 become one of the
 //! next kind, put on a stack of that kind in the same grid or else in its first
 //! free place, carrying on upward. What could not then find room stays where it
-//! came from. The same rule on both sides, so the client's guess is the server's
-//! answer: a new coin takes the id of the first of the hundred it is made from.
+//! came from. Coins are counted (`ItemDef::counted`), so this is sums on counts;
+//! a new stack's id comes from `new_id`: the server's own, or a stand-in in the
+//! client's guess, which the server's answer replaces.
 
 use crate::id::Id;
 use crate::item::{COINS_PER_NEXT, Holder, Inventory, Item, MoveRefused, Rotation, StackLimits};
@@ -39,8 +40,16 @@ impl Inventory {
                 if before + count < COINS_PER_NEXT {
                     return count <= plain;
                 }
+                // Stand-ins from the top down, apart from the client's guesses'.
+                let mut next = u64::MAX;
+                let mut stand_in = || {
+                    next -= 1;
+                    Id::stand_in(next)
+                };
                 let mut trial = self.clone();
-                trial.join_coins(item, onto, holder, count, limits).is_ok()
+                trial
+                    .join_coins(item, onto, holder, count, limits, &mut stand_in)
+                    .is_ok()
             })
             .unwrap_or(0)
     }
@@ -55,81 +64,88 @@ impl Inventory {
         holder: Holder,
         count: u32,
         limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
     ) -> Result<(), MoveRefused> {
-        let mut part = item.clone();
-        if count < part.count() {
-            part = part.split_top(count);
-        }
         // Something carried leaves the place it lay in.
         if self.find(item.id).is_some() {
             match count == item.count() {
                 true => drop(self.take(item.id)),
-                false => drop(self.find_mut(item.id).map(|item| item.split_top(count))),
+                false => self.find_mut(item.id).ok_or(MoveRefused::NoSuchItem)?.count -= count,
             }
         }
-        self.find_mut(onto)
-            .ok_or(MoveRefused::NoSuchItem)?
-            .put_on(part);
-        self.carry_coins(onto, holder, limits)
+        self.find_mut(onto).ok_or(MoveRefused::NoSuchItem)?.count += count;
+        self.carry_coins(onto, holder, limits, new_id)
     }
 
     /// Turns each 100 coins in the stack `onto` (lying in `holder`) into one of
-    /// the next kind, leaving the rest from the bottom, its id the stack's while
-    /// any are left. Refused if what is left is more than a stack may hold, or a
-    /// new coin has no room: then it is half done, so it is tried on a copy first.
+    /// the next kind, leaving the rest, with the stack's id, while any are left.
+    /// Refused if what is left is more than a stack may hold, or a new coin has
+    /// no room: then it is half done, so it is tried on a copy first.
     pub(super) fn carry_coins(
         &mut self,
         onto: Id,
         holder: Holder,
         limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
     ) -> Result<(), MoveRefused> {
         let stack = self.find(onto).ok_or(MoveRefused::NoSuchItem)?;
         let Some(next) = stack.kind.next_coin() else {
             return Ok(());
         };
-        let keep = stack.count() % COINS_PER_NEXT;
+        let all = stack.count();
+        let keep = all % COINS_PER_NEXT;
         if keep > limits.most_of(stack) {
             return Err(MoveRefused::NoStackRoom);
         }
-        if stack.count() < COINS_PER_NEXT {
+        if all < COINS_PER_NEXT {
             return Ok(());
         }
-        let turned = match keep {
-            0 => {
-                let mut bottom = self.take(onto).ok_or(MoveRefused::NoSuchItem)?;
-                let above = std::mem::take(&mut bottom.above);
-                std::iter::once(bottom).chain(above).collect::<Vec<_>>()
-            }
-            _ => {
-                let stack = self.find_mut(onto).ok_or(MoveRefused::NoSuchItem)?;
-                stack.above.split_off(keep as usize - 1)
-            }
-        };
-        for hundred in turned.chunks(COINS_PER_NEXT as usize) {
-            let first = &hundred[0];
-            let coin = Item {
-                made_at: first.made_at,
-                ..Item::new(first.id, next)
-            };
-            self.put_coin(coin, holder, limits)?;
+        let made_at = stack.made_at;
+        match keep {
+            0 => drop(self.take(onto)),
+            _ => self.find_mut(onto).ok_or(MoveRefused::NoSuchItem)?.count = keep,
         }
-        Ok(())
+        let coins = Item {
+            made_at,
+            count: all / COINS_PER_NEXT,
+            ..Item::new(new_id(), next)
+        };
+        self.put_coins(coins, holder, limits, new_id)
     }
 
-    /// Puts a new coin in this grid: on a stack of its kind, or else in the
-    /// first place it fits.
-    fn put_coin(
+    /// Puts new coins in this grid: on the stacks of their kind with room, in
+    /// order, and the rest in the first places they fit, as many on each as a
+    /// stack may hold.
+    fn put_coins(
         &mut self,
-        coin: Item,
+        mut coins: Item,
         holder: Holder,
         limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
     ) -> Result<(), MoveRefused> {
-        if let Some(onto) = self.first_stack_for(&coin, holder, limits) {
-            return self.add_to_stack(coin, onto, limits).map(drop);
+        loop {
+            let grid = self.grid(holder).ok_or(MoveRefused::NoSuchGrid)?;
+            let ids: Vec<Id> = grid.iter().map(|placed| placed.item.id).collect();
+            let onto = ids
+                .into_iter()
+                .find(|&onto| self.stack_room(&coins, onto, limits).is_ok());
+            if let Some(onto) = onto {
+                match self.add_to_stack(coins, onto, limits, new_id)? {
+                    Some(rest) => coins = rest,
+                    None => return Ok(()),
+                }
+                continue;
+            }
+            let most = limits.most_of(&coins);
+            let rest = (coins.count > most).then(|| coins.split_top(coins.count - most, new_id));
+            let (x, y, rotation) = self
+                .first_place_for_new(&coins, holder, Rotation::None)
+                .ok_or(MoveRefused::NoRoom)?;
+            self.add(coins, holder, x, y, rotation)?;
+            match rest {
+                Some(rest) => coins = rest,
+                None => return Ok(()),
+            }
         }
-        let (x, y, rotation) = self
-            .first_place_for_new(&coin, holder, Rotation::None)
-            .ok_or(MoveRefused::NoRoom)?;
-        self.add(coin, holder, x, y, rotation)
     }
 }

@@ -56,7 +56,8 @@ pub(super) fn let_go_of(
             to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
             // Only the top of a stack goes on, and the rest stays on the ground.
             let mut item = item;
-            let top = item.take_top();
+            // One off a counted stack is new: a stand-in until the server says.
+            let top = item.take_top(&mut || holding.stand_in());
             let all_of_it = top.is_none();
             let wearing = top.unwrap_or(item);
             let grams = wearing.total_weight();
@@ -73,7 +74,8 @@ pub(super) fn let_go_of(
             let grams = item.total_weight();
             to_server.write(ToServer(ClientMessage::StackFromGround { item: id, onto }));
             // What is left stays on the ground, as the server will say.
-            if let Ok(rest) = carried.0.add_to_stack(item, onto, stacks.0) {
+            let stand_in = &mut || holding.stand_in();
+            if let Ok(rest) = carried.0.add_to_stack(item, onto, stacks.0, stand_in) {
                 let left = rest.as_ref().map_or(0, Item::total_weight);
                 if rest.is_none() {
                     took.write(TookItem { with, item: id });
@@ -110,16 +112,23 @@ pub(super) fn let_go_of(
         }
         return;
     }
-    // Some of a mixed stack: whatever is asked is for those items together.
+    // Some of a mixed stack: whatever is asked is for those items together. Part
+    // of a counted one: the server makes it, naming it in place of the stand-in.
     let group = holding.group.take();
+    let counted = holding.counted.take();
     let mut send = |ToServer(then): ToServer| {
-        to_server.write(ToServer(match &group {
-            Some((stack, items)) => ClientMessage::FromStack {
+        to_server.write(ToServer(match (&group, counted) {
+            (Some((stack, items)), _) => ClientMessage::FromStack {
                 stack: *stack,
                 items: items.clone(),
                 then: Box::new(then),
             },
-            None => then,
+            (None, Some((stack, count))) => ClientMessage::PartOfStack {
+                stack,
+                count,
+                then: Box::new(then),
+            },
+            (None, None) => then,
         }));
     };
     if aim == (Target::Body { allowed: true }) {
@@ -177,7 +186,8 @@ pub(super) fn let_go_of(
         let to = carried.0.placed(onto).map(|(holder, _)| holder);
         let cost = to.map_or(0, |to| carried.0.move_cost(item, to));
         let taking_off = carried.0.taking_off_cost(item);
-        if carried.0.stack_onto(item, onto, stacks.0).is_ok() {
+        let stand_in = &mut || holding.stand_in();
+        if carried.0.stack_onto(item, onto, stacks.0, stand_in).is_ok() {
             spent.write(SpentEnergy(cost));
             dressing.write(Dressing(taking_off));
             send(ToServer(ClientMessage::StackItem { item, onto }));
