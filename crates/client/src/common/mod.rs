@@ -100,7 +100,8 @@ pub use map::{
 pub use model_material::{ModelMaterial, model_material};
 pub use own_ability::OwnAbility;
 pub use pointer::{
-    PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface, interface_area,
+    PointerOverride, PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface,
+    interface_area,
 };
 pub use rivers::NearRivers;
 pub use roads::KnownRoads;

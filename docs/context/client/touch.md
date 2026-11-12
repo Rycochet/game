@@ -4,7 +4,7 @@ Turns fingers into what the rest of the game reads, so no other module needs to 
 
 ## Files
 
-- `crates/client/src/touch/mod.rs`: `TouchPlugin`. `read_touches` (`PreUpdate`, in `common::PointerSystems`) feeds Bevy's `Touches` to the private `Tracker`, which follows one contact (first finger down to last finger up) and is unit tested without Bevy. Constants `TAP_SLOP` (10 logical pixels), `MIN_FINGER_GAP`.
+- `crates/client/src/touch/mod.rs`: `TouchPlugin`. `read_touches` (`PreUpdate`, in `common::PointerSystems`, with `common::PointerOverride` ordered after it) feeds Bevy's `Touches` to the private `Tracker`, which follows one contact (first finger down to last finger up) and is unit tested without Bevy. Constants `TAP_SLOP` (10 logical pixels), `MIN_FINGER_GAP`.
 
 ## Public API
 

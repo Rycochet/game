@@ -8,8 +8,10 @@ use server::debug_api::{BrpError, BrpResult, Value, json, params};
 use std::path::PathBuf;
 use std::{fs, path, process};
 
+use super::super::FakeCursor;
 use crate::common::{
-    CurrentDungeon, GameView, MapPosition, OtherLevels, ServerClock, SpotPosition, Target,
+    CurrentDungeon, GameView, MapPosition, OtherLevels, PointerPosition, ServerClock, SpotPosition,
+    Target,
 };
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
@@ -24,7 +26,7 @@ pub(super) fn done() -> BrpResult {
 /// `client.state`: which client answered (process and the data folder its
 /// embedded server saves in, so a caller can tell it is talking to its own
 /// game), what it shows, where the player is and whom they target, the clock,
-/// the window and what is open.
+/// the window, the pointer and what is open.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn state(
     _: In<Option<Value>>,
@@ -36,6 +38,7 @@ pub(super) fn state(
     (window, ui_scale): (Query<&Window, With<PrimaryWindow>>, Res<UiScale>),
     open: (Res<FullMap>, Res<DebugMenu>, Res<SystemMenu>),
     target: Res<Target>,
+    pointer: (Res<PointerPosition>, Res<FakeCursor>),
 ) -> BrpResult {
     let view = *view.get();
     let (map, debug_menu, system_menu) = open;
@@ -58,6 +61,12 @@ pub(super) fn state(
             "scale_factor": window.scale_factor(),
         })),
         "ui_scale": ui_scale.0,
+        // Where the game's pointer is (logical pixels), and whether dev tools
+        // hold it in place of the real mouse.
+        "pointer": json!({
+            "at": pointer.0.0.map(|at| [at.x, at.y]),
+            "fake": pointer.1.at.is_some(),
+        }),
         "full_map": map.open,
         "debug_menu": debug_menu.open,
         "system_menu": format!("{:?}", *system_menu),

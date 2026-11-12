@@ -7,6 +7,12 @@ use bevy::prelude::*;
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PointerSystems;
 
+/// Inside `PointerSystems`, after the pointer is read from the mouse and
+/// fingers: where dev tools may put a pointer of their own in its place, so
+/// the rest of the game takes it for the mouse. Empty unless they do.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct PointerOverride;
+
 /// The point the player is pointing at, in logical window pixels: the finger
 /// while one is on the screen, otherwise the mouse. Read this rather than
 /// `Window::cursor_position`, which knows nothing of fingers.
