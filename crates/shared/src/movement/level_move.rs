@@ -2,7 +2,7 @@
 //! for a step from one cell's middle to another's, otherwise the segment rule.
 
 use super::{Gait, Step, step_on_level_by};
-use crate::clearance::{Passage, check_segment};
+use crate::clearance::{Passage, check_segment_by};
 use crate::creature::Size;
 use crate::dungeon::Level;
 use crate::protocol::{MOST_MOVE, is_middle};
@@ -20,6 +20,7 @@ pub enum LevelMove {
 
 /// Whether a player of `size` with this `gait` may move straight from `from`
 /// to `to` on `level`, and how. Never longer than `MOST_MOVE`, never nowhere.
+/// A good swimmer (`Gait::swims_deep`) swims water rather than jumping it.
 /// Until routes and moves leave cells (free positions PR 4), the cell rule
 /// keeps every step it took before allowed, the same as ever.
 pub fn move_on_level(
@@ -46,7 +47,8 @@ pub fn move_on_level(
             });
         }
     }
-    check_segment(level, size, from, to).map(LevelMove::Segment)
+    // A good swimmer swims water anywhere, as the cell rule lets them.
+    check_segment_by(level, size, gait.swims_deep(), from, to).map(LevelMove::Segment)
 }
 
 impl LevelMove {

@@ -27,10 +27,12 @@ pub use cell_blockers::{
     CORNER_CUT, DOOR_HALF_GAP, FENCE_HALF, TRUNK_RADIUS, blockers_near, cell_blockers,
 };
 pub use crowd::{Crowding, Other, check_among, crowd_per_mille, crowded_at};
-pub use footing::has_footing;
+pub use footing::{has_footing, has_footing_by};
 pub use room_map::RoomMap;
-pub use segment::{JUMP_REACH, Passage, check_segment, segment_cost, segment_is_legal};
-pub use slide::slide;
+pub use segment::{
+    JUMP_REACH, Passage, check_segment, check_segment_by, segment_cost, segment_is_legal,
+};
+pub use slide::{slide, slide_by};
 pub use squeeze::{MOST_SQUEEZE_PER_MILLE, squeeze_per_mille};
 
 #[cfg(test)]

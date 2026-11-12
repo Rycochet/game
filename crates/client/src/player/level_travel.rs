@@ -107,6 +107,7 @@ pub(super) fn travel_on_level(
     let walker = Walker {
         level,
         size: size.0,
+        swims: gait.0.swims_deep(),
         others: &crowd,
         squeezes: walk.is_none(),
     };

@@ -1,7 +1,7 @@
 //! A step asked for on a level or in the Hall (`TakeStep`: a tap of a key's
 //! worth from dev tools or the debug menu), as one move in units.
 
-use shared::clearance::check_segment;
+use shared::clearance::check_segment_by;
 use shared::creature::Size;
 use shared::dungeon::Level;
 use shared::movement::{Gait, Step, step_on_level_by};
@@ -26,6 +26,7 @@ pub(super) fn level_step(
     }
     let to = Spot::middle_of(step.from(cell));
     let legal = from.distance(to) <= MOST_MOVE
-        && check_segment(level, size, from, to).is_some_and(|p| p.jumped.is_none());
+        && check_segment_by(level, size, gait.swims_deep(), from, to)
+            .is_some_and(|p| p.jumped.is_none());
     legal.then_some(to)
 }

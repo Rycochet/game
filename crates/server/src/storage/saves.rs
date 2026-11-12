@@ -104,9 +104,8 @@ pub struct LevelSave {
     pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
     pub unsettled: BTreeMap<u32, SavedMob>,
-    /// The bags lying on the ground, by where each is in units (older saves'
-    /// cells read as their middles), what is in each oldest first. Stays until
-    /// taken: a reset never touches it.
+    /// The bags on the ground by where each is, their insides oldest first.
+    /// Stays until taken: a reset never touches it.
     #[serde(default)]
     pub ground: SpotMap<Vec<Item>>,
     /// Which of its spawns have died, by number: they aren't made again.
@@ -227,8 +226,7 @@ pub struct CharacterWorldSave {
     pub pois: BTreeMap<ChunkPos, KnownPoi>,
     /// The cells they have seen of each site level.
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
-    /// The bags they last saw on each site level, by where they are, as they
-    /// looked then.
+    /// The bags they last saw on each site level, as they looked then.
     #[serde(default)]
     pub bags: BTreeMap<SiteId, BTreeMap<u32, RememberedBags>>,
     /// The doors they last saw on each site level, by cell, as they were then:

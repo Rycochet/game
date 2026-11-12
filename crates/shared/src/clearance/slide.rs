@@ -1,7 +1,7 @@
 //! Sliding along what is in the way, for the client's movement: as far as a
 //! move goes, then on along whichever of east-west or north-south goes further.
 
-use super::check_segment;
+use super::check_segment_by;
 use crate::creature::Size;
 use crate::dungeon::Level;
 use crate::spot::Spot;
@@ -16,15 +16,22 @@ const PARTS: i64 = 1024;
 /// squeezed than at `from`, so nobody is pressed into a wall by pushing
 /// against it. `from` if it can't move at all.
 pub fn slide(level: &Level, size: Size, from: Spot, to: Spot) -> Spot {
-    let Some(start) = check_segment(level, size, from, from) else {
+    slide_by(level, size, false, from, to)
+}
+
+/// `slide` for someone who may or may not swim deep water
+/// (`check_segment_by`).
+pub fn slide_by(level: &Level, size: Size, swims: bool, from: Spot, to: Spot) -> Spot {
+    let check_segment = |a, b| check_segment_by(level, size, swims, a, b);
+    let Some(start) = check_segment(from, from) else {
         return from;
     };
     let walks = |a: Spot, b: Spot| {
-        check_segment(level, size, a, b).is_some_and(|passage| {
+        check_segment(a, b).is_some_and(|passage| {
             passage.jumped.is_none() && passage.squeeze_per_mille <= start.squeeze_per_mille
         })
     };
-    if check_segment(level, size, from, to).is_some_and(|passage| passage.jumped.is_none()) {
+    if check_segment(from, to).is_some_and(|passage| passage.jumped.is_none()) {
         return to;
     }
     let furthest = |a: Spot, b: Spot| {
