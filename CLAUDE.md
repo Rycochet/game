@@ -70,6 +70,7 @@ Crates: `crates/shared` (plain Rust, no Bevy: rules and generation), `crates/cli
 | shared: ground      | `crates/shared/src/ground.rs`   | `docs/context/shared/ground.md`     | How full a bag on the ground looks, from its weight |
 | shared: shop        | `crates/shared/src/shop.rs`     | `docs/context/shared/shop.md`       | What town shops sell, make times, biased rolls, and catching stock up on opening |
 | shared: mob         | `crates/shared/src/mob.rs`    | `docs/context/shared/mob.md`        | Who is on a site level from its seed, and what a player learns of what is on the map |
+| shared: clearance   | `crates/shared/src/clearance.rs`, `clearance/`, `spot.rs` | `docs/context/shared/clearance.md` | Free positions (not in play yet): `Spot`s in 240 units a cell, creatures' circles by size, what blocks them (walls, door frames, fences, trunks, corner notches), the one rule for a move with squeezing and jumps, sliding, room maps per size |
 | shared: movement    | `crates/shared/src/movement.rs` | `docs/context/shared/movement.md`     | One-cell steps and the rules both sides check them by |
 | shared: name        | `crates/shared/src/name.rs`     | `docs/context/shared/name.md`         | Characters' names: what may be in one, folding what is typed (lookalikes made plain, accents off), checking, keys for uniqueness and numbered names |
 | shared: pathfinding | `crates/shared/src/pathfinding.rs` | `docs/context/shared/pathfinding.md` | Quickest route of legal steps across one level or the world map (A*), spreading diagonals out |

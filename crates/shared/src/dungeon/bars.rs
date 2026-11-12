@@ -18,7 +18,7 @@ pub(super) fn bars_of(cell: (i64, i64), shape: WallShape) -> [WallBar; 2] {
 
 /// Whether a line touches a box given by its smallest and largest corners:
 /// their ranges overlap, and the box's corners aren't all on one side of it.
-pub(super) fn line_hits_box(
+pub(crate) fn line_hits_box(
     from: (i64, i64),
     to: (i64, i64),
     low: (i64, i64),

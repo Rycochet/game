@@ -11,14 +11,18 @@ mod distance_map;
 mod find_path;
 mod measure;
 mod path;
+mod sized_path;
 mod straighten;
+mod straighten_spots;
 mod world_path;
 
 pub use distance_map::DistanceMap;
 pub use find_path::{find_path, find_path_by};
 use measure::{distance_squared, estimate};
 pub use path::Path;
+pub use sized_path::{SizedPath, find_sized_path};
 pub use straighten::{straighten, straighten_by};
+pub use straighten_spots::straighten_spots;
 pub use world_path::{WORLD_ROUTE_REACH, find_world_path};
 
 /// The order steps are tried in, so equally quick routes always come out the
@@ -36,5 +40,7 @@ const DIRECTIONS: [(i64, i64); 8] = [
 
 #[cfg(test)]
 mod road_tests;
+#[cfg(test)]
+mod sized_tests;
 #[cfg(test)]
 mod tests;
