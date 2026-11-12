@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 use super::online::{OWN_TIP, OnlineToggle};
-use super::{Action, Layer, PausedText, SystemMenu};
+use super::{Action, GearButton, Layer, PausedText, SystemMenu};
 use crate::dom::{Template, document};
 use crate::html;
 use crate::widgets::{ButtonTooltip, UiId};
@@ -88,10 +88,14 @@ fn action_of(name: &str) -> Option<Action> {
 /// Gives the built panel and its buttons what the menu knows them by.
 pub(super) fn bind_main_panel(mut commands: Commands, new: Query<(Entity, &UiId), Added<UiId>>) {
     for (entity, id) in &new {
+        let mut bound = commands.entity(entity);
+        // The gear button in the corner opens the menu.
+        if *id == Action::Open.ui_id("hud") {
+            bound.insert((GearButton, Action::Open, ButtonTooltip("Menu".into())));
+        }
         let ("menu", name) = id.parts() else {
             continue;
         };
-        let mut bound = commands.entity(entity);
         if let Some(action) = action_of(name) {
             bound.insert(action);
         }
@@ -112,6 +116,7 @@ mod tests {
     #[test]
     fn the_panel_is_good_markup() {
         MENU.assert_good();
+        super::super::spawn::GEAR.assert_good();
     }
 
     #[test]

@@ -52,6 +52,10 @@ pub struct Theme {
     /// How tall a control is at least, by the size of the writing round it:
     /// the menus' bigger writing has taller buttons and boxes.
     pub rows: Vec<(TextSize, f32)>,
+    /// How tall a text box is at least where `rows` says nothing for the
+    /// writing round it: as a dropdown or a button beside it, which have
+    /// room round their words that a box of its own height lacks.
+    pub boxes: Vec<(TextSize, f32)>,
     /// How wide a button in a dialog's `footer` is at least, so its buttons
     /// match.
     pub footer_button: f32,
@@ -68,6 +72,7 @@ impl Theme {
             progress: (GRID_COLOUR, ALLOWED),
             line: 1.2,
             rows: vec![(TextSize::Large, 38.0)],
+            boxes: vec![(TextSize::Medium, 34.0)],
             footer_button: 120.0,
         };
         // Spacing belongs to what holds things, not to the things: whatever
@@ -235,6 +240,7 @@ impl Theme {
                 &["", "main", "quiet", "danger", "folder", "small"][..],
             ),
             (Tag::Input, &["", "error"]),
+            (Tag::Select, &["", "small"]),
             (Tag::KeyBox, &["", "warned"]),
         ];
         for (tag, classes) in controls {
@@ -250,6 +256,13 @@ impl Theme {
     pub fn row(&self, size: TextSize) -> Option<f32> {
         let found = self.rows.iter().find(|(known, _)| *known == size);
         found.map(|(_, height)| *height)
+    }
+
+    /// How tall a text box is at least where the writing is this size: the
+    /// row's height, or else its own (`boxes`).
+    pub fn box_row(&self, size: TextSize) -> Option<f32> {
+        let found = self.boxes.iter().find(|(known, _)| *known == size);
+        self.row(size).or(found.map(|(_, height)| *height))
     }
 
     /// Gives `tag` elements of this `class` (`""` for none) a look.

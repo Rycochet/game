@@ -110,7 +110,7 @@ impl Plugin for InventoryPlugin {
                     give::show_give_aim,
                     panels::show_aim,
                     panels::show_tooltip,
-                    panels::show_button,
+                    (panels::bind_button, panels::show_button).chain(),
                     split::move_split,
                     (split::show_split, split::bind_split).chain(),
                 )
@@ -124,10 +124,7 @@ impl Plugin for InventoryPlugin {
         app.add_systems(Update, early_pictures::ask_early);
         app.add_systems(Update, panels::switch_pages.after(panels::toggle_inventory));
         // Before the grids are drawn, so a sort shows at once.
-        app.add_systems(
-            Update,
-            (sort::press_sort, sort::show_icons).before(panels::show_grids),
-        );
+        app.add_systems(Update, sort::press_sort.before(panels::show_grids));
         #[cfg(not(target_arch = "wasm32"))]
         app.add_message::<InventoryDebug>()
             .add_systems(Update, run_debug.before(panels::forget_closed));

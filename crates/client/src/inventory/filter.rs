@@ -7,7 +7,7 @@ use shared::item::{Holder, Item, ItemCategory};
 
 use super::Carried;
 use super::ground::Ground;
-use crate::widgets::{ButtonTooltip, Dropdown, spawn_icon_dropdown};
+use crate::widgets::Dropdown;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod icons;
@@ -28,18 +28,12 @@ pub(super) fn make_icons(mut commands: Commands, mut images: ResMut<Assets<Image
     commands.insert_resource(FilterIcons(icons.collect()));
 }
 
-/// A filter's button, showing All.
-pub(super) fn spawn_filter(parent: &mut ChildSpawnerCommands, of: Option<Holder>) {
+/// A filter's options, each its value and its words: All, then every
+/// category. Its `select` is in its grid's markup, with only All.
+pub(super) fn filter_options() -> Vec<(String, String)> {
     let names = ItemCategory::ALL.map(|category| category.name().to_owned());
-    let dropdown = Dropdown {
-        options: std::iter::once("All".to_owned()).chain(names).collect(),
-        ..default()
-    };
-    spawn_icon_dropdown(parent, dropdown, Node::default()).insert((
-        GridFilter(of),
-        ButtonTooltip("Filter".into()),
-        super::ui_ids::grid_id(of, "filter"),
-    ));
+    let all = std::iter::once("All".to_owned()).chain(names);
+    all.map(|name| (name.clone(), name)).collect()
 }
 
 /// The category a filter shows clearly, or `None` for all of them.

@@ -30,7 +30,7 @@ pub(super) fn show_menu(
     view: Res<State<GameView>>,
     clock: Res<ServerClock>,
     mut layers: Query<(&Layer, &mut Visibility)>,
-    mut gear: Single<&mut Visibility, (With<GearButton>, Without<Layer>)>,
+    gear: Option<Single<&mut Visibility, (With<GearButton>, Without<Layer>)>>,
     mut paused: Single<&mut Node, With<PausedText>>,
 ) {
     let shown_if = |shown: bool| {
@@ -43,7 +43,10 @@ pub(super) fn show_menu(
     for (layer, mut visibility) in &mut layers {
         visibility.set_if_neq(shown_if(layer.0.contains(&menu)));
     }
-    gear.set_if_neq(shown_if(*view.get() != GameView::Connecting));
+    // (Not there until its markup is built.)
+    if let Some(mut gear) = gear {
+        gear.set_if_neq(shown_if(*view.get() != GameView::Connecting));
+    }
     let display = if clock.paused {
         Display::Flex
     } else {

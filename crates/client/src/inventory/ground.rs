@@ -8,13 +8,13 @@ use shared::id::Id;
 use shared::protocol::ServerMessage;
 
 use super::Carried;
-use super::filter::spawn_filter;
+use super::filter::{GridFilter, filter_options};
 use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, TookItem};
 use crate::connection::FromServer;
-use crate::dom::{GridShown, Template, document_in};
+use crate::dom::{Dom, GridShown, Template, document_in};
 use crate::html;
 use crate::player::Player;
-use crate::widgets::{StockGrid, StockGridNode, StockOf, UiId, show_stock_aim};
+use crate::widgets::{ButtonTooltip, StockGrid, StockGridNode, StockOf, UiId, show_stock_aim};
 
 /// How many cells across it is: the longest thing there can be.
 const COLUMNS: u8 = 8;
@@ -50,7 +50,9 @@ static SECTION: Template = html!(
     r#"
 <form id="ground">
   <container id="frame" title="On the ground">
-    <header id="controls"/>
+    <header>
+      <select id="filter" class="small"><option>All</option></select>
+    </header>
     <scroll id="scroll" max-height="50%">
       <object-grid id="grid" type="item" places="packed" grows/>
     </scroll>
@@ -71,12 +73,17 @@ pub(super) fn spawn_section(parent: &mut ChildSpawnerCommands) {
 
 /// Fills the section's places once it is built: its filter, and the grid the
 /// ground's things are shown in.
-pub(super) fn bind_section(new: Query<(Entity, &UiId), Added<UiId>>, mut commands: Commands) {
+pub(super) fn bind_section(
+    new: Query<(Entity, &UiId), Added<UiId>>,
+    mut commands: Commands,
+    mut dom: Dom,
+) {
     for (entity, id) in &new {
         match id.parts() {
-            ("ground", "controls") => {
-                let mut controls = commands.entity(entity);
-                controls.with_children(|row| spawn_filter(row, None));
+            ("ground", "filter") => {
+                let marks = (GridFilter(None), ButtonTooltip("Filter".into()));
+                commands.entity(entity).insert(marks);
+                dom.set_options("ground/filter", filter_options());
             }
             ("ground", "grid") => {
                 commands.entity(entity).insert(GroundHolder);

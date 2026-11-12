@@ -24,7 +24,7 @@ mod shown;
 
 pub(super) use aim::show_aim;
 pub(super) use bins::{show_bins, show_drop};
-pub(super) use fixed::spawn_fixed_parts;
+pub(super) use fixed::{bind_button, spawn_fixed_parts};
 pub(super) use frame::bind_frames;
 pub(super) use held::{show_button, show_tooltip};
 use icons::{bin_icon, drop_icon, person_icon};
@@ -34,8 +34,6 @@ use pages::Page;
 pub(super) use pages::{bind_pages, switch_pages};
 pub(super) use show::{show_grids, show_weights};
 
-const BUTTON: f32 = 34.0;
-const CORNER_GAP: f32 = 8.0;
 const FONT: TextSize = TextSize::Medium;
 /// How far from the pointer an item's name goes.
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(16.0, 16.0);

@@ -11,45 +11,16 @@ use shared::protocol::ClientMessage;
 use super::server::Stacks;
 use super::{Carried, Holding};
 use crate::connection::ToServer;
-use crate::widgets::{
-    ButtonPressed, ButtonState, ButtonTooltip, Pressable, spawn_small_icon_button,
-};
+use crate::dom::Pictures;
+use crate::widgets::ButtonPressed;
 
-/// A sort button, and the grid it sorts.
+/// A sort button (in its grid's markup), and the grid it sorts.
 #[derive(Component, Clone, Copy)]
 pub(super) struct SortButton(pub Holder);
 
-/// The sort button's picture.
-#[derive(Resource)]
-pub(super) struct SortIcon(Handle<Image>);
-
-pub(super) fn make_icon(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    commands.insert_resource(SortIcon(images.add(sort_icon())));
-}
-
-/// A sort button. Its picture comes from `show_icons`.
-pub(super) fn spawn_sort(parent: &mut ChildSpawnerCommands, holder: Holder) {
-    spawn_small_icon_button(parent, ButtonState::Normal, default(), Node::default()).insert((
-        SortButton(holder),
-        Pressable,
-        super::ui_ids::grid_id(Some(holder), "sort"),
-        ButtonTooltip("Sort".into()),
-    ));
-}
-
-/// Gives new sort buttons their picture.
-pub(super) fn show_icons(
-    icon: Res<SortIcon>,
-    buttons: Query<&Children, Added<SortButton>>,
-    mut pictures: Query<&mut ImageNode>,
-) {
-    for children in &buttons {
-        for &child in children {
-            if let Ok(mut picture) = pictures.get_mut(child) {
-                picture.image = icon.0.clone();
-            }
-        }
-    }
+/// Names the sort button's picture, for the markup (`picture:sort`).
+pub(super) fn make_icon(mut images: ResMut<Assets<Image>>, mut pictures: ResMut<Pictures>) {
+    pictures.name("sort", images.add(sort_icon()));
 }
 
 /// Sorts a grid when its button is pressed, unless something is held.

@@ -35,9 +35,6 @@ const SUBMENU: usize = 1;
 /// Each layer's form in the markup.
 const FORMS: [&str; 2] = ["debug.menu", "debug.submenu"];
 
-const WARNING_BUTTON: f32 = 34.0;
-const CORNER_GAP: f32 = 8.0;
-
 const MARGIN: f32 = 16.0;
 const TITLE_ROW: f32 = 36.0;
 const FILTER_HEIGHT: f32 = 38.0;

@@ -19,7 +19,7 @@ pub(super) static ACCOUNTS: Template = html!(
     <div id="find_page" width="520" hidden>
       <span class="columns" nowrap>
         <label for="name" width="110">Character</label>
-        <input id="name" type="text" width="240" height="34"/>
+        <input id="name" type="text" width="240"/>
         <button id="find" class="main" width="90">Find</button>
       </span>
       <div id="found" hidden>
@@ -45,7 +45,7 @@ pub(super) static ACCOUNTS: Template = html!(
           </span>
           <span class="columns" nowrap>
             <label for="reason" width="110">Why</label>
-            <input id="reason" type="text" width="340" height="34"/>
+            <input id="reason" type="text" width="340"/>
           </span>
           <span>
             <button id="apply" class="main" width="110">Apply</button>
@@ -64,11 +64,11 @@ pub(super) static ACCOUNTS: Template = html!(
         </span>
         <span class="columns" nowrap>
           <label for="role_name" width="110">Name</label>
-          <input id="role_name" type="text" width="240" height="34"/>
+          <input id="role_name" type="text" width="240"/>
         </span>
         <span class="columns" nowrap>
           <label for="role_title" width="110">Title</label>
-          <input id="role_title" type="text" width="240" height="34"/>
+          <input id="role_title" type="text" width="240"/>
         </span>
         <p>A title, if given, is shown instead of the name.</p>
         <span>

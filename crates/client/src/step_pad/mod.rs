@@ -15,14 +15,17 @@ mod spawn;
 
 /// The pad's widget form.
 const FORM: &str = "step_pad";
-/// The button that opens and closes it, across.
+/// The button that opens and closes it, across (as its markup says).
+#[cfg(test)]
 const TOGGLE: f32 = 30.0;
 /// Each of the pad's buttons, across: room for a finger (as its markup says).
 #[cfg(test)]
 const BUTTON: f32 = 44.0;
-/// Between the pad's buttons, and between the pad and its toggle button.
+/// Between the pad and its toggle button (as the markup says).
+#[cfg(test)]
 const GAP: f32 = 4.0;
-/// Between the toggle button and the window's corner.
+/// Between the toggle button and the window's corner (as the markup says).
+#[cfg(test)]
 const CORNER_GAP: f32 = 8.0;
 
 pub struct StepPadPlugin;

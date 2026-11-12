@@ -18,7 +18,7 @@ impl Plugin for LoginPlugin {
                 Update,
                 (
                     screen::show_screen,
-                    corner::show_corner,
+                    (corner::bind_corner, corner::show_corner).chain(),
                     screen::press_buttons,
                 ),
             );

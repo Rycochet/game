@@ -28,7 +28,10 @@ pub(super) static MINIMAP: Template = html!(
 /// (`PANEL_EDGE`, 3), so each is that much less than the constant it comes
 /// from. `place_maps` keeps its place and sizes. The pointer is never on it
 /// (`inert`), as `take_input` does its own search; the close button is
-/// beside it, not in it, so it is still pointed at as a button.
+/// beside it, not in it, so it is still pointed at as a button. Over it is
+/// the column of a site's known floors (`floors`): a button for each is a
+/// copy of the template, `BUTTON_WIDTH` by `BUTTON` and `BUTTON_GAP` apart
+/// (`div class="tight"`), found by `take_input`'s own search too.
 pub(super) static FULL_MAP: Template = html!(
     "full_map",
     r#"
@@ -43,6 +46,10 @@ pub(super) static FULL_MAP: Template = html!(
   </div>
 </panel>
 <div id="close" form="full_map" top="0" left="0" hidden/>
+<div id="floors" form="full_map" class="tight" top="0" left="0" inert hidden/>
+<template id="floor" form="full_map">
+  <button id="go" form="full_map" width="36" height="26">0</button>
+</template>
 "#
 );
 
