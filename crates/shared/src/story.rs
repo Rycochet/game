@@ -83,4 +83,6 @@ mod tests;
 #[cfg(test)]
 mod where_tests;
 #[cfg(test)]
+mod wording_tests;
+#[cfg(test)]
 mod words_tests;

@@ -65,12 +65,15 @@ impl Story {
         if let Some(count) = ask.count {
             args = (args.count("count", i64::from(count))).count("done", i64::from(done));
         }
-        let counted = if ask.count.is_some() {
+        // A boss alone, with no creatures to name: the place instead.
+        let words = if ask.goal == super::Goal::Slay && self.facts.creatures.is_none() {
+            "place"
+        } else if ask.count.is_some() {
             "counted"
         } else {
             "plain"
         };
-        lang.render(&format!("step-{}.{counted}", ask.goal.key()), &args)
+        lang.render(&format!("step-{}.{words}", ask.goal.key()), &args)
     }
 
     /// The last step's words: "Return to Mara Tull".
@@ -83,6 +86,12 @@ impl Story {
         let mut args = self.args(lang)?;
         if let Some(lie) = ending.lies.first() {
             args = args.text("liar-name", self.role_name(lang, lie.liar)?);
+            let giver = if lie.liar == super::Role::Giver {
+                "yes"
+            } else {
+                "no"
+            };
+            args = args.text("liar-is-giver", giver);
             args = match lie.truth {
                 Truth::Errand(errand) => args.text("truth", lang.phrase(&errand)?),
                 Truth::TimeAgo(when) => args.text("truth", lang.phrase(&when)?),
