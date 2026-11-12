@@ -26,7 +26,7 @@ What the character can do: the Character panel's Abilities page (B), every abili
 
 ## Depends on
 
-- `player` (`PlayerMoving`, `PlayerSystems`, `TakeStep`, `TravelTo`), `common` (`AbilitiesPage`, `Sneaking`, `VitalsCircle`, `OwnVitals`, `Other`, `Target`, `Action::UseSlot`, `Preferences`, `UiPointer`, `TouchGesture`, `PointerSystems`), `connection` (`FromServer`, `ToServer`), `inventory` (`Carried`, for the body), `dom` (`AbilityGridShown`, `AbilitySlotShown`, `AbilityThing`, `AbilityCell`, `SlotPart`, `HeldObject`, `Dropped`, `HoldObjects`, `DrawObjects`), `widgets` (`AbilityLook`, `attribute_colour`, `stops_presses`), `shared::ability`, `shared::magic`.
+- `player` (`PlayerMoving`, `PlayerSystems`, `TakeStep`, `TravelTo`), `common` (`AbilitiesPage`, `Sneaking`, `VitalsCircle`, `OwnVitals`, `Other`, `Target`, `Action::UseSlot`, `Preferences`, `UiPointer`, `TouchGesture`, `PointerSystems`), `connection` (`FromServer`, `ToServer`), `inventory` (`Carried`, for the body), `dom` (`AbilityGridShown`, `AbilitySlotShown`, `AbilityThing`, `AbilityCell`, `SlotPart`, `HeldObject`, `Dropped`, `HoldObjects`, `DrawObjects`), `widgets` (`AbilityLook`, `attribute_colour`, `UiId`), `shared::ability`, `shared::magic`.
 
 ## Used by
 

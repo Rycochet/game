@@ -14,7 +14,7 @@ The box near the bottom middle of the window naming what the pointer is over: an
 
 ## Depends on
 
-- `common` (`HoverName`, `StaffMark`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `CurrentWorld`, `KnownPois`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `widgets` (`spawn_tooltip_with_picture`).
+- `common` (`HoverName`, `StaffMark`, `HoveredOnMap`, `HoveredInSky`, `HoveredBag`, `Portal`, `poi_name`, `CurrentWorld`, `KnownPois`, `BottomHud`, `GameView`), `view3d` (`HoveredToken`), `minimap` (`FullMap`), `dom` (`Template`, `Dom`, `document`, `bottom_strip`).
 
 ## Used by
 
