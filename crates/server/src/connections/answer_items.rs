@@ -5,9 +5,10 @@ use shared::energy::handling_cost;
 use shared::item::{Holder, Item};
 use shared::protocol::{ClientMessage, ServerMessage};
 
-use super::{Action, Client};
+use super::{Action, Client, stack_parts};
 use crate::ServerWorld;
 use crate::ground::GroundAction;
+use crate::ids::new_id;
 use crate::sites::{self};
 
 /// Answers a message about items. Whether the client is still welcome.
@@ -16,29 +17,10 @@ pub(super) fn answer_items(
     message: ClientMessage,
     world: &mut ServerWorld,
 ) -> bool {
-    // Some of a mixed stack: lifted out together, then dealt with as anything is.
-    let message = match message {
-        ClientMessage::FromStack { stack, items, then } => match *then {
-            ClientMessage::DropItem { item } => {
-                let group = Some((stack, items));
-                let action = Action::Ground(GroundAction::Drop { item, group });
-                client.waiting.push_back(action);
-                return true;
-            }
-            then @ (ClientMessage::MoveItem { .. }
-            | ClientMessage::StackItem { .. }
-            | ClientMessage::GiveItem { .. }
-            | ClientMessage::WearItem { .. }
-            | ClientMessage::BinItem { .. }) => {
-                client.inventory.lift_group(stack, &items);
-                then
-            }
-            other => {
-                warn!("Refused {other:?} for part of a stack");
-                return client.send_inventory();
-            }
-        },
-        other => other,
+    // Part of a stack: lifted out on its own, then dealt with as anything is.
+    let message = match stack_parts::lift(client, message) {
+        Ok(message) => message,
+        Err(welcome) => return welcome,
     };
     // An id from inside a stack stands for it and all above it: lifted out on its
     // own, it moves like anything else, and goes back if it isn't moved.
@@ -52,7 +34,7 @@ pub(super) fn answer_items(
     }
     match message {
         ClientMessage::DropItem { item } => {
-            let action = Action::Ground(GroundAction::Drop { item, group: None });
+            let action = Action::Ground(GroundAction::Drop { item, part: None });
             client.waiting.push_back(action);
             true
         }
@@ -114,7 +96,10 @@ pub(super) fn answer_items(
             let cost = client.inventory.move_cost(item, to);
             let tick = world.action_clock.ticks();
             if client.may_take_off(item) {
-                match client.inventory.stack_onto(item, onto, world.stacks) {
+                match client
+                    .inventory
+                    .stack_onto(item, onto, world.stacks, &mut new_id)
+                {
                     Ok(_) => {
                         client.unsaved = true;
                         client.energy.spend(tick, client.speed, cost);

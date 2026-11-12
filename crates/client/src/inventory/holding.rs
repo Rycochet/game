@@ -23,6 +23,11 @@ pub(super) struct Holding {
     pub(super) stock: Option<(Id, Item)>,
     /// Some of a mixed stack: the stack, and the items held, from the bottom up.
     pub(super) group: Option<(Id, Vec<Id>)>,
+    /// Part of a counted stack (coins): the stack, and how many from its top. What
+    /// is held has a stand-in id until the server answers (`PartOfStack`).
+    pub(super) counted: Option<(Id, u32)>,
+    /// The last stand-in id given (`Id::stand_in`), counting up.
+    stand_ins: u64,
 }
 
 impl Holding {
@@ -51,6 +56,12 @@ impl Holding {
         });
         object.pick_up(HeldThing { what, by }, picked);
         self.held = Some(HeldBy { item: held, by });
+    }
+
+    /// A new stand-in id, for something new until the server names it.
+    pub(super) fn stand_in(&mut self) -> Id {
+        self.stand_ins += 1;
+        Id::stand_in(self.stand_ins)
     }
 
     /// Lets go without dropping it anywhere.
@@ -96,5 +107,6 @@ pub(super) fn cancel_held(
         holding.put_back(&mut object);
         holding.stock = None;
         holding.group = None;
+        holding.counted = None;
     }
 }

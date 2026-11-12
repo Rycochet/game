@@ -1,6 +1,8 @@
 //! Stacks: items that look the same carried as one, in one place. The first item
 //! in is the bottom, whose id is the stack's, and holds the rest in `Item::above`;
-//! the last in is the top, which is what shows and the first to come off.
+//! the last in is the top, which is what shows and the first to come off. A
+//! counted kind (coins) is a number instead: one item with `Item::count`, whose
+//! parts need new ids, which only the server makes (`new_id`).
 
 use serde::{Deserialize, Serialize};
 
@@ -56,6 +58,13 @@ impl StackLimits {
         }
         let cells = stack.shape().cells().count() as u32;
         let most_grams = self.grams_per_cell.saturating_mul(cells);
+        if stack.is_counted() {
+            // By number: every one is like every other.
+            let one = stack.own_weight().max(1);
+            let by_number = self.most.saturating_sub(stack.count());
+            let by_grams = most_grams.saturating_sub(stack.total_weight()) / one;
+            return adding.count().min(by_number).min(by_grams);
+        }
         let mut grams = stack.total_weight();
         let mut count = stack.count();
         let mut fits = 0;
@@ -74,7 +83,12 @@ impl StackLimits {
 impl Item {
     /// How many items it is: 1 unless it is a stack.
     pub fn count(&self) -> u32 {
-        1 + self.above.len() as u32
+        self.count + self.above.len() as u32
+    }
+
+    /// Whether it is of a counted kind, a number rather than items (`ItemDef::counted`).
+    pub fn is_counted(&self) -> bool {
+        self.kind.def().counted
     }
 
     /// What lies on top, which is what a stack shows: itself if alone.
@@ -82,7 +96,7 @@ impl Item {
         self.above.last().unwrap_or(self)
     }
 
-    /// Every item in it, from the bottom up.
+    /// Every item in it, from the bottom up: a counted stack is one, whatever its count.
     pub fn members(&self) -> impl DoubleEndedIterator<Item = &Item> {
         std::iter::once(self).chain(&self.above)
     }
@@ -113,34 +127,47 @@ impl Item {
         self.kind.def().container.is_none() && self.as_compared() == other.as_compared()
     }
 
-    /// Takes the top off a stack. `None` if it is alone.
-    pub fn take_top(&mut self) -> Option<Item> {
-        self.above.pop()
+    /// Takes the top off a stack. `None` if it is alone. One off a counted stack is
+    /// new, with an id from `new_id`.
+    pub fn take_top(&mut self, new_id: &mut impl FnMut() -> Id) -> Option<Item> {
+        match self.is_counted() {
+            true => (self.count > 1).then(|| self.split_top(1, new_id)),
+            false => self.above.pop(),
+        }
     }
 
     /// Takes the top `count` off a stack, as a stack of their own. Only for fewer
-    /// than it holds.
-    pub fn split_top(&mut self, count: u32) -> Item {
+    /// than it holds. Part of a counted stack is new, with an id from `new_id`;
+    /// part of any other has its own items' ids, its lowest's the part's.
+    pub fn split_top(&mut self, count: u32, new_id: &mut impl FnMut() -> Id) -> Item {
         assert!(
             count > 0 && count < self.count(),
             "a split leaves both parts"
         );
+        if self.is_counted() {
+            self.count -= count;
+            return Item {
+                id: new_id(),
+                count,
+                ..self.clone()
+            };
+        }
         let mut taken = self.above.split_off(self.above.len() - count as usize);
         let mut bottom = taken.remove(0);
         bottom.above = taken;
         bottom
     }
 
-    /// Puts all of `part` on top, keeping its order.
+    /// Puts all of `part` on top, keeping its order. On a counted stack it adds
+    /// to the count, and the part's id and `made_at` go: the bottom's stay.
     pub fn put_on(&mut self, mut part: Item) {
+        if self.is_counted() {
+            self.count += part.count();
+            return;
+        }
         let above = std::mem::take(&mut part.above);
         self.above.push(part);
         self.above.extend(above);
-    }
-
-    /// What one item of it weighs, with anything in it, but not what is stacked on it.
-    pub fn own_weight(&self) -> u32 {
-        self.total_weight() - self.above.iter().map(Item::total_weight).sum::<u32>()
     }
 
     /// Whether `id` is one of the items stacked on this one.
@@ -158,6 +185,7 @@ impl Item {
         copy.id = Id::NOBODY;
         copy.made_at = None;
         copy.above.clear();
+        copy.count = 1;
         if let Some(ItemForm::Ring(ring)) = &mut copy.form {
             for gem in ring
                 .settings

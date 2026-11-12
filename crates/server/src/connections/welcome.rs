@@ -53,7 +53,7 @@ pub(super) fn start_sheet(
     }
     match asked {
         Some((kind, gender, appearance, build)) => {
-            inventory.change_body(kind, StackLimits::NONE);
+            inventory.change_body(kind, StackLimits::NONE, &mut crate::ids::new_id);
             Sheet {
                 appearance,
                 ..Sheet::built(kind, gender, build)

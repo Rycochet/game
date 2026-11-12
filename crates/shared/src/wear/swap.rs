@@ -77,7 +77,9 @@ impl Inventory {
         let taken_off = off.iter().map(|item| item.id).collect();
         for item in off {
             let id = item.id;
-            self.give(item, limits)
+            // What was worn is never counted, so never turns coins: no new ids.
+            let no_new_ids = &mut || unreachable!("nothing worn is counted");
+            self.give(item, limits, no_new_ids)
                 .map_err(|_| WearRefused::NoRoom(id))?;
         }
         Ok(Swapped {

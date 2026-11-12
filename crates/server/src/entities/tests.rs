@@ -545,7 +545,7 @@ fn a_mob_part_way_through_something_carries_on_after_a_restart() {
 /// `beside_a_mob`, with something to give it.
 fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
     let mut test = beside_a_mob(kind, 2);
-    let answers = test.send(&[ClientMessage::DevGiveItem {
+    let answers = test.send(&[ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind: shared::item::ItemKind::CopperCoin,
         size: None,
         magical: false,
@@ -557,7 +557,7 @@ fn with_a_gift(kind: CreatureKind) -> (TestClient, Id) {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }]);
+    })]);
     let gift = answers.iter().rev().find_map(|answer| match answer {
         ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),
         _ => None,
@@ -637,7 +637,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
     let population = test.world.populations.0.values_mut().next().unwrap();
     population.mobs[0].put((x + 1, y));
     let mob = population.mobs[0].id;
-    let answers = test.send(&[ClientMessage::DevGiveItem {
+    let answers = test.send(&[ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind: shared::item::ItemKind::CopperCoin,
         size: None,
         magical: false,
@@ -649,7 +649,7 @@ fn what_a_mob_remembers_and_was_given_comes_back_after_a_restart() {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }]);
+    })]);
     let coin = answers.iter().rev().find_map(|answer| match answer {
         ServerMessage::Inventory(carried) => Some(carried.items[0].item.id),
         _ => None,
@@ -699,6 +699,7 @@ fn next_to_a_laden_mob(test: &mut TestClient) -> (Id, (i64, i64)) {
     gear.give(
         shared::item::Item::new(Id::for_test(50), ItemKind::Sword),
         shared::item::StackLimits::NONE,
+        &mut shared::id::stand_ins(),
     )
     .unwrap();
     record.gear = Some(gear);

@@ -99,7 +99,9 @@ fn carrying(pieces: &[(ItemKind, UnderForm)]) -> Inventory {
             form: Some(ItemForm::Under(under)),
             ..Item::new(id(index as u128 + 1), item)
         };
-        inventory.give(new, StackLimits::NONE).expect("room");
+        inventory
+            .give(new, StackLimits::NONE, &mut crate::id::stand_ins())
+            .expect("room");
     }
     inventory
 }

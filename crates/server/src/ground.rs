@@ -10,6 +10,7 @@ use shared::item::{Holder, Item, Rotation};
 
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::ids::new_id;
 
 mod bags;
 mod tell;
@@ -25,8 +26,8 @@ pub(crate) use tell::sync;
 pub(crate) enum GroundAction {
     Drop {
         item: Id,
-        /// The stack and items, for a group from a mixed one (`FromStack`).
-        group: Option<(Id, Vec<Id>)>,
+        /// Part of a stack, lifted out when it is dropped.
+        part: Option<StackPart>,
     },
     Take {
         item: Id,
@@ -47,6 +48,15 @@ pub(crate) enum GroundAction {
     },
 }
 
+/// Part of a carried stack, to be lifted out on its own when its turn comes.
+#[derive(Clone, Debug)]
+pub(crate) enum StackPart {
+    /// The stack and some of its items, a group from a mixed one (`FromStack`).
+    Group(Id, Vec<Id>),
+    /// The stack and how many from its top (`PartOfStack`): new, for a counted one.
+    Count(Id, u32),
+}
+
 /// What a client was last told about the ground in its reach.
 #[derive(Default)]
 pub(crate) struct GroundTold {
@@ -64,13 +74,23 @@ fn dropped(
     client: &mut Client,
     world: &mut ServerWorld,
     item: Id,
-    group: Option<(Id, Vec<Id>)>,
+    part: Option<StackPart>,
 ) -> Result<u32, &'static str> {
     standing_at(client).ok_or("not in a site")?;
-    // Part of a stack: see `answer_items`.
-    match group {
-        Some((stack, items)) => client.inventory.lift_group(stack, &items),
-        None => client.inventory.lift_part(item),
+    // Part of a stack: see `connections::stack_parts`.
+    let item = match part {
+        Some(StackPart::Group(stack, items)) => {
+            client.inventory.lift_group(stack, &items);
+            item
+        }
+        Some(StackPart::Count(stack, count)) => client
+            .inventory
+            .lift_count(stack, count, &mut new_id)
+            .ok_or("no such part of a stack")?,
+        None => {
+            client.inventory.lift_part(item);
+            item
+        }
     };
     if !client.may_take_off(item) {
         return Err("it won't come off");
@@ -92,7 +112,7 @@ pub(crate) fn act(
     action: GroundAction,
 ) -> (bool, u32) {
     let done = match action {
-        GroundAction::Drop { item, ref group } => dropped(client, world, item, group.clone()),
+        GroundAction::Drop { item, ref part } => dropped(client, world, item, part.clone()),
         GroundAction::Take {
             item,
             to,
@@ -112,7 +132,7 @@ pub(crate) fn act(
             let stacks = world.stacks;
             let rest = client
                 .inventory
-                .add_to_stack(found.clone(), onto, stacks)
+                .add_to_stack(found.clone(), onto, stacks, &mut new_id)
                 .map_err(|_| "it can't go on that")?;
             let left = rest.as_ref().map_or(0, Item::total_weight);
             leave_on_ground(client, world, item, rest);
@@ -120,7 +140,7 @@ pub(crate) fn act(
         }),
         GroundAction::Wear { item } => lying(client, world, item).and_then(|mut found| {
             // Only the top of a stack goes on: the rest stays on the ground.
-            let top = found.take_top();
+            let top = found.take_top(&mut new_id);
             let rest = top.is_some().then(|| found.clone());
             let wearing = top.unwrap_or(found);
             let grams = wearing.total_weight();

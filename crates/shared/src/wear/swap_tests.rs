@@ -25,7 +25,9 @@ fn carrying(kinds: &[ItemKind]) -> Inventory {
     };
     for (index, &kind) in kinds.iter().enumerate() {
         let item = made(kind, index as u128 + 1);
-        inventory.give(item, StackLimits::NONE).expect("room");
+        inventory
+            .give(item, StackLimits::NONE, &mut crate::id::stand_ins())
+            .expect("room");
     }
     inventory
 }

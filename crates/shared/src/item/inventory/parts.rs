@@ -7,14 +7,50 @@ use crate::item::{Holder, Inventory, Item, Placed};
 
 impl Inventory {
     /// The id standing for the top `count` of this carried stack: its own if that is
-    /// all of it. `None` for none, more than it has, or no such stack.
+    /// all of it. `None` for none, more than it has, or no such stack, and for part
+    /// of a counted stack, which has no id until it is lifted (`lift_count`).
     pub fn part_of(&self, stack: Id, count: u32) -> Option<Id> {
         let item = self.find(stack)?;
         let all = item.count();
-        if count == 0 || count > all {
+        if count == 0 || count > all || (item.is_counted() && count < all) {
             return None;
         }
         item.members().nth((all - count) as usize).map(|one| one.id)
+    }
+
+    /// Lifts the top `count` of a stack in a grid out on its own, lying where the
+    /// stack does, like `lift_part`: the part's id. Part of a counted stack is new,
+    /// its id from `new_id` (the server's, or a stand-in for a guess); all of a
+    /// stack is left as it is. `None` for none, more than it has, or no such stack.
+    pub fn lift_count(
+        &mut self,
+        stack: Id,
+        count: u32,
+        new_id: &mut impl FnMut() -> Id,
+    ) -> Option<Id> {
+        let all = self.find(stack)?.count();
+        if count == 0 || count > all {
+            return None;
+        }
+        if count == all {
+            return Some(stack);
+        }
+        let (holder, placed) = self.placed(stack)?;
+        if !placed.item.is_counted() {
+            let part = self.part_of(stack, count)?;
+            self.lift_part(part);
+            return Some(part);
+        }
+        let (x, y, rotation) = (placed.x, placed.y, placed.rotation);
+        let part = self.find_mut(stack)?.split_top(count, new_id);
+        let id = part.id;
+        self.grid_mut(holder)?.push(Placed {
+            item: part,
+            x,
+            y,
+            rotation,
+        });
+        Some(id)
     }
 
     /// Lifts the part of a stack in a grid that `id` stands for out on its own, lying
@@ -26,7 +62,8 @@ impl Inventory {
         let placed = grid.iter_mut().find(|placed| placed.item.id == stack)?;
         let index = placed.item.above.iter().position(|one| one.id == id)?;
         let count = (placed.item.above.len() - index) as u32;
-        let part = placed.item.split_top(count);
+        // Never counted (it has an item above it), so nothing new needs an id.
+        let part = placed.item.split_top(count, &mut || Id::NOBODY);
         grid.push(Placed {
             item: part,
             x,

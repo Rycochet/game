@@ -59,8 +59,14 @@ impl Inventory {
     /// on, checked in the order it was put on so what is under goes back first.
     /// What it can't wear drops, cursed or not (owner, 2026-11-04), and what was
     /// carried goes in the new inventory, stacking, as far as it fits. Gives back
-    /// what drops: what can't be worn and what there was no room for.
-    pub fn change_body(&mut self, kind: CreatureKind, limits: StackLimits) -> Vec<Item> {
+    /// what drops: what can't be worn and what there was no room for. Coins
+    /// meeting may turn, any new stack of them with an id from `new_id`.
+    pub fn change_body(
+        &mut self,
+        kind: CreatureKind,
+        limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
+    ) -> Vec<Item> {
         let old = std::mem::take(self);
         self.creature = kind;
         self.outfitted = old.outfitted;
@@ -75,7 +81,7 @@ impl Inventory {
             }
         }
         let carried = old.items.into_iter().map(|placed| placed.item);
-        dropped.extend(carried.filter_map(|item| self.give(item, limits).err()));
+        dropped.extend(carried.filter_map(|item| self.give(item, limits, new_id).err()));
         dropped
     }
 }

@@ -51,6 +51,7 @@ mod playtime;
 mod roads;
 mod role;
 mod role_ask;
+mod stack_parts;
 mod systems;
 mod visited_gates;
 mod vitals;

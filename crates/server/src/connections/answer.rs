@@ -225,6 +225,7 @@ pub(crate) fn answer(
         | ClientMessage::StackItem { .. }
         | ClientMessage::SortGrid { .. }
         | ClientMessage::FromStack { .. }
+        | ClientMessage::PartOfStack { .. }
         | ClientMessage::StackFromGround { .. }
         | ClientMessage::GiveItem { .. }
         | ClientMessage::TakeItem { .. }
@@ -256,7 +257,7 @@ pub(crate) fn answer(
         | ClientMessage::DevRevealMap
         | ClientMessage::DevForgetMap
         | ClientMessage::DevForgetMapOnServer
-        | ClientMessage::DevGiveItem { .. }
+        | ClientMessage::DevGiveItem(..)
         | ClientMessage::DevDetectMonsters(..)
         | ClientMessage::DevTruesight(..)
         | ClientMessage::DevGodMode(..)

@@ -105,6 +105,7 @@ pub(super) fn hold_items(
     // Part of a stack lifted out (see `split`) goes back once nothing holds it.
     if HeldBy::of(&object).is_none() {
         holding.group = None;
+        holding.counted = None;
         if carried.bypass_change_detection().0.settle_parts() {
             carried.set_changed();
         }
@@ -135,7 +136,15 @@ pub(super) fn hold_items(
     // Holding part of a stack: it lies on its own while held, even after the server
     // has said what is carried again.
     if holding.stock.is_none() {
+        let held_id = held.item.id;
         match &holding.group {
+            // Part of a counted stack, by its stand-in id, while the server knows
+            // nothing of it.
+            None if let Some((stack, count)) = holding.counted => {
+                if carried.0.find(held_id).is_none() {
+                    carried.0.lift_count(stack, count, &mut || held_id);
+                }
+            }
             Some((stack, items)) => {
                 let lifted = carried.0.find(held.item.id).is_some_and(|item| {
                     item.count() as usize == items.len()

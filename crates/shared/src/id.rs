@@ -34,6 +34,20 @@ impl Id {
         Self(Uuid::from_u128(n))
     }
 
+    /// A stand-in, never a real id: what a guess names something new by until the
+    /// server's answer, with the real id, replaces it. A version 8 UUID, so it can't
+    /// be one the server made (version 6), different for each `n`.
+    pub fn stand_in(n: u64) -> Self {
+        let mut bytes = [0; 16];
+        bytes[8..].copy_from_slice(&n.to_be_bytes());
+        Self(uuid::Builder::from_custom_bytes(bytes).into_uuid())
+    }
+
+    /// Whether it is a stand-in (`stand_in`).
+    pub fn is_stand_in(self) -> bool {
+        self.0.get_version_num() == 8
+    }
+
     /// The id written as `Display` writes it (hyphenated), if `text` is one.
     pub fn parse(text: &str) -> Option<Self> {
         // `parse_str` also takes other forms (simple, braced, urn): only this one.
@@ -43,6 +57,16 @@ impl Id {
                 _ => c.is_ascii_hexdigit(),
             });
         Uuid::parse_str(text).ok().filter(|_| hyphenated).map(Self)
+    }
+}
+
+/// Stand-ins one after another (`Id::stand_in`), from 1: for a trial or a test,
+/// where nothing they name is kept.
+pub fn stand_ins() -> impl FnMut() -> Id {
+    let mut n = 0;
+    move || {
+        n += 1;
+        Id::stand_in(n)
     }
 }
 

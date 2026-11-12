@@ -66,7 +66,7 @@ pub(super) fn answer_dev(
             Some(_) => sites::forget_site(client, world),
             None => world_map::forget_on_server(client, world),
         },
-        ClientMessage::DevGiveItem {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
             kind,
             size,
             magical,
@@ -78,7 +78,7 @@ pub(super) fn answer_dev(
             identical,
             request,
             to,
-        } => {
+        }) => {
             let order = ItemOrder {
                 kind,
                 size,

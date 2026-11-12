@@ -31,6 +31,10 @@ pub struct ItemDef {
     pub wear: Option<WearDef>,
     /// Whether how well it is made matters: not for a coin.
     pub has_quality: bool,
+    /// Every one is like every other, so a stack of them is a number, not items
+    /// with ids (`Item::count`): coins. Such a kind has no quality, form, wear,
+    /// grid, name of its own or secrets.
+    pub counted: bool,
     /// How long it takes to make beside other things, as a percentage.
     pub make_percent: u64,
 }
@@ -61,6 +65,7 @@ pub(super) const fn plain(name: &'static str, weight: u32, shape: Shape) -> Item
         container: None,
         wear: None,
         has_quality: true,
+        counted: false,
         make_percent: 100,
     }
 }
@@ -139,6 +144,14 @@ impl ItemDef {
     pub(super) const fn without_quality(self) -> Self {
         Self {
             has_quality: false,
+            ..self
+        }
+    }
+
+    /// Held as a number in a stack: see `ItemDef::counted`.
+    pub(super) const fn counted(self) -> Self {
+        Self {
+            counted: true,
             ..self
         }
     }

@@ -21,7 +21,7 @@ fn in_a_site() -> TestClient {
 }
 
 fn give(kind: ItemKind) -> ClientMessage {
-    ClientMessage::DevGiveItem {
+    ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind,
         size: None,
         magical: false,
@@ -33,11 +33,11 @@ fn give(kind: ItemKind) -> ClientMessage {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }
+    })
 }
 
 fn give_cursed(kind: ItemKind) -> ClientMessage {
-    ClientMessage::DevGiveItem {
+    ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind,
         size: None,
         magical: false,
@@ -49,7 +49,7 @@ fn give_cursed(kind: ItemKind) -> ClientMessage {
         identical: true,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }
+    })
 }
 
 fn carrying(answers: &[ServerMessage]) -> Inventory {

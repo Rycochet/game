@@ -23,7 +23,8 @@ impl Inventory {
         }
         let mut part = item.clone();
         if count < part.count() {
-            part = part.split_top(count);
+            // Only to weigh it: its id is never kept.
+            part = part.split_top(count, &mut || Id::NOBODY);
         }
         self.may_hold(holder, &part)?;
         Ok(count)
@@ -31,47 +32,54 @@ impl Inventory {
 
     /// Puts as much of this carried stack as fits on the stack `onto`, from its top:
     /// how many went. The rest stays where it was. Coins reaching 100 turn into
-    /// the next kind (`coins.rs`).
+    /// the next kind (`coins.rs`), any new stack of them with an id from `new_id`.
     pub fn stack_onto(
         &mut self,
         id: Id,
         onto: Id,
         limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
     ) -> Result<u32, MoveRefused> {
         let item = self.find(id).ok_or(MoveRefused::NoSuchItem)?;
         let count = self.stack_room(item, onto, limits)?;
         let holder = self.placed(onto).map(|(holder, _)| holder);
         let holder = holder.ok_or(MoveRefused::NoSuchGrid)?;
+        // A part joins `onto` straight away, so its id is never kept.
         let part = match count == item.count() {
             true => self.take(id),
-            false => self.find_mut(id).map(|item| item.split_top(count)),
+            false => self
+                .find_mut(id)
+                .map(|item| item.split_top(count, &mut || Id::NOBODY)),
         };
         let part = part.ok_or(MoveRefused::NoSuchItem)?;
         self.find_mut(onto)
             .expect("checked above, and not inside what was lifted out")
             .put_on(part);
-        self.carry_coins(onto, holder, limits)
+        self.carry_coins(onto, holder, limits, new_id)
             .expect("stack_room tried it on a copy");
         Ok(count)
     }
 
     /// Puts as much of something not carried as fits on the stack `onto`, from its
-    /// top. Gives back what is left, if any.
+    /// top. Gives back what is left, if any, keeping its id. Coins turn as for
+    /// `stack_onto`.
     pub fn add_to_stack(
         &mut self,
         mut item: Item,
         onto: Id,
         limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
     ) -> Result<Option<Item>, MoveRefused> {
         let count = self.stack_room(&item, onto, limits)?;
         let holder = self.placed(onto).map(|(holder, _)| holder);
         let holder = holder.ok_or(MoveRefused::NoSuchGrid)?;
         let (part, rest) = match count == item.count() {
             true => (item, None),
-            false => (item.split_top(count), Some(item)),
+            // The part joins `onto` straight away, so its id is never kept.
+            false => (item.split_top(count, &mut || Id::NOBODY), Some(item)),
         };
         self.find_mut(onto).expect("checked above").put_on(part);
-        self.carry_coins(onto, holder, limits)
+        self.carry_coins(onto, holder, limits, new_id)
             .expect("stack_room tried it on a copy");
         Ok(rest)
     }
@@ -84,11 +92,14 @@ impl Inventory {
             .find(|&onto| self.stack_room(item, onto, limits) == Ok(item.count()))
     }
 
-    /// Takes the top item off a carried stack, or the item itself if it is alone.
+    /// Takes the top item off a carried stack, or the item itself if it is alone:
+    /// for wearing, so never part of a counted stack (`None`), which nothing wears.
     pub(crate) fn take_top(&mut self, id: Id) -> Option<Item> {
-        match self.find(id)?.count() {
+        let item = self.find(id)?;
+        match item.count() {
             1 => self.take(id),
-            _ => self.find_mut(id)?.take_top(),
+            _ if item.is_counted() => None,
+            _ => self.find_mut(id)?.above.pop(),
         }
     }
 

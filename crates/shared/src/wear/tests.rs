@@ -28,7 +28,9 @@ fn carrying_for(kind: CreatureKind, kinds: &[ItemKind]) -> Inventory {
             made,
             ..Item::new(id(index as u128 + 1), item)
         };
-        inventory.give(new, StackLimits::NONE).expect("room");
+        inventory
+            .give(new, StackLimits::NONE, &mut crate::id::stand_ins())
+            .expect("room");
     }
     inventory
 }
@@ -183,13 +185,21 @@ fn gloves_need_the_right_number_of_fingers_unless_magical() {
         creature: kobold,
         ..Inventory::default()
     };
-    inventory.give(gloves(false), StackLimits::NONE).unwrap();
+    inventory
+        .give(
+            gloves(false),
+            StackLimits::NONE,
+            &mut crate::id::stand_ins(),
+        )
+        .unwrap();
     assert_eq!(inventory.check_wear(id(1)), Err(WearRefused::WrongFingers));
     let mut magic = Inventory {
         creature: kobold,
         ..Inventory::default()
     };
-    magic.give(gloves(true), StackLimits::NONE).unwrap();
+    magic
+        .give(gloves(true), StackLimits::NONE, &mut crate::id::stand_ins())
+        .unwrap();
     assert_eq!(magic.check_wear(id(1)), Ok(Fit::Exact));
     // Fingerless ones don't care.
     let mut fingerless = carrying_for(kobold, &[ItemKind::FingerlessGloves]);
@@ -226,7 +236,9 @@ fn mitten_gauntlets_fit_any_fingers_and_demi_gauntlets_leave_rings_free() {
             creature: kobold,
             ..Inventory::default()
         };
-        inventory.give(item, StackLimits::NONE).unwrap();
+        inventory
+            .give(item, StackLimits::NONE, &mut crate::id::stand_ins())
+            .unwrap();
         inventory.check_wear(id(1))
     };
     assert_eq!(
@@ -357,7 +369,11 @@ fn blessed_stops_others_and_cursed_stops_everyone() {
 fn a_curse_only_holds_what_is_worn() {
     let mut inventory = Inventory::default();
     inventory
-        .give(with_favour(Some(Favour::Cursed)), StackLimits::NONE)
+        .give(
+            with_favour(Some(Favour::Cursed)),
+            StackLimits::NONE,
+            &mut crate::id::stand_ins(),
+        )
         .unwrap();
     assert!(inventory.may_remove(id(1), Remover::Wearer));
 }
@@ -454,7 +470,9 @@ fn magic_doesnt_change_the_body() {
         },
         ..Item::new(id(1), ItemKind::TShirt)
     };
-    inventory.give(shirt, StackLimits::NONE).unwrap();
+    inventory
+        .give(shirt, StackLimits::NONE, &mut crate::id::stand_ins())
+        .unwrap();
     assert_eq!(
         inventory.check_wear(id(1)),
         Err(WearRefused::WrongBody(Location::Arms))
@@ -505,7 +523,11 @@ fn changing_body_drops_what_cant_be_worn_and_what_has_no_room() {
     inventory.wear(id(1)).unwrap();
     // A chicken's 2 × 2 inventory: the armour can't go on it, and drops rather
     // than being carried; the ring and stone go in the grid as far as they fit.
-    let dropped = inventory.change_body(CreatureKind::Chicken, StackLimits::NONE);
+    let dropped = inventory.change_body(
+        CreatureKind::Chicken,
+        StackLimits::NONE,
+        &mut crate::id::stand_ins(),
+    );
     assert!(inventory.worn.is_empty());
     assert_eq!(inventory.size, (2, 2));
     assert_eq!(dropped.len() + inventory.items.len(), 3);
@@ -520,7 +542,11 @@ fn changing_to_a_body_that_takes_the_same_keeps_everything_on() {
     for n in 1..=4 {
         inventory.wear(id(n)).unwrap();
     }
-    let dropped = inventory.change_body(CreatureKind::Elf, StackLimits::NONE);
+    let dropped = inventory.change_body(
+        CreatureKind::Elf,
+        StackLimits::NONE,
+        &mut crate::id::stand_ins(),
+    );
     assert!(dropped.is_empty());
     let worn: Vec<Id> = inventory.worn.iter().map(|item| item.id).collect();
     assert_eq!(worn, [id(1), id(2), id(3), id(4)], "in the order put on");
@@ -536,7 +562,11 @@ fn changing_body_drops_cursed_things_it_cant_wear() {
     }
     inventory.wear(id(1)).unwrap();
     inventory.wear(id(2)).unwrap();
-    let dropped = inventory.change_body(CreatureKind::Horse, StackLimits::NONE);
+    let dropped = inventory.change_body(
+        CreatureKind::Horse,
+        StackLimits::NONE,
+        &mut crate::id::stand_ins(),
+    );
     assert!(inventory.worn.is_empty());
     let ids: Vec<Id> = dropped.iter().map(|item| item.id).collect();
     assert_eq!(ids, [id(1), id(2)]);
@@ -552,7 +582,7 @@ fn changing_body_keeps_on_what_still_fits_over_what_dropped() {
     // put on as it is.
     for kind in CreatureKind::ALL {
         let mut changed = inventory.clone();
-        let dropped = changed.change_body(kind, StackLimits::NONE);
+        let dropped = changed.change_body(kind, StackLimits::NONE, &mut crate::id::stand_ins());
         assert_eq!(changed.worn.len() + dropped.len(), 2, "{kind:?}");
         for item in changed.worn.clone() {
             let mut without = changed.clone();
@@ -599,7 +629,9 @@ fn helmet_for(kind: CreatureKind, closed: bool) -> Inventory {
         form: Some(ItemForm::Head(form)),
         ..Item::new(id(1), ItemKind::Helmet)
     };
-    inventory.give(helmet, StackLimits::NONE).expect("room");
+    inventory
+        .give(helmet, StackLimits::NONE, &mut crate::id::stand_ins())
+        .expect("room");
     inventory
 }
 

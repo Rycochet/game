@@ -44,11 +44,17 @@ impl Inventory {
     }
 
     /// Puts a new item in the inventory: on the first stack it can all go on, or else
-    /// in the first place it fits. Gives it back if there is no room.
+    /// in the first place it fits. Gives it back if there is no room. Coins turn as
+    /// for `stack_onto`, any new stack of them with an id from `new_id`.
     #[allow(clippy::result_large_err)] // Handing it back whole is the point, and rare.
-    pub fn give(&mut self, item: Item, limits: StackLimits) -> Result<(), Item> {
+    pub fn give(
+        &mut self,
+        item: Item,
+        limits: StackLimits,
+        new_id: &mut impl FnMut() -> Id,
+    ) -> Result<(), Item> {
         if let Some(onto) = self.first_stack_for(&item, Holder::Inventory, limits) {
-            self.add_to_stack(item, onto, limits)
+            self.add_to_stack(item, onto, limits, new_id)
                 .expect("first_stack_for found room for all of it");
             return Ok(());
         }

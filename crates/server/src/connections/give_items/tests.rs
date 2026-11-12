@@ -7,7 +7,7 @@ use shared::protocol::ClientMessage;
 use crate::connections::tests::TestClient;
 
 fn give(kind: ItemKind, seed: u64, count: u32, identical: bool) -> ClientMessage {
-    ClientMessage::DevGiveItem {
+    ClientMessage::DevGiveItem(shared::protocol::DevGive {
         kind,
         size: None,
         magical: false,
@@ -19,7 +19,7 @@ fn give(kind: ItemKind, seed: u64, count: u32, identical: bool) -> ClientMessage
         identical,
         request: shared::item_form::RollRequest::NONE,
         to: None,
-    }
+    })
 }
 
 fn of_kind(inventory: &Inventory, kind: ItemKind) -> Vec<&Item> {
@@ -101,7 +101,7 @@ fn in_a_site_what_does_not_fit_goes_on_the_ground() {
 
 fn give_asking(kind: ItemKind, request: RollRequest) -> ClientMessage {
     match give(kind, 3, 1, true) {
-        ClientMessage::DevGiveItem {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
             kind,
             size,
             magical,
@@ -112,7 +112,7 @@ fn give_asking(kind: ItemKind, request: RollRequest) -> ClientMessage {
             count,
             identical,
             ..
-        } => ClientMessage::DevGiveItem {
+        }) => ClientMessage::DevGiveItem(shared::protocol::DevGive {
             kind,
             size,
             magical,
@@ -124,7 +124,7 @@ fn give_asking(kind: ItemKind, request: RollRequest) -> ClientMessage {
             identical,
             request,
             to: None,
-        },
+        }),
         _ => unreachable!(),
     }
 }
@@ -172,7 +172,7 @@ fn beside_a_mob(test: &mut TestClient) -> shared::id::Id {
 
 fn give_to(kind: ItemKind, count: u32, to: shared::id::Id) -> ClientMessage {
     match give(kind, 5, count, true) {
-        ClientMessage::DevGiveItem {
+        ClientMessage::DevGiveItem(shared::protocol::DevGive {
             kind,
             size,
             magical,
@@ -184,7 +184,7 @@ fn give_to(kind: ItemKind, count: u32, to: shared::id::Id) -> ClientMessage {
             identical,
             request,
             ..
-        } => ClientMessage::DevGiveItem {
+        }) => ClientMessage::DevGiveItem(shared::protocol::DevGive {
             kind,
             size,
             magical,
@@ -196,7 +196,7 @@ fn give_to(kind: ItemKind, count: u32, to: shared::id::Id) -> ClientMessage {
             identical,
             request,
             to: Some(to),
-        },
+        }),
         _ => unreachable!(),
     }
 }

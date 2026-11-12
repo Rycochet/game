@@ -113,6 +113,13 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 item: Id(uuid::Uuid::from_u128(8)),
             }),
         },
+        ClientMessage::PartOfStack {
+            stack: Id(uuid::Uuid::from_u128(7)),
+            count: 40,
+            then: Box::new(ClientMessage::DropItem {
+                item: Id::stand_in(1),
+            }),
+        },
         ClientMessage::StackFromGround {
             item: Id(uuid::Uuid::from_u128(7)),
             onto: Id(uuid::Uuid::from_u128(8)),
@@ -127,7 +134,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::WearItem {
             item: Id(uuid::Uuid::from_u128(7)),
         },
-        ClientMessage::DevGiveItem {
+        ClientMessage::DevGiveItem(crate::protocol::DevGive {
             kind: ItemKind::Pouch,
             size: Some(Size::Large),
             magical: true,
@@ -139,7 +146,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             identical: true,
             request: crate::item_form::RollRequest::NONE,
             to: None,
-        },
+        }),
         ClientMessage::OpenTrade {
             with: Id::for_test(3),
         },
@@ -521,7 +528,17 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ServerMessage::Inventory({
             let mut inventory = Inventory::default();
             let pouch = crate::item::Item::new(Id(uuid::Uuid::from_u128(1)), ItemKind::Pouch);
-            inventory.give(pouch, StackLimits::NONE).unwrap();
+            inventory
+                .give(pouch, StackLimits::NONE, &mut crate::id::stand_ins())
+                .unwrap();
+            // A counted stack: its count goes with it.
+            let coins = crate::item::Item {
+                count: 37,
+                ..crate::item::Item::new(Id::for_test(2), ItemKind::SilverCoin)
+            };
+            inventory
+                .give(coins, StackLimits::NONE, &mut crate::id::stand_ins())
+                .unwrap();
             inventory
         }),
     ];

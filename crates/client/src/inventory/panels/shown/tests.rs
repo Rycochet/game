@@ -7,7 +7,9 @@ use super::{grows, shown_size};
 fn with_bag(kind: ItemKind) -> Inventory {
     let mut inventory = Inventory::default();
     let bag = Item::new(Id::for_test(1), kind);
-    inventory.give(bag, StackLimits::NONE).unwrap();
+    inventory
+        .give(bag, StackLimits::NONE, &mut shared::id::stand_ins())
+        .unwrap();
     inventory
 }
 
