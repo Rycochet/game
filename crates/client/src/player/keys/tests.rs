@@ -5,6 +5,9 @@ use super::*;
 fn app() -> App {
     let mut app = App::new();
     app.add_message::<TakeStep>()
+        .add_message::<Walking>()
+        .init_resource::<ViewTurn>()
+        .insert_resource(State::new(GameView::WorldMap))
         .init_resource::<ButtonInput<KeyCode>>()
         .init_resource::<Preferences>()
         .init_resource::<ViewFacing>()
@@ -106,4 +109,25 @@ fn a_tap_whose_step_waits_for_energy_still_steps() {
     app.insert_resource(PadSteps::default());
     app.update();
     assert_eq!(app.world().resource::<PlayerEnergy>().waiting.len(), 1);
+}
+
+#[test]
+fn on_a_level_keys_walk_the_way_the_screen_shows() {
+    let mut app = app();
+    app.insert_resource(State::new(GameView::Dungeon));
+    // The camera turned an eighth of a turn clockwise: up the screen is
+    // north-east.
+    app.insert_resource(ViewTurn(std::f32::consts::FRAC_PI_4));
+    app.insert_resource(PadSteps { dx: 0, dy: -1 });
+    app.update();
+    let walked: Vec<Walking> = app
+        .world_mut()
+        .resource_mut::<Messages<Walking>>()
+        .drain()
+        .collect();
+    assert_eq!(walked.len(), 1);
+    let half = std::f64::consts::FRAC_1_SQRT_2;
+    assert!((walked[0].x - half).abs() < 1e-6 && (walked[0].y + half).abs() < 1e-6);
+    assert_eq!(steps_asked(&mut app), 0);
+    assert!(app.world().resource::<PlayerMoving>().keys);
 }

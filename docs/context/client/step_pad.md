@@ -23,5 +23,5 @@ The movement pad (owner's design, 2026-11-08): a grip panel at the bottom right,
 
 ## Notes
 
-- The arrows are screen directions, as the step keys, turned by `ViewFacing` in `player`. Only one finger holds at a time, so no diagonals by touch; the mouse and a finger could hold two.
+- The arrows are screen directions, as the step keys, turned by the camera in `player`: on a level or in the Hall they walk freely that way (at whatever angle the camera is turned), on the world map they step. Only one finger holds at a time, so no diagonals by touch; the mouse and a finger could hold two.
 - Up and Down fire once when they become held; staying held does nothing more.

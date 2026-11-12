@@ -3,10 +3,12 @@
 use bevy::prelude::*;
 use shared::energy::{ACTION_TICKS_PER_SECOND, Energy};
 use shared::movement::Step;
+use shared::spot::Spot;
 use std::collections::VecDeque;
 
+use super::stride::Stride;
 use super::{LIGHT_RADIUS, Player};
-use crate::common::{Icon, LightSource, MapPosition, SmoothPosition, Token};
+use crate::common::{Icon, LightSource, MapPosition, SmoothPosition, SpotPosition, Token};
 
 /// Travel state, private to this module.
 #[derive(Component, Default)]
@@ -26,6 +28,22 @@ pub(super) struct Travel {
     pub(super) jump: Option<MapPosition>,
     /// A closed door asked open, not yet answered: not asked again meanwhile.
     pub(super) door_asked: Option<(i64, i64)>,
+    /// On a level or in the Hall: the spots a journey has still to reach, in
+    /// order (each straight on from the last).
+    pub(super) spots: VecDeque<Spot>,
+    /// The `SpotPosition` this module last set, to notice other changes.
+    pub(super) last_spot: Spot,
+    /// A move already taken (and sent) to this spot, being shown: a jump, or a
+    /// step asked for (`TakeStep`). Nothing else moves the player meanwhile.
+    pub(super) landing: Option<Spot>,
+    /// The straight stretch walked since the last move was sent.
+    pub(super) stride: Stride,
+    /// A route to `goal` is to be found on a level (asked for, or the way was
+    /// blocked).
+    pub(super) asked: bool,
+    /// The route was found again because the way was blocked, and nothing
+    /// has been walked since: blocked again, the journey ends.
+    pub(super) rerouted: bool,
 }
 
 /// The player's energy as far as the client can tell, the same way the server
@@ -51,6 +69,7 @@ pub(super) fn spawn_player(mut commands: Commands) {
     commands.spawn((
         Player,
         MapPosition::default(),
+        SpotPosition::default(),
         SmoothPosition::default(),
         Travel::default(),
         // A white circle (no attitude): drawn as a cylinder on the map.

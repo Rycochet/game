@@ -65,7 +65,9 @@ Shared building blocks for the client modules. Keep it small.
 - `Icon(String)` (component): a 2D picture shown above an entity's token, standing upright and turned to face the camera; asset path such as `monsters/humanarcher.png` (54×54 art, main picture in the central 32×32). Set by the owning module, drawn by `view3d`.
 - `IconPicture(Handle<Image>)` (component): a drawn picture shown in place of the `Icon` (a character as dressed, from `item_art`), filling its whole square, so drawn at the icon art's central size. `entities` sets it.
 - `PadButton` (component) and `PadSteps` (resource, `step_pad.rs`): the movement pad's buttons (Up, the four step arrows, Down), and the steps its held arrows ask for, as screen `dx` / `dy`. `step_pad` spawns the buttons and writes `PadSteps`; `player` steps by it, `site` enables Up and Down.
-- `ViewFacing(u8)` (resource): which compass direction is nearest the top of the screen, in quarter turns clockwise from north (0 north, 1 east, 2 south, 3 west). Written by `view3d` from its camera; `screen_to_grid(dx, dy)` turns a screen direction into a grid step (used by `player` for keys).
+- `ViewFacing(u8)` (resource): which compass direction is nearest the top of the screen, in quarter turns clockwise from north (0 north, 1 east, 2 south, 3 west). Written by `view3d` from its camera; `screen_to_grid(dx, dy)` turns a screen direction into a grid step (used by `player` for keys on the world map).
+- `ViewTurn(f32)` (resource, `view.rs`): exactly how far the view is turned, clockwise from north to the top of the screen, in radians; `screen_to_grid(dx, dy)` at any angle. Written by `view3d`; used by `player` for free walking on levels.
+- `SpotPosition(Spot)` (component, `map.rs`): the player's exact place on a level or in the Hall, in units; `place(spot)` gives it with its `MapPosition` (the cell) and `SmoothPosition`, for whoever puts the player somewhere (`site`, `connection`). Unused on the world map.
 - `CurrentWorld::conditions(clock)`: the walking rules now (the hour's tide; frozen sea counts as ground, by the climate), for `player` and `world_map`.
 
 ## Depends on

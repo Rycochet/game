@@ -18,10 +18,11 @@ mod wilderness;
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::site::leads_out;
+use shared::spot::Spot;
 
 use crate::common::{
     ClickMode, CurrentDungeon, CurrentWorld, GameView, MapPosition, OtherLevels, OwnVitals, Portal,
-    WorldReturn,
+    SmoothPosition, SpotPosition, WorldReturn,
 };
 use crate::connection::{FromServer, ToServer};
 use crate::player::{Arrived, Player, PlayerSystems, TravelTo};
@@ -149,8 +150,9 @@ fn change_map(
     mut world_return: ResMut<WorldReturn>,
     mut next: ResMut<NextState<GameView>>,
     view: Res<State<GameView>>,
-    mut player: Single<&mut MapPosition, With<Player>>,
+    player: Single<(&mut MapPosition, &mut SpotPosition, &mut SmoothPosition), With<Player>>,
 ) {
+    let (mut player, mut spot, mut smooth) = player.into_inner();
     for FromServer(message) in from_server.read() {
         match message {
             // Joined (or joined again): where the player is on the world map,
@@ -158,10 +160,9 @@ fn change_map(
             &ServerMessage::Welcome { x, y, .. } => world_return.0 = MapPosition { x, y },
             ServerMessage::EnterLevel(info) => {
                 if *view.get() == GameView::WorldMap {
-                    world_return.0 = **player;
+                    world_return.0 = *player;
                 }
-                let (x, y) = info.arrival.cell();
-                **player = MapPosition { x, y };
+                (*spot, *player, *smooth) = SpotPosition::place(info.arrival);
                 others.entering(&mut dungeon, info);
                 dungeon.enter(info.clone());
                 next.set(GameView::Dungeon);
@@ -169,11 +170,11 @@ fn change_map(
             // Counted from `origin`, a multiple of the gates' spacing, so the
             // cells are the same.
             &ServerMessage::EnterHall { at, origin } => {
-                let (x, y) = at.cell();
                 if *view.get() == GameView::WorldMap {
-                    world_return.0 = **player;
+                    world_return.0 = *player;
                 }
-                **player = MapPosition { x, y };
+                (*spot, *player, *smooth) = SpotPosition::place(at);
+                let (x, y) = at.cell();
                 *others = OtherLevels::default();
                 hall::show_around(&mut dungeon, (x, y), origin);
                 next.set(GameView::Dungeon);
@@ -199,7 +200,7 @@ fn change_map(
                     _ => world_return.0.x,
                 };
                 let shift = (from - x + width / 2).div_euclid(width) * width;
-                **player = MapPosition { x: x + shift, y };
+                *player = MapPosition { x: x + shift, y };
                 // (Moved on the world map: no need to set it up again.)
                 if *view.get() != GameView::WorldMap {
                     next.set(GameView::WorldMap);
@@ -208,18 +209,15 @@ fn change_map(
             &ServerMessage::Teleported { x, y } => {
                 // Dev tools, on the map the player is on: on the world map,
                 // on the copy of the planet they are on; on a level, in units.
-                let (x, y) = match view.get() {
-                    GameView::WorldMap => (x, y),
-                    _ => shared::protocol::cell_of_units((x, y)),
-                };
-                let shift = match (view.get(), world.as_ref()) {
-                    (GameView::WorldMap, Some(world)) => {
-                        let width = world.surface.width();
-                        (player.x - x + width / 2).div_euclid(width) * width
-                    }
-                    _ => 0,
-                };
-                **player = MapPosition { x: x + shift, y };
+                if *view.get() != GameView::WorldMap {
+                    (*spot, *player, *smooth) = SpotPosition::place(Spot::new(x, y));
+                    continue;
+                }
+                let shift = world.as_ref().map_or(0, |world| {
+                    let width = world.surface.width();
+                    (player.x - x + width / 2).div_euclid(width) * width
+                });
+                *player = MapPosition { x: x + shift, y };
             }
             _ => {}
         }

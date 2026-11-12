@@ -3,20 +3,23 @@
 use bevy::prelude::*;
 use shared::movement::Step;
 
-use super::{PlayerEnergy, PlayerMoving, TakeStep};
-use crate::common::{Action, PadSteps, Preferences, ViewFacing};
+use super::{PlayerEnergy, PlayerMoving, TakeStep, Walking};
+use crate::common::{Action, GameView, PadSteps, Preferences, ViewFacing, ViewTurn};
 
 /// Asks for a step while a key (or a pad arrow, `PadSteps`) is held, as soon as the last one has gone: energy
 /// sets the pace. The first step of a hold is always taken; once it has been,
 /// letting go drops the one waiting, so a click or tap lasting a few frames is
-/// one step.
+/// one step. On a level or in the Hall the player walks freely instead
+/// (`Walking`), at any angle: the way the keys point on the screen, however
+/// the camera is turned.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn move_player(
     (keys, preferences): (Res<ButtonInput<KeyCode>>, Res<Preferences>),
-    facing: Res<ViewFacing>,
+    (facing, turn, view): (Res<ViewFacing>, Res<ViewTurn>, Res<State<GameView>>),
     mut energy: ResMut<PlayerEnergy>,
     pad: Option<Res<PadSteps>>,
     mut moving: ResMut<PlayerMoving>,
-    mut steps: MessageWriter<TakeStep>,
+    (mut steps, mut walking): (MessageWriter<TakeStep>, MessageWriter<Walking>),
     mut asked: Local<u32>,
 ) {
     // A key tapped and released within one frame is "just pressed" but no
@@ -53,6 +56,15 @@ pub(super) fn move_player(
             energy.waiting.clear();
         }
         *asked = 0;
+    }
+    if held && *view.get() == GameView::Dungeon {
+        let (x, y) = turn.screen_to_grid(dx as f64, dy as f64);
+        let length = x.hypot(y);
+        walking.write(Walking {
+            x: x / length,
+            y: y / length,
+        });
+        return;
     }
     if held && energy.waiting.is_empty() {
         // The keys mean screen directions, so follow the way the map is turned.

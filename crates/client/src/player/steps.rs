@@ -2,23 +2,29 @@
 
 use bevy::prelude::*;
 use shared::energy::ACTION_TICKS_PER_SECOND;
-use shared::movement::{step_on_level_by, step_on_world_map_by, world_step_time};
+use shared::movement::{step_on_world_map_by, world_step_time};
 use shared::protocol::DoorAsk;
 
 use super::doors::AskDoor;
 use super::level_costs::LevelCosts;
+use super::level_step::level_step;
+use super::stride::Stride;
 use super::{
-    MOST_STEPS_WAITING, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick, enemy_cells,
+    MOST_STEPS_WAITING, Moved, Player, PlayerEnergy, Stepped, TakeStep, Travel, action_tick,
+    enemy_cells,
 };
 use crate::common::{
     CancelledEnergy, CurrentDungeon, CurrentWorld, GameClock, GameView, GodMode, MapPosition,
-    NearRivers, Other, PlayerGait, PlayerSpeed, Sneaking, SpentEnergy, WildCellHeights,
+    NearRivers, Other, PlayerGait, PlayerSpeed, Sneaking, SpentEnergy, SpotPosition,
+    WildCellHeights,
 };
 
-/// Takes the steps asked for this frame, in order: in a dungeon, only onto
-/// walkable cells the client knows of, or over liquid to one; on the world map,
-/// not into open water (the server's rules, `shared::movement`). Steps are
-/// ignored until a jump has landed.
+/// Takes the steps asked for this frame, in order: on a level or in the Hall
+/// as a move to the next cell's middle (`level_step`: from a middle by the
+/// cell rule, onto walkable cells the client knows of or over liquid to
+/// one), shown going there; on the world map, not into open water (the
+/// server's rules, `shared::movement`). Steps are ignored until a jump has
+/// landed.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn take_steps(
     mut requests: MessageReader<TakeStep>,
@@ -33,12 +39,16 @@ pub(super) fn take_steps(
     (gait, sneaking): (Res<PlayerGait>, Res<Sneaking>),
     (heights, rivers): (Res<WildCellHeights>, Res<NearRivers>),
     mut energy: ResMut<PlayerEnergy>,
-    (mut stepped, mut asks): (MessageWriter<Stepped>, MessageWriter<AskDoor>),
+    (mut stepped, mut moved, mut asks): (
+        MessageWriter<Stepped>,
+        MessageWriter<Moved>,
+        MessageWriter<AskDoor>,
+    ),
     god: Res<GodMode>,
     others: Query<(&Other, &MapPosition), Without<Player>>,
-    player: Single<(&mut MapPosition, &mut Travel), With<Player>>,
+    player: Single<(&mut MapPosition, &mut SpotPosition, &mut Travel), With<Player>>,
 ) {
-    let (mut position, mut travel) = player.into_inner();
+    let (mut position, mut spot, mut travel) = player.into_inner();
     let tick = action_tick(&time);
     // The time up to now went at the old speed.
     let old_speed = energy.speed.max(1);
@@ -63,53 +73,80 @@ pub(super) fn take_steps(
         let Some(step) = energy.waiting.pop_front() else {
             break;
         };
-        if travel.jump.is_some() {
+        if travel.jump.is_some() || travel.landing.is_some() {
             continue;
         }
         let from = (position.x, position.y);
-        let to = match view.get() {
-            GameView::Dungeon => step_on_level_by(&dungeon.level, from, step, gait.0),
-            _ => world.as_ref().and_then(|world| {
-                step_on_world_map_by(&world.ground, world.conditions(&clock), from, step, gait.0)
-            }),
-        };
-        let Some((x, y)) = to else {
-            // Walking into a closed door tries to open it.
-            let (dx, dy) = step.from(from);
-            let dungeon_view = *view.get() == GameView::Dungeon;
-            if dungeon_view && dungeon.level.is_shut(dx, dy) && travel.door_asked != Some((dx, dy))
-            {
-                travel.door_asked = Some((dx, dy));
-                asks.write(AskDoor(DoorAsk::Open { x: dx, y: dy }));
+        if *view.get() == GameView::Dungeon {
+            let costs = LevelCosts {
+                level: &dungeon.level,
+                heights: &heights,
+                gait: gait.0,
+                sneaking: sneaking.0,
+                speed: speed.0,
+            };
+            // Put somewhere else (the server, arriving): from there.
+            if spot.0 != travel.last_spot {
+                travel.stride = Stride::at(spot.0);
+                travel.last_spot = spot.0;
+                travel.spots.clear();
             }
+            // Whatever was walked and not yet sent goes first.
+            if let Some((from, to)) = travel.stride.finish() {
+                energy
+                    .energy
+                    .spend(tick, speed.0, costs.move_time(from, to));
+                moved.write(Moved { from, to });
+            }
+            let start = travel.stride.at;
+            let landing = level_step(&dungeon.level, gait.0, start, step);
+            let Some(to) = landing.filter(|to| !enemy_cells(&others, *god).contains(&to.cell()))
+            else {
+                // Walking into a closed door tries to open it.
+                let (dx, dy) = step.from(from);
+                if dungeon.level.is_shut(dx, dy) && travel.door_asked != Some((dx, dy)) {
+                    travel.door_asked = Some((dx, dy));
+                    asks.write(AskDoor(DoorAsk::Open { x: dx, y: dy }));
+                }
+                continue;
+            };
+            energy
+                .energy
+                .spend(tick, speed.0, costs.move_time(start, to));
+            let (x, y) = to.cell();
+            *position = MapPosition { x, y };
+            spot.0 = to;
+            moved.write(Moved { from: start, to });
+            // Shown going there, as a jump is (`travel_on_level`).
+            travel.route.clear();
+            travel.spots.clear();
+            travel.last = *position;
+            travel.last_spot = to;
+            travel.stride = Stride::at(to);
+            travel.landing = Some(to);
+            continue;
+        }
+        let to = world.as_ref().and_then(|world| {
+            step_on_world_map_by(&world.ground, world.conditions(&clock), from, step, gait.0)
+        });
+        let Some((x, y)) = to else {
             continue;
         };
         // An enemy won't move aside; anyone else swaps places, as the server says.
         if enemy_cells(&others, *god).contains(&(x, y)) {
             continue;
         }
-        let cost = match view.get() {
-            // Slopes, wading, jumps and sneaking, as the server prices them.
-            GameView::Dungeon => LevelCosts {
-                level: &dungeon.level,
-                heights: &heights,
-                gait: gait.0,
-                sneaking: sneaking.0,
-                speed: speed.0,
-            }
-            .time(from, (x, y)),
-            _ => world.as_ref().map_or(0, |world| {
-                let conditions = world.conditions(&clock);
-                let ends = (
-                    world.ground.elevation(from.0, from.1, conditions),
-                    world.ground.elevation(x, y, conditions),
-                );
-                let road = world.roads.steps().kind_of(from, (x, y));
-                let on_river = rivers.points.contains((x, y));
-                let footing = world.ground.footing((x, y), conditions, road, on_river);
-                world_step_time(from, (x, y), ends, footing, gait.0)
-            }),
-        };
+        let cost = world.as_ref().map_or(0, |world| {
+            let conditions = world.conditions(&clock);
+            let ends = (
+                world.ground.elevation(from.0, from.1, conditions),
+                world.ground.elevation(x, y, conditions),
+            );
+            let road = world.roads.steps().kind_of(from, (x, y));
+            let on_river = rivers.points.contains((x, y));
+            let footing = world.ground.footing((x, y), conditions, road, on_river);
+            world_step_time(from, (x, y), ends, footing, gait.0)
+        });
         energy.energy.spend(tick, speed.0, cost);
         *position = MapPosition { x, y };
         stepped.write(Stepped::between(step, from, (x, y)));

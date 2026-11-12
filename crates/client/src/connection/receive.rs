@@ -2,7 +2,8 @@
 
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
-use shared::protocol::{OnlineState, ServerMessage, cell_of_units};
+use shared::protocol::{OnlineState, ServerMessage};
+use shared::spot::Spot;
 use shared::world::MINUTES_PER_HOUR;
 use shared::world::WORLD_MAP_VERSION;
 
@@ -11,7 +12,7 @@ use super::prediction::{Prediction, correction};
 use super::{FromServer, ServerConnection, give_up, hang_up};
 use crate::common::{
     CurrentWorld, GameClock, GameView, Hosting, MapPosition, ServerClock, ServerStatus,
-    WorldChanged,
+    SmoothPosition, SpotPosition, WorldChanged,
 };
 use crate::player::Player;
 
@@ -32,7 +33,7 @@ pub(super) fn receive(
     mut server_clock: ResMut<ServerClock>,
     time: Res<Time<Real>>,
     mut hosting: ResMut<Hosting>,
-    mut player: Query<&mut MapPosition, With<Player>>,
+    mut player: Query<(&mut MapPosition, &mut SpotPosition, &mut SmoothPosition), With<Player>>,
 ) {
     // A world joined now: its chunks follow straight away, before the
     // resource can be added.
@@ -103,7 +104,7 @@ pub(super) fn receive(
                 joined = Some(CurrentWorld::new(&info));
                 // Where the player left off (`EnterLevel` follows if they
                 // were in a site).
-                for mut position in &mut player {
+                for (mut position, _, _) in &mut player {
                     *position = MapPosition { x, y };
                 }
                 // (Connected again on the world map: nothing to set up.)
@@ -174,14 +175,8 @@ pub(super) fn receive(
                 None => warn!("A road arrived before the world"),
             },
             Ok(Some(ServerMessage::Position { map, step, x, y })) => {
-                // On a level or in the Hall, in units: the client keeps the
-                // player on cells for now (free positions PR 4).
-                let at = if prediction.on_level() {
-                    cell_of_units((x, y))
-                } else {
-                    (x, y)
-                };
-                let Some(predicted) = prediction.confirmed(map, step, at) else {
+                // On a level or in the Hall, in units.
+                let Some(predicted) = prediction.confirmed(map, step, (x, y)) else {
                     continue;
                 };
                 // The world map wraps; site levels don't.
@@ -189,10 +184,20 @@ pub(super) fn receive(
                     GameView::WorldMap => world.as_ref().map(|w| w.surface.width()),
                     _ => None,
                 };
-                for mut position in &mut player {
-                    let shown = (position.x, position.y);
-                    if let Some((x, y)) = correction(shown, predicted, width) {
-                        info!("The server has the player at ({x}, {y}): a step was refused");
+                let on_level = prediction.on_level();
+                for (mut position, mut spot, mut smooth) in &mut player {
+                    let shown = match on_level {
+                        true => (spot.0.x, spot.0.y),
+                        false => (position.x, position.y),
+                    };
+                    let expected = prediction.expected(shown);
+                    let Some((x, y)) = correction(expected, predicted, width) else {
+                        continue;
+                    };
+                    info!("The server has the player at ({x}, {y}): a move was refused");
+                    if on_level {
+                        (*spot, *position, *smooth) = SpotPosition::place(Spot::new(x, y));
+                    } else {
                         *position = MapPosition { x, y };
                     }
                 }

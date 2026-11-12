@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use bevy::render::view::{DebandDither, Tonemapping};
 use bevy::window::PrimaryWindow;
 
-use crate::common::{DrawnGround, MapPosition, Preferences, SmoothPosition, ViewFacing};
+use crate::common::{DrawnGround, MapPosition, Preferences, SmoothPosition, ViewFacing, ViewTurn};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
 pub use token::{
@@ -181,7 +181,7 @@ fn place_camera_and_tokens(
     grid: Res<ViewGrid>,
     heights: Res<DrawnGround>,
     positions: Query<(Option<&MapPosition>, &SmoothPosition)>,
-    mut facing: ResMut<ViewFacing>,
+    (mut facing, mut turn): (ResMut<ViewFacing>, ResMut<ViewTurn>),
     time: Res<Time>,
     camera: Single<
         (&mut OrbitCamera, &mut Transform),
@@ -219,6 +219,8 @@ fn place_camera_and_tokens(
     *camera = orbit.transform(target);
     // Only write when it changes, so change detection stays meaningful.
     facing.set_if_neq(ViewFacing(orbit.quarter_turns()));
+    // The camera turning east (positive yaw) puts west at the top.
+    turn.set_if_neq(ViewTurn(-orbit.yaw));
 
     for (view, mut transform) in &mut views {
         let Ok(position) = positions.get(view.owner) else {

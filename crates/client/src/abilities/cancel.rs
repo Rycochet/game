@@ -11,7 +11,7 @@ use crate::common::{CancelledEnergy, OwnAbility};
 use crate::connection::ToServer;
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
-use crate::player::{TakeStep, TravelTo};
+use crate::player::{TakeStep, TravelTo, Walking};
 use crate::system_menu::SystemMenu;
 
 /// Calls it off: the server is asked, the player's energy here comes back but
@@ -54,7 +54,7 @@ pub(super) fn cancel_by_escape(
 /// by hand is forgotten, one asked for and still waiting on the server is
 /// taken back, and one winding up is called off, so the player can move away.
 pub(super) fn cancel_by_moving(
-    mut steps: MessageReader<TakeStep>,
+    (mut steps, mut walking): (MessageReader<TakeStep>, MessageReader<Walking>),
     mut journeys: MessageReader<TravelTo>,
     time: Res<Time>,
     mut own: ResMut<OwnAbility>,
@@ -62,7 +62,7 @@ pub(super) fn cancel_by_moving(
     mut to_server: MessageWriter<ToServer>,
     mut cancelled: MessageWriter<CancelledEnergy>,
 ) {
-    let moving = steps.read().count() + journeys.read().count() > 0;
+    let moving = steps.read().count() + walking.read().count() + journeys.read().count() > 0;
     if !moving {
         return;
     }

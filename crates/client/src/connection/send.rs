@@ -5,18 +5,21 @@ use shared::protocol::ServerMessage;
 
 use super::prediction::Prediction;
 use super::{FromServer, ServerConnection, ToServer};
-use crate::player::Stepped;
+use crate::player::{Moved, Stepped};
 
-/// Sends the steps the player took this frame, keeping them until the
-/// server confirms them: on the world map as steps, on a level or in the Hall
-/// as moves to the middle of the cell each ended in.
+/// Sends the steps and moves the player took this frame, keeping them until
+/// the server confirms them: on the world map as steps, on a level or in the
+/// Hall as moves in units.
 pub(super) fn send_steps(
-    mut stepped: MessageReader<Stepped>,
+    (mut stepped, mut moved): (MessageReader<Stepped>, MessageReader<Moved>),
     mut prediction: ResMut<Prediction>,
     mut to_server: MessageWriter<ToServer>,
 ) {
-    for &Stepped { step, moved, to } in stepped.read() {
-        to_server.write(ToServer(prediction.step(step, moved, to)));
+    for &Stepped { step, moved, .. } in stepped.read() {
+        to_server.write(ToServer(prediction.step(step, moved)));
+    }
+    for &Moved { from, to } in moved.read() {
+        to_server.write(ToServer(prediction.moved(from, to)));
     }
 }
 

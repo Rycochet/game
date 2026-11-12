@@ -34,6 +34,7 @@ pub(super) fn wait_at_door(
     }
     if travel.goal == door {
         travel.route.clear();
+        travel.spots.clear();
     }
 }
 
@@ -83,6 +84,7 @@ pub(super) fn door_answers(
         if travel.door_asked == Some((x, y)) {
             info!("The door at ({x}, {y}) stays shut");
             travel.route.clear();
+            travel.spots.clear();
             travel.door_asked = None;
         }
     }

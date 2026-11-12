@@ -20,24 +20,39 @@ pub(super) struct Prediction {
     /// are sent instead of steps.
     on_level: bool,
     /// How far each step sent on this map that the server hasn't confirmed
-    /// moved the player (a jump moves two cells), by number.
+    /// moved the player (in the map's measure: units on a level), by number.
     pending: VecDeque<(u32, (i64, i64))>,
+    /// On a level or in the Hall, where the last move sent ends: where the
+    /// player will be once the server has taken them all. The player may be
+    /// shown further on, along a stretch not yet sent.
+    sent: Option<(i64, i64)>,
 }
 
 impl Prediction {
-    /// The message for a step just taken, which moved the player by `moved`,
-    /// remembered until it is confirmed: a move to `to` on a level or in the
-    /// Hall, otherwise a world map step.
-    pub fn step(&mut self, step: Step, moved: (i64, i64), to: (i64, i64)) -> ClientMessage {
+    /// The message for a world map step just taken, which moved the player
+    /// by `moved`, remembered until it is confirmed.
+    pub fn step(&mut self, step: Step, moved: (i64, i64)) -> ClientMessage {
         self.last += 1;
         self.pending.push_back((self.last, moved));
         let (map, number) = (self.map, self.last);
-        if self.on_level {
-            let to = Spot::middle_of(to);
-            ClientMessage::Move { map, number, to }
-        } else {
-            ClientMessage::Step { map, number, step }
-        }
+        ClientMessage::Step { map, number, step }
+    }
+
+    /// The message for a move just taken on a level or in the Hall, from one
+    /// spot to another, remembered until it is confirmed.
+    pub fn moved(&mut self, from: Spot, to: Spot) -> ClientMessage {
+        self.last += 1;
+        self.pending
+            .push_back((self.last, (to.x - from.x, to.y - from.y)));
+        self.sent = Some((to.x, to.y));
+        let (map, number) = (self.map, self.last);
+        ClientMessage::Move { map, number, to }
+    }
+
+    /// Where the player is expected to be by the server's word: where the
+    /// last move sent on this level ends, else where they are `shown`.
+    pub fn expected(&self, shown: (i64, i64)) -> (i64, i64) {
+        self.sent.filter(|_| self.on_level).unwrap_or(shown)
     }
 
     /// Whether the map is a level or the Hall (positions in units).
@@ -51,6 +66,7 @@ impl Prediction {
         self.map += 1;
         self.on_level = on_level;
         self.pending.clear();
+        self.sent = None;
     }
 
     /// The server has the player at `at` on `map`, after step `number`:

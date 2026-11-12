@@ -13,7 +13,7 @@ The keys below are the ones the game starts with. To change them, open Settings,
 
 | Action | Keyboard and mouse | Touch |
 | ------ | ------------------ | ----- |
-| Take steps | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking), or hold an arrow on the movement pad | Hold an arrow on the movement pad |
+| Walk | W, A, S, D, or 8, 4, 2, 6 on the number pad (hold to keep walking; two together walk diagonally), or hold an arrow on the movement pad | Hold an arrow on the movement pad |
 | Travel somewhere | Click the place | Tap the place |
 | Enter a place, take stairs, leave a site (in the wilderness, the hatched ground round a place you know leads back to the world map) | Click it, and walk there | Tap it |
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
@@ -27,6 +27,8 @@ In the wilderness you walk the land between places on foot, 16 steps to each ste
 You can't change floors in a fight: for 10 seconds after you last attack or are attacked, stairs, Up, Down and the edge of a map do nothing. Walking onto stairs then leaves you standing on them, and Up or Down takes them once the fight is over.
 
 How fast you go depends on your kind of creature, what you carry, and the ground: the heavier the load, the slower everything is.
+
+In places, the wilderness and the Hall of Worlds you walk freely, any way at all: the keys walk the way they point on the screen, however the camera is turned, and walking into a wall at an angle slides along it. Walking straight at water or a hole jumps it. Clicking somewhere walks there by the shortest way, cutting across open ground at any angle. On the world map you still go a step at a time.
 
 You can't walk onto an enemy. Walking onto anyone else swaps places with them.
 

@@ -7,7 +7,7 @@ use super::{Bags, Heading, STAR_LONG, sparkle_scale, sparkle_up};
 use crate::common::{ClickMode, DrawnGround, HoveredBag, MapPosition, PointerPosition};
 use crate::dungeon_map::{CELL_SIZE, Shown};
 use crate::inventory::OpenCharacter;
-use crate::player::{Arrived, Player, TakeStep, TravelTo};
+use crate::player::{Arrived, Player, TakeStep, TravelTo, Walking};
 use crate::view3d::{ClickedToken, ViewCamera};
 
 /// Which bag the pointer is on, measured on screen, nearest the camera first. Its
@@ -62,11 +62,11 @@ pub(super) fn find_hovered(
 
 /// Walking anywhere else, or a step of their own: they aren't going to the bag.
 pub(super) fn change_of_mind(
-    mut steps: MessageReader<TakeStep>,
+    (mut steps, mut walking): (MessageReader<TakeStep>, MessageReader<Walking>),
     mut journeys: MessageReader<TravelTo>,
     mut heading: ResMut<Heading>,
 ) {
-    let stepped = steps.read().count() > 0;
+    let stepped = steps.read().count() + walking.read().count() > 0;
     let elsewhere = journeys
         .read()
         .any(|journey| Some((journey.x, journey.y)) != heading.0);

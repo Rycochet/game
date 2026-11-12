@@ -27,3 +27,20 @@ impl ViewFacing {
         (x, y)
     }
 }
+
+/// Exactly how far the map view is turned: the angle from north to the
+/// direction at the top of the screen, clockwise, in radians (`ViewFacing`
+/// rounded to quarter turns). Written by the active view; read by free
+/// movement on levels, so the keys walk the way the screen shows.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+pub struct ViewTurn(pub f32);
+
+impl ViewTurn {
+    /// Turns a screen direction (`dy` −1 is up the screen, `dx` +1 right)
+    /// into a grid direction (`y` −1 is north, `x` +1 east), the same length.
+    pub fn screen_to_grid(self, dx: f64, dy: f64) -> (f64, f64) {
+        let (sin, cos) = f64::from(self.0).sin_cos();
+        // Clockwise by the angle: a quarter turn makes up east, right south.
+        (dx * cos - dy * sin, dx * sin + dy * cos)
+    }
+}

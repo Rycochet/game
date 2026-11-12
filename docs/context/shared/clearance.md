@@ -1,6 +1,6 @@
 # shared: clearance (and spot)
 
-Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`). Since PR 3, positions on levels are `Spot`s end to end and a player's move that isn't a step between two cells' middles is checked by `check_segment` (`movement::move_on_level`); the client still moves cell to cell. Routes by size are in `pathfinding` (`find_sized_path`).
+Positions on a level in whole units (`Spot`, 240 a cell) and room to move for creatures of each size: what blocks them, the one rule for a move from one spot to another (with squeezing and jumps), sliding along what is in the way, and where each size has room. Free positions, PR 2 of 9 (`docs/context/free-positions.md`). Since PR 3, positions on levels are `Spot`s end to end and a player's move that isn't a step between two cells' middles is checked by `check_segment` (`movement::move_on_level`); since PR 4 the client walks freely by the same rule (`slide`, `check_segment`). Routes by size are in `pathfinding` (`find_sized_path`).
 
 ## Files
 
@@ -34,7 +34,7 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 
 ## Used by
 
-- `pathfinding` (`find_sized_path`, `straighten_spots`), `movement::move_on_level` (players' moves), `protocol` (`Spot` in messages, `JUMP_REACH`), `shop::beside_door`, `energy::site_move_cost`, `server` (visits, the Hall, saves, dev teleports' room to stand). Still to come: PR 4 (free movement on the client: `slide`), PR 5 (sizes in play: room maps, squeezing, mobs).
+- `pathfinding` (`find_sized_path`, `straighten_spots`), `movement::move_on_level` (players' moves), `protocol` (`Spot` in messages, `JUMP_REACH`), `shop::beside_door`, `energy::site_move_cost`, `server` (visits, the Hall, saves, dev teleports' room to stand). Client `player` (free walking: `check_segment`, `slide`; routes: `RoomMap`). Still to come: PR 5 (sizes in play: room maps, squeezing, mobs).
 
 ## Notes
 
