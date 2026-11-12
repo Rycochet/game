@@ -4,7 +4,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 
 ## Files
 
-- `crates/client/src/dom/mod.rs`: `DomPlugin` (`PostUpdate`, before layout: `build_documents`, `apply_changes`, `restyle`, in that order), the re-exports.
+- `crates/client/src/dom/mod.rs`: `DomPlugin` (`PostUpdate`, before layout: `clear_surfaces`, `build_documents`, `apply_changes`, `tidy_surfaces`, `restyle`, in that order), the re-exports.
 - `crates/client/src/dom/template.rs`: `Template { name, source }`, the `html!` macro, `checked()`, `assert_good()` (tests only).
 - `crates/client/src/dom/error.rs`: `MarkupError` (`at`, `what`), `Place` (line and column, from 1).
 - `crates/client/src/dom/markup.rs`: markup as written (`RawNode`, `RawElement`, `RawAttr`). In `markup/`: `cursor.rs` (`Cursor`: a place moving along the source), `parse.rs` (`parse`), `text.rs` (`tidy`: spaces as HTML's; `decode`: `&amp;` and the like).
@@ -16,7 +16,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `crates/client/src/dom/parts.rs`: the components: `Document`, `document()`, `document_in()`, `Element`, `Inert`, `Canvas`; private `TextStyle`, `Words`, `InTable`, `Bar`, `TemplateBody`.
 - `crates/client/src/dom/build.rs`: `Builder`, `build_documents`. In `build/`: `table.rs`, `progress.rs`, `surfaces.rs` (`panel`, `dialog`, `footer`, `popup`, `scroll`), `title_row.rs` (a big dialog's title and close button).
 - `crates/client/src/dom/popup.rs`: `Popup` (on its box: `locked`), `spawn_popup` (the box and its padlock), `press_locks`, `close_popups` (in the set `ClosePopups`); `popup/drag.rs`: `drag_popups`, `on_grip`. Tests.
-- `crates/client/src/dom/surfaces.rs`: `follow_surfaces` (a panel's or dialog's `hidden`; a popup's `hidden`, `left` and `top`), `tidy_surfaces` (they go with their document; one closed by the player says so).
+- `crates/client/src/dom/surfaces.rs`: `follow_surfaces` (a panel's or dialog's `hidden`; a moving panel's `title` and start; a popup's `hidden`, `left` and `top`), `clear_surfaces` (they go with their document, before new documents are built, so one spawned in a despawned one's place the same frame is the one its ids find), `tidy_surfaces` (one closed by the player, its document still there, says so).
 - `crates/client/src/dom/strip.rs`: `top_strip()`, `bottom_strip()`: the node for a document of pieces over the game's view.
 - `crates/client/src/dom/restyle.rs`: `restyle`: `Node`, background, tooltip, picture and bar of every new or changed `Element`.
 - `crates/client/src/dom/pictures.rs`: `Pictures` (resource), `picture_for`.
@@ -67,7 +67,7 @@ The interface as markup: HTML's look with XML's closing rule, no CSS and no scri
 - `debug_menu`: Show Widgets' markup sample (`panels/html_sample.rs`), which also reads `UiEvent`.
 - `system_menu`: its requesters (`requesters.rs`), Credits (`credits.rs`), the menu's panel (`panel.rs`) and Connect (`connect.rs`) and its popups (`connect/popups.rs`), and Settings' layer and Interface page (`settings/shell.rs`).
 - `accounts_panel`: the whole panel (`markup.rs`), changed in place (`show.rs`).
-- `inventory` (the Character panel, each bag's panel, Nearby) and `trade` (each shop's panel): panels that move, each its own document.
+- `inventory` (the Character panel, each bag's panel, Nearby), `trade` (each shop's panel) and `debug_menu` (every panel): panels that move, each its own document.
 - `notices`, `hover`, `ui` (the status text), `vitals` (the ball, a `canvas`), `step_pad` (its buttons), `minimap` (the minimap and the full map's parchment, all `inert`): pieces over the view.
 - `widgets`: `Hit` (what is pointed at and pressed), `Solid`, `DomInput`.
 - `view3d`: `Hit` (the wheel zooms only with the pointer on the view).

@@ -96,9 +96,10 @@ impl Plugin for DomPlugin {
                     // (First: a panel whose document went this frame is gone
                     // before one built in its place, with the same ids, is
                     // changed by them.)
-                    surfaces::tidy_surfaces,
+                    surfaces::clear_surfaces,
                     build::build_documents,
                     change::apply_changes,
+                    surfaces::tidy_surfaces,
                     (
                         restyle::restyle,
                         controls::follow_elements,
