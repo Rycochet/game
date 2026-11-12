@@ -9,6 +9,8 @@
 
 mod slot;
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use shared::ability::Ability;
 pub(super) use slot::draw_ability_slots;
@@ -23,6 +25,22 @@ const GAP: f32 = 6.0;
 pub struct AbilityThing {
     pub ability: Ability,
     pub look: AbilityLook,
+}
+
+/// The abilities an `<object type="ability" for="<name>"/>` can show, by
+/// name, as whoever knows them (`abilities`) last said: how each looks now.
+#[derive(Resource, Default)]
+pub struct KnownAbilities(HashMap<String, AbilityThing>);
+
+impl KnownAbilities {
+    /// Says how the ability called `name` looks now.
+    pub fn set(&mut self, name: impl Into<String>, thing: AbilityThing) {
+        self.0.insert(name.into(), thing);
+    }
+
+    pub fn get(&self, name: &str) -> Option<&AbilityThing> {
+        self.0.get(name)
+    }
 }
 
 /// A list of abilities, set by its owner. They have no shape: each takes one

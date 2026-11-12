@@ -191,3 +191,40 @@ fn rows_from_a_template_are_added_to_a_table() {
     let other = find(&mut app, "c/other");
     assert!(app.world().get::<Children>(other).is_none());
 }
+
+static NOTE: Template = html!("note", r#"<form id="n"><p id="says">Plain</p></form>"#);
+
+#[test]
+fn items_written_into_words_show_as_items_and_go_again() {
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::id::Id;
+    use shared::item_text::item_token;
+
+    use crate::widgets::ItemText;
+
+    let mut app = built(&NOTE);
+    let says = find(&mut app, "n/says");
+    let words = |app: &App| -> Entity { app.world().get::<Children>(says).unwrap()[0] };
+    assert!(app.world().get::<ItemText>(words(&app)).is_none());
+
+    let token = format!("Take {}", item_token(Id::for_test(3)));
+    let written = token.clone();
+    let write = move |mut dom: Dom| dom.set_text("n/says", written.clone());
+    app.world_mut().run_system_once(write).unwrap();
+    app.update();
+    let shown = app
+        .world()
+        .get::<ItemText>(words(&app))
+        .expect("items shown");
+    assert_eq!(shown.0, token);
+    assert_eq!(app.world().get::<Text>(words(&app)).unwrap().0, "");
+
+    let plain = |mut dom: Dom| dom.set_text("n/says", "Plain again");
+    app.world_mut().run_system_once(plain).unwrap();
+    app.update();
+    assert!(app.world().get::<ItemText>(words(&app)).is_none());
+    assert_eq!(
+        app.world().get::<Text>(words(&app)).unwrap().0,
+        "Plain again"
+    );
+}

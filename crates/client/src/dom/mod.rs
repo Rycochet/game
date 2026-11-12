@@ -36,7 +36,9 @@ pub use hold::{Dropped, Hand, HeldItem, HeldObject, HeldOver, HeldThing, HeldWha
 pub use input::Hit;
 #[cfg(test)]
 pub use input::find_now;
-pub use object_ability::{AbilityCell, AbilityGridShown, AbilitySlotShown, AbilityThing, SlotPart};
+pub use object_ability::{
+    AbilityCell, AbilityGridShown, AbilitySlotShown, AbilityThing, KnownAbilities, SlotPart,
+};
 pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, ThingCell};
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
 pub use parts::{AlwaysBars, Solid};
@@ -70,7 +72,8 @@ impl Plugin for DomPlugin {
             .init_resource::<Pictures>()
             // (`common` makes it too: here for an `object`'s items wherever
             // documents are built.)
-            .init_resource::<crate::common::KnownItems>();
+            .init_resource::<crate::common::KnownItems>()
+            .init_resource::<KnownAbilities>();
         input::add(app);
         hold::add(app);
         popup::add(app);

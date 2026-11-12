@@ -58,3 +58,40 @@ fn an_objects_type_is_its_own_and_only_its() {
     assert!(ALSO_WRONG.checked().is_err());
     THINGS.assert_good();
 }
+
+static ABLE: Template = html!(
+    "able",
+    r#"<form id="a"><object id="thing" type="ability" for="attack"/></form>"#
+);
+
+#[test]
+fn an_object_shows_an_ability_once_someone_says_how_it_looks() {
+    use shared::ability::Ability;
+
+    use crate::dom::{AbilityCell, AbilityThing, KnownAbilities};
+    use crate::widgets::AbilityLook;
+
+    let mut app = built(&ABLE);
+    let thing = find(&mut app, "a/thing");
+    app.update();
+    assert_eq!(children(&app, thing), 0);
+
+    let look = AbilityLook {
+        icon: Handle::default(),
+        name: "Attack".to_string(),
+        passive: false,
+        usable: true,
+        colour: Color::WHITE,
+    };
+    let attack = AbilityThing {
+        ability: Ability::Attack,
+        look,
+    };
+    let mut known = app.world_mut().resource_mut::<KnownAbilities>();
+    known.set("attack", attack);
+    app.update();
+    assert_eq!(children(&app, thing), 1);
+    let mut cells = app.world_mut().query::<&AbilityCell>();
+    let cell = cells.iter(app.world()).next().expect("drawn");
+    assert_eq!((cell.of, cell.ability), (thing, Ability::Attack));
+}

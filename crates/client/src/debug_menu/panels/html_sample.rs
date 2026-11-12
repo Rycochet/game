@@ -2,6 +2,7 @@
 //! there is of it so far, under the widgets made the old way.
 
 use bevy::prelude::*;
+use shared::item_text::item_token;
 
 use crate::dom::{Document, Dom, Template, UiEvent, UiValue, document};
 use crate::html;
@@ -34,6 +35,11 @@ pub(super) static HTML_SAMPLE: Template = html!(
     An object, the first thing carried:
     <object id="thing" type="item"/>
   </span>
+  <span valign="middle">
+    An ability:
+    <object id="able" type="ability" for="attack"/>
+  </span>
+  <p id="written">Nothing carried to write of.</p>
   <h2>Controls</h2>
   <span>
     <button id="plain">Button</button>
@@ -157,6 +163,12 @@ pub(in crate::debug_menu) fn fill_html_sample(
             Some(id) => dom.set("debug.html_sample/thing", "for", &id.to_string()),
             None => dom.clear("debug.html_sample/thing", "for"),
         }
+        // The same thing written into words shows as the thing.
+        let written = match first {
+            Some(id) => format!("Written into words, {} is the same.", item_token(id)),
+            None => "Nothing carried to write of.".to_string(),
+        };
+        dom.set_text("debug.html_sample/written", written);
     }
     for Document(template) in &new {
         if std::ptr::eq(*template, &HTML_SAMPLE) {

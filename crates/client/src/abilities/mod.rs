@@ -56,7 +56,7 @@ impl Plugin for AbilitiesPlugin {
             .add_systems(
                 Update,
                 (
-                    page::fill_pages,
+                    (page::fill_pages, page::name_abilities),
                     own_bar::take_bar,
                     held::use_by_key,
                     use_ability::take_timing,

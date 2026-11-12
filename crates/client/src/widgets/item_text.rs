@@ -20,6 +20,13 @@ pub(super) use inline::InlineHeight;
 #[derive(Component, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ItemText(pub String);
 
+/// What makes a `Text` (with its font and colour) show this writing with its
+/// items as pictures: for writing spawned some other way, as markup's is.
+pub fn item_text(text: impl Into<String>, size: TextSize) -> impl Bundle {
+    let height = InlineHeight(super::text_box::line_height(size));
+    (ItemText(text.into()), height)
+}
+
 /// Shows this writing, with any items in it as pictures, wrapping like any text.
 pub fn spawn_item_text<'a>(
     parent: &'a mut ChildSpawnerCommands,

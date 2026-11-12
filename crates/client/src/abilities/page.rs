@@ -7,7 +7,7 @@ use shared::creature::CreatureKind;
 
 use super::icons::icon_path;
 use crate::common::AbilitiesPage;
-use crate::dom::{AbilityGridShown, AbilityThing};
+use crate::dom::{AbilityGridShown, AbilityThing, KnownAbilities};
 use crate::inventory::Carried;
 use crate::widgets::{AbilityLook, Shade, attribute_colour};
 
@@ -41,6 +41,25 @@ pub(super) fn fill_pages(
         let mut page = commands.entity(page);
         page.despawn_children().insert(DrawnFor(kind));
         page.with_children(|page| spawn_contents(page, kind, &assets));
+    }
+}
+
+/// Says how every ability looks for the body the character is in, by name, for
+/// an `<object type="ability">` anywhere: again when the body changes.
+pub(super) fn name_abilities(
+    carried: Res<Carried>,
+    assets: Res<AssetServer>,
+    mut known: ResMut<KnownAbilities>,
+    mut named_for: Local<Option<CreatureKind>>,
+) {
+    let kind = carried.0.creature;
+    if *named_for == Some(kind) {
+        return;
+    }
+    *named_for = Some(kind);
+    for ability in Ability::ALL {
+        let look = look(ability, kind, &assets);
+        known.set(ability_id(ability), AbilityThing { ability, look });
     }
 }
 

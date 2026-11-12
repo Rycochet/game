@@ -12,7 +12,7 @@ use super::parts::{
 use super::pictures::Pictures;
 use super::tag::Tag;
 use super::theme::Theme;
-use crate::widgets::UiId;
+use crate::widgets::{UiId, item_text};
 
 mod container;
 mod progress;
@@ -43,6 +43,11 @@ impl Inside {
     }
 }
 
+/// Whether this writing has an item written into it.
+pub(super) fn has_items(words: &str) -> bool {
+    !shared::item_text::items_in(words).is_empty()
+}
+
 pub(super) struct Builder<'a, 'w, 's> {
     pub commands: &'a mut Commands<'w, 's>,
     pub theme: &'a Theme,
@@ -63,14 +68,22 @@ impl Builder<'_, '_, '_> {
         }
     }
 
+    /// Writing in `parent`. Any items written into it (`${item:<uuid>}`) are
+    /// shown as the items, in among the words.
     pub fn words(&mut self, parent: Entity, words: &str, style: TextStyle) -> Entity {
+        let items = has_items(words);
         let text = (
-            Text::new(words),
+            // (With items, the words are spans the item text makes.)
+            Text::new(if items { "" } else { words }),
             style.size.font(),
             TextColor(style.colour),
             TextLayout::justify(style.justify),
         );
-        self.commands.spawn((text, Words, ChildOf(parent))).id()
+        let mut made = self.commands.spawn((text, Words, ChildOf(parent)));
+        if items {
+            made.insert(item_text(words, style.size));
+        }
+        made.id()
     }
 
     fn element(&mut self, parent: Entity, element: &Checked, inside: Inside) {

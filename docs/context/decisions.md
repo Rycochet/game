@@ -1266,3 +1266,9 @@ Owner: "own element is better for consistency", against Claude's suggestion of p
 ## 2026-11-11: A pop-up element, with a padlock
 
 Owner, asked whether the split box should stay code or get a new surface: "New pop-up element", and then: "the element needs to have a padlock type icon floating at the top-right - clicking on it toggles a lock state which prevents it from auto-closing, this way it can survive clicks elsewhere and can be used as more of a detailed popup (item and skill info boxes etc)". So `popup` is a surface of its own: a dark box at a place, in front of the panels, which closes itself on Esc or a press elsewhere and tells its owner, unless locked by its padlock. A new popup always starts unlocked (Claude's reading). Owner, the same day, on whether Esc should close a locked one: "close it - they should also be draggable when locked (make it the top text line height or so, but don't give any visual indicator (we need to change the mouse pointer by context later)". So Esc closes any popup, and a locked one is dragged by its top 24 pixels, unmarked. The split box is the first on it; the closing that was `inventory`'s is now the element's.
+
+## 2026-11-12: Three small decisions, and parking what needs the owner
+
+Owner, on three things left open: the loading screen becomes markup after all (it was left as code in #405); the fallback apt mirror in the Check workflow stays, as GitHub is sometimes flaky; the ground section's "On the ground" hover tip, which a `container`'s `title` gives it, stays.
+
+Owner, on the order of the rest: PRs 8 to 10 don't depend on each other (but that the Character panel, PR 9, holds PR 8's elements), and only PR 11 needs them all. So anything that needs the owner's decision is parked on a branch of its own while the rest carries on, and every parked item is put to the owner before PR 11 starts.
