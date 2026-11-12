@@ -3,8 +3,6 @@
 
 use bevy::prelude::*;
 
-use crate::widgets::TextSize;
-
 mod armour;
 mod arms;
 mod feet;
@@ -24,7 +22,6 @@ mod create_mob;
 mod create_mob_systems;
 mod dev_area;
 mod dev_area_systems;
-mod every_widget;
 mod examine_mob;
 mod generate;
 mod generate_form;
@@ -44,7 +41,6 @@ mod open;
 mod pictures_form;
 mod pictures_spawn;
 mod pictures_systems;
-mod ring_samples;
 mod steps;
 mod teleport_to_world;
 mod teleport_to_world_systems;
@@ -62,8 +58,6 @@ pub(super) use dev_area::{
     DevAreaSeed,
 };
 pub(super) use dev_area_systems::add_dev_area_panel;
-use every_widget::spawn_every_widget;
-pub(super) use every_widget::{give_sample_icons, show_typed_items};
 pub(super) use examine_mob::add_examine_mob_panel;
 pub(super) use generate::{open_generate_panel, press_generate_buttons, update_generate_buttons};
 use generate_form::new_seed;
@@ -109,10 +103,6 @@ pub(super) use vitals::{press_vitals_buttons, update_vitals_buttons};
 pub(super) use world_rate::{press_rate_buttons, update_rate_buttons};
 pub(super) use world_time::{edit_time_box, press_time_steps};
 
-const FONT: TextSize = TextSize::Medium;
-/// How much of the window's height Show Widgets may take before it scrolls.
-const EVERY_WIDGET_HEIGHT: f32 = 80.0;
-const CHECK_ROW: f32 = 34.0;
 /// Where the first panel goes, and how far along each one after it.
 const FIRST_AT: Vec2 = Vec2::new(60.0, 110.0);
 const NEXT_AT: Vec2 = Vec2::new(30.0, 30.0);

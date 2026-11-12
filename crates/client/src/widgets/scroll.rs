@@ -36,19 +36,11 @@ pub(super) struct ScrollBar(Entity);
 #[derive(Component, Clone, Copy)]
 pub(super) struct ScrollThumb(Entity);
 
-/// An area no taller than `max_height`, as tall as its contents until then. Returns
-/// the entity to put its contents in. They scroll, and don't take presses where they
-/// are out of sight: check `shown_at` when looking for what is under the pointer.
-pub fn spawn_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
-    let row = Node {
-        flex_shrink: 0.0,
-        ..default()
-    };
-    spawn_area(parent, row, max_height, false)
-}
-
-/// The same, as wide as what holds it rather than as what is in it, so rows
-/// in it can fill it (markup's `scroll`).
+/// An area no taller than `max_height`, as tall as its contents until then,
+/// and as wide as what holds it, so rows in it can fill it (markup's
+/// `scroll`). Returns the entity to put its contents in. They scroll, and
+/// don't take presses where they are out of sight: check `shown_at` when
+/// looking for what is under the pointer.
 pub fn spawn_wide_scroll_area(parent: &mut ChildSpawnerCommands, max_height: Val) -> Entity {
     let row = Node {
         flex_shrink: 0.0,

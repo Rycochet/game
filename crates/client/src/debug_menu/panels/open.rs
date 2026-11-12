@@ -11,13 +11,15 @@ use super::{
 use crate::dom::{Dom, Template, UiEvent, UiValue, document, top_strip};
 use crate::html;
 
-/// Show Widgets' panel: `every_widget` fills its holder.
+/// Show Widgets' panel: its sample (`html_sample`) is built into its holder.
 static EVERY_WIDGET: Template = html!(
     "debug_menu.every_widget",
     r#"
 <form id="debug.every_widget">
   <panel id="panel" moveable>
-    <div id="holder"/>
+    <scroll id="scroll" max-height="80%">
+      <div id="holder"/>
+    </scroll>
   </panel>
 </form>
 "#

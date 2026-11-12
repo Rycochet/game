@@ -4,10 +4,6 @@
 
 use bevy::prelude::*;
 
-mod sample;
-pub use sample::SAMPLE_GRADIENT;
-pub(super) use sample::make_sample_gradient;
-
 use super::text_box::line_height;
 use super::theme::{INK, RAISED_BACKGROUND, TextSize};
 use super::{BUTTON_BORDER, ButtonPressed, ButtonState, ButtonTooltip, Pressable};

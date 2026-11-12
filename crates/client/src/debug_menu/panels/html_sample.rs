@@ -1,5 +1,5 @@
-//! Show Widgets' sample of the interface written as markup (`dom`): what
-//! there is of it so far, under the widgets made the old way.
+//! Show Widgets: a sample of every piece of the interface, written as markup
+//! (`dom`).
 
 use bevy::prelude::*;
 use shared::item_text::item_token;
@@ -13,8 +13,7 @@ pub(super) static HTML_SAMPLE: Template = html!(
     // Two hashes: a colour (`"#be3c32"`) would end a string with one.
     r##"
 <form id="debug.html_sample">
-  <hr/>
-  <h2>From markup</h2>
+  <h2>Words and pictures</h2>
   <p>
     A paragraph with a picture <img src="icon:lorc/pointy-sword" alt="A sword"/>
     among its words, wrapping when it is too long for one line of the panel.
@@ -46,6 +45,7 @@ pub(super) static HTML_SAMPLE: Template = html!(
     <button id="main" class="main" title="The main thing to do here">Main</button>
     <button id="quiet" class="quiet">Quiet</button>
     <button id="danger" class="danger">Delete</button>
+    <button id="chosen" selected>Selected</button>
     <button id="off" disabled>Disabled</button>
     <button id="icon"><img src="icon:lorc/pointy-sword"/></button>
   </span>

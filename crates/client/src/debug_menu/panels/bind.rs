@@ -4,11 +4,12 @@
 use bevy::prelude::*;
 
 use super::super::bodies::BodiesToShow;
+use super::html_sample::HTML_SAMPLE;
 use super::{
     change_creature, create_mob, dev_area, examine_mob, generate, give, learn_skills,
-    pictures_spawn, spawn_every_widget, steps, teleport_to_world, vitals, world_time,
+    pictures_spawn, steps, teleport_to_world, vitals, world_time,
 };
-use crate::dom::Dom;
+use crate::dom::{Dom, document};
 use crate::widgets::UiId;
 
 pub(in crate::debug_menu) fn bind_panels(
@@ -18,10 +19,11 @@ pub(in crate::debug_menu) fn bind_panels(
 ) {
     for (entity, id) in &new {
         let mut bound = commands.entity(entity);
-        // The two panels still filled by code, into their holders.
+        // Show Widgets' sample is a document of its own, and Suns and Moons
+        // is still filled by code: each into its holder.
         match id.parts() {
             ("debug.every_widget", "holder") => {
-                bound.with_children(spawn_every_widget);
+                bound.with_child(document(&HTML_SAMPLE));
             }
             ("debug.suns_and_moons", "holder") => {
                 bound.insert(BodiesToShow);

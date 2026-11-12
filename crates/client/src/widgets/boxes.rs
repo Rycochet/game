@@ -3,10 +3,8 @@
 use bevy::prelude::*;
 
 use super::theme::{INK, PARCHMENT, TextSize};
-use super::theme::{
-    LIT_EDGE, RAISED_BACKGROUND, SHADED_EDGE, TOOLTIP_BACKGROUND, TOOLTIP_TEXT, soft_shadow,
-};
-use super::{BUTTON_PADDING, PANEL_EDGE, TITLE_LIFT, TOOLTIP_EDGE, TOOLTIP_FONT};
+use super::theme::{LIT_EDGE, SHADED_EDGE, TOOLTIP_BACKGROUND, TOOLTIP_TEXT, soft_shadow};
+use super::{BUTTON_PADDING, TITLE_LIFT, TOOLTIP_EDGE, TOOLTIP_FONT};
 
 /// Lit along its top and left, in shade along its bottom and right.
 pub(super) fn raised_border() -> BorderColor {
@@ -26,19 +24,6 @@ pub(super) fn sunken_border() -> BorderColor {
         right: LIT_EDGE,
         bottom: LIT_EDGE,
     }
-}
-
-/// A box standing up from what is behind it. Put its contents in as children.
-pub fn raised_box() -> impl Bundle {
-    (
-        Node {
-            border: UiRect::all(px(PANEL_EDGE)),
-            padding: BUTTON_PADDING,
-            ..default()
-        },
-        BackgroundColor(RAISED_BACKGROUND),
-        raised_border(),
-    )
 }
 
 /// A parchment panel, placed by absolute position, with a soft shadow. Its parts

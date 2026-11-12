@@ -95,8 +95,6 @@ impl Plugin for DebugMenuPlugin {
                     panels::fill_pictures,
                     panels::show_pictures,
                     panels::update_panel_buttons,
-                    panels::show_typed_items,
-                    panels::give_sample_icons,
                     (panels::fill_html_sample, panels::show_html_events),
                     (menu::bind_menu, menu::show_menu, panels::bind_panels),
                 )
