@@ -43,4 +43,6 @@ mod road_tests;
 #[cfg(test)]
 mod sized_tests;
 #[cfg(test)]
+mod slope_tests;
+#[cfg(test)]
 mod tests;

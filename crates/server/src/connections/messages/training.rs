@@ -1,18 +1,18 @@
 //! What steps cost by the player's movement skills, and the practice they
 //! give: Running for every step on the world map, Climbing for steep ones there
-//! and in the wilderness, Swimming for wading, Jumping for jumps, Sneaking for
+//! and on levels' slopes, Swimming for wading, Jumping for jumps, Sneaking for
 //! a slow pace in the wilderness under a wary eye, and Weight Training under a
 //! heavy load (`shared::movement`'s training settings), at
 //! most once per skill every 5 seconds, as blows are.
 
-use shared::dungeon::Cell;
-use shared::energy::level_step_energy;
+use shared::energy::level_move_energy;
 use shared::movement::{
-    Gait, JUMP_PRACTICE, MOVEMENT_SKILLS, PIONEER_PRACTICE, RIVER_SWIM_PRACTICE, RUN_PRACTICE,
-    SNEAK_PRACTICE, SWIM_PRACTICE, Terrain, WildHeights, climb_practice, climbed, footing_of,
-    is_jump, weight_practice, world_step_time,
+    Gait, JUMP_PRACTICE, LevelWay, MOVEMENT_SKILLS, PIONEER_PRACTICE, RIVER_SWIM_PRACTICE,
+    RUN_PRACTICE, SNEAK_PRACTICE, SWIM_PRACTICE, Terrain, WildHeights, climb_practice, climbed,
+    footing_on, weight_practice, world_step_time,
 };
 use shared::protocol::ServerMessage;
+use shared::spot::Spot;
 
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -22,8 +22,8 @@ use crate::connections::Client;
 pub(super) struct Moved {
     /// On the world map: practises Running.
     pub on_world_map: bool,
-    /// Elevations climbed or descended (a world map step's, or 16ths a cell in
-    /// the wilderness, the same steepness).
+    /// Elevations climbed or descended (a world map step's, or 16ths a cell on
+    /// a level's smooth ground, the same steepness).
     pub elevations: u32,
     /// Swimming practice from wading.
     pub swam: u32,
@@ -36,50 +36,71 @@ pub(super) struct Moved {
     pub terrain: Option<Terrain>,
 }
 
+/// What a move on a level was like, worked out before it is taken: its energy
+/// (before any sneaking pace) and what it practises.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Walked {
+    pub energy: u32,
+    /// Its length in units.
+    pub length: u64,
+    /// The cells it crossed (0 within one): practice comes only from those.
+    pub cells: u32,
+    /// 16ths of an elevation a cell, on the level's smooth ground.
+    pub steepness: u32,
+    pub wades: bool,
+    pub jumped: bool,
+    pub terrain: Option<Terrain>,
+}
+
+impl Walked {
+    /// A move from `from` to `to` along `way` (the shared rule,
+    /// `movement::LevelWay`).
+    pub(super) fn of(way: &LevelWay, from: Spot, to: Spot, jumped: bool) -> Self {
+        let (a, b) = (from.cell(), to.cell());
+        let footing = footing_on(way.level, b, way.terrain);
+        Self {
+            energy: level_move_energy(way.cost(from, to, jumped)),
+            length: from.distance(to),
+            cells: (a.0 - b.0).abs().max((a.1 - b.1).abs()) as u32,
+            steepness: way.steepness(from, to),
+            wades: footing.wades(),
+            jumped,
+            terrain: footing.slowed_by(),
+        }
+    }
+}
+
+/// The wilderness's terrain at a cell (`WildHeights::terrain`).
+pub(super) fn terrain_at(world: &ServerWorld, (x, y): (i64, i64)) -> Option<Terrain> {
+    WildHeights::new(&world.ground, (x, y, 1, 1)).terrain(x, y)
+}
+
 impl Client {
-    /// What a step on a level from `from` to `to` (where it landed before any
-    /// wrapping round the planet) costs: in the wilderness (`wild`) by its slope
-    /// and the player's Climbing, and slower if `wading`, less so by Swimming;
-    /// no quicker than a sneaking pace while sneaking. Whether the client is
-    /// still there, and the cost.
-    pub(super) fn level_step(
+    /// What a move on a level takes (`walked`, in the wilderness if `wild`): no
+    /// quicker than a sneaking pace while sneaking. Moving into another cell
+    /// practises Climbing by its steepness, Swimming by wading, Jumping and,
+    /// slowly in the wilderness under a wary eye, Sneaking. Whether the client
+    /// is still there, and the cost.
+    pub(super) fn level_move(
         &mut self,
         world: &ServerWorld,
-        (from, to): ((i64, i64), (i64, i64)),
+        walked: Walked,
         wild: bool,
-        landed_on: Option<Cell>,
     ) -> (bool, u32) {
-        let heights = wild.then(|| {
-            let corner = (from.0.min(to.0), from.1.min(to.1));
-            let size = ((from.0 - to.0).abs() + 1, (from.1 - to.1).abs() + 1);
-            let bounds = (corner.0, corner.1, size.0, size.1);
-            match self.visit.as_ref() {
-                Some(visit) => visit.wild_heights(&world.ground, bounds),
-                None => WildHeights::new(&world.ground, bounds),
-            }
-        });
-        let ends = heights
-            .as_ref()
-            .map(|heights| (heights.at(from.0, from.1), heights.at(to.0, to.1)));
-        let terrain = heights
-            .as_ref()
-            .and_then(|heights| heights.terrain(to.0, to.1));
-        let footing = footing_of(landed_on.unwrap_or(Cell::Floor), terrain);
-        let gait = Gait::of(&self.sheet.skills);
-        // 16ths of an elevation a cell: elevations per world map point, as
-        // steepness counts there.
-        let cells = (from.0 - to.0).abs().max((from.1 - to.1).abs()).max(1) as u32;
-        let cost = self.sneak_cost(level_step_energy(from, to, ends, footing, gait), cells);
+        let cost = self.sneak_cost(walked.energy, walked.length);
+        if walked.cells == 0 {
+            return (true, cost);
+        }
         let now = world.action_clock.ticks();
-        let slow = self.learning.sneak.stepped(now, cells);
+        let slow = self.learning.sneak.stepped(now, walked.cells);
         let sneaked = wild && slow && self.watched(world);
         let moved = Moved {
             on_world_map: false,
-            elevations: ends.map_or(0, |(a, b)| a.abs_diff(b) / cells),
-            swam: if footing.wades() { SWIM_PRACTICE } else { 0 },
-            jumped: is_jump(from, to),
+            elevations: walked.steepness,
+            swam: if walked.wades { SWIM_PRACTICE } else { 0 },
+            jumped: walked.jumped,
             sneaked,
-            terrain: footing.slowed_by(),
+            terrain: walked.terrain,
         };
         (self.practise_moving(moved, now), cost)
     }

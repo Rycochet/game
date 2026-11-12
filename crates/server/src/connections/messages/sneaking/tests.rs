@@ -25,7 +25,7 @@ fn toggling_tells_the_client() {
         test.end.receive().unwrap(),
         Some(ServerMessage::Sneaking(true))
     ));
-    assert_eq!(test.client.sneak_cost(70, 1), test.client.speed * 40);
+    assert_eq!(test.client.sneak_cost(70, 240), test.client.speed * 40);
     assert!(test.client.toggle_sneak());
-    assert_eq!(test.client.sneak_cost(70, 1), 70);
+    assert_eq!(test.client.sneak_cost(70, 240), 70);
 }

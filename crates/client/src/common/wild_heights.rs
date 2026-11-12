@@ -10,8 +10,9 @@ pub const DRAWN_PER_16TH: f32 = 0.125;
 
 /// The heights of the wilderness level's cells, worked out by `player` from the
 /// world map's ground and the flats the server told of, whenever the level is
-/// the wilderness and its window moves; `None` anywhere else. Step costs and
-/// routes there go by them, as the server's do, and the views draw by them.
+/// the wilderness and its window moves; `None` anywhere else. The drawn ground
+/// (`DrawnGround`, which moves are priced on) is made from them, and moves
+/// there are slowed by their terrain, as the server's are.
 #[derive(Resource, Default)]
 pub struct WildCellHeights {
     /// The level's bounds they were worked out for.
@@ -29,12 +30,5 @@ impl WildCellHeights {
     /// The terrain of a cell (`WildHeights::terrain`), if known.
     pub fn terrain(&self, (x, y): (i64, i64)) -> Option<shared::movement::Terrain> {
         self.heights.as_ref()?.terrain(x, y)
-    }
-
-    /// The heights at each end of a step, if both are known.
-    pub fn ends(&self, from: (i64, i64), to: (i64, i64)) -> Option<(i32, i32)> {
-        let heights = self.heights.as_ref()?;
-        (heights.covers(from.0, from.1) && heights.covers(to.0, to.1))
-            .then(|| (heights.at(from.0, from.1), heights.at(to.0, to.1)))
     }
 }

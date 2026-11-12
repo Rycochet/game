@@ -41,7 +41,7 @@ pub(super) fn jump_ahead(walker: &Walker, at: Spot, way: DVec2) -> Option<Spot> 
 }
 
 /// Goes `distance` units (on flat ground; `slowness` says how much longer
-/// a step from one cell into another takes) along a journey's route, adding
+/// walking from one spot to another takes) along a journey's route, adding
 /// each straight move to `moves`. Waits at a closed door in the way (asked
 /// open once); finds a new way from where it is if something else is in
 /// the way, giving up if that found way is blocked at once. Whether it has
@@ -50,7 +50,7 @@ pub(super) fn follow_route(
     travel: &mut Travel,
     walker: &Walker,
     mut distance: f64,
-    slowness: impl Fn((i64, i64), (i64, i64)) -> f64,
+    slowness: impl Fn(Spot, Spot) -> f64,
     moves: &mut Vec<(Spot, Spot)>,
     asks: &mut MessageWriter<AskDoor>,
 ) -> bool {
@@ -78,7 +78,7 @@ pub(super) fn follow_route(
             return travel.spots.is_empty() && travel.route_arrives;
         }
         let way = to_vector(at, next) / unit_distance(at, next);
-        let slow = slowness(at.cell(), ahead_of(at, way, CELL_SPAN as f64).cell()).max(0.1);
+        let slow = slowness(at, ahead_of(at, way, CELL_SPAN as f64)).max(0.1);
         let walked = travel
             .stride
             .walk(walker, way, distance / slow, Some(next), moves);

@@ -16,9 +16,10 @@ fn a_towns_buildings_are_level_and_its_streets_follow_the_land() {
     test.send(&[ClientMessage::EnterSite { chunk: poi.chunk }]);
     let visit = test.client.visit.as_ref().expect("in the wilderness");
     let bounds = visit.level.level.bounds();
-    let heights = visit.wild_heights(&test.world.ground, bounds);
-    let land = WildHeights::new(&test.world.ground, bounds);
     let flats = visit.flats();
+    let heights =
+        WildHeights::new(&test.world.ground, bounds).with_flats(&flats, &visit.level.level);
+    let land = WildHeights::new(&test.world.ground, bounds);
     assert!(!flats.is_empty(), "a town's buildings");
     let (min_x, min_y, width, height) = bounds;
     let mut covered = 0;

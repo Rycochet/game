@@ -20,8 +20,8 @@ use super::{
     action_tick,
 };
 use crate::common::{
-    CurrentDungeon, GameView, GodMode, MapPosition, PlayerGait, PlayerSize, PlayerSpeed,
-    SmoothPosition, Sneaking, SpotPosition, WildCellHeights,
+    CurrentDungeon, DrawnGround, GameView, GodMode, MapPosition, PlayerGait, PlayerSize,
+    PlayerSpeed, SmoothPosition, Sneaking, SpotPosition, WildCellHeights,
 };
 
 /// How far ahead of the energy it has the player may walk, in seconds: moves
@@ -40,7 +40,7 @@ pub(super) fn travel_on_level(
     mut arrived: MessageWriter<Arrived>,
     (mut moved, mut asks): (MessageWriter<Moved>, MessageWriter<AskDoor>),
     (speed_now, gait, sneaking): (Res<PlayerSpeed>, Res<PlayerGait>, Res<Sneaking>),
-    heights: Res<WildCellHeights>,
+    (heights, drawn): (Res<WildCellHeights>, Res<DrawnGround>),
     mut energy: ResMut<PlayerEnergy>,
     (god, size): (Res<GodMode>, Res<PlayerSize>),
     others: Others,
@@ -114,6 +114,7 @@ pub(super) fn travel_on_level(
     let costs = LevelCosts {
         level,
         heights: &heights,
+        relief: drawn.relief.as_ref(),
         gait: gait.0,
         sneaking: sneaking.0,
         speed: speed_now.0,
@@ -136,7 +137,7 @@ pub(super) fn travel_on_level(
             at.x + (want.x * CELL_SPAN as f64).round() as i64,
             at.y + (want.y * CELL_SPAN as f64).round() as i64,
         );
-        let distance = distance / costs.slowness(at.cell(), ahead.cell());
+        let distance = distance / costs.slowness(at, ahead);
         let walked = travel
             .stride
             .walk(&walker, want, distance, None, &mut moves);
@@ -162,7 +163,8 @@ pub(super) fn travel_on_level(
                 && ((x, y) == goal || level.cell(x, y) != Cell::WorldGate)
         };
         moves.extend(travel.stride.finish());
-        let path = level_route(level, travel.stride.at, size.0, goal, known);
+        let ground = (drawn.relief.as_ref(), gait.0);
+        let path = level_route(level, ground, travel.stride.at, size.0, goal, known);
         travel.route_arrives = path.reached;
         travel.spots = path.spots.into_iter().skip(1).collect();
         if travel.spots.is_empty() && path.reached {

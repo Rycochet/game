@@ -4,9 +4,10 @@
 use bevy::prelude::*;
 use shared::clearance::crowd_per_mille;
 use shared::energy::site_move_cost;
-use shared::movement::{Gait, Step};
+use shared::movement::{Gait, LevelWay, Step};
 use shared::spot::{CELL_SPAN, Spot};
 
+use super::training::{Walked, terrain_at};
 use crate::connections::Client;
 use crate::sites::{self, Visit};
 use crate::{ServerWorld, hall, world_map};
@@ -57,7 +58,7 @@ pub(super) fn move_taken(client: &mut Client, world: &mut ServerWorld, to: Spot)
     let Some(visit) = &client.visit else {
         return (true, 0);
     };
-    let (from, from_cell) = (visit.spot(), visit.position());
+    let from = visit.spot();
     let to_cell = to.cell();
     let place = visit.population();
     let wild = visit.is_wilderness();
@@ -66,7 +67,16 @@ pub(super) fn move_taken(client: &mut Client, world: &mut ServerWorld, to: Spot)
     let Some(landing) = visit.landing(to, gait, size) else {
         return (sites::refused(client, to), 0);
     };
-    let landed_on = visit.cells().cell(to_cell.0, to_cell.1);
+    // Priced before it is taken, by the shared rule on the level's ground.
+    let relief = world.populations.0.get(&place).and_then(|p| p.relief());
+    let terrain = wild.then(|| terrain_at(world, to_cell)).flatten();
+    let way = LevelWay {
+        level: visit.cells(),
+        relief,
+        terrain,
+        gait,
+    };
+    let walked = Walked::of(&way, from, to, landing.jumped());
     // Enemies are in the way; anyone else is squeezed past, slowly.
     let kind = client.inventory.creature;
     let character = client.character_id.as_ref();
@@ -88,15 +98,6 @@ pub(super) fn move_taken(client: &mut Client, world: &mut ServerWorld, to: Spot)
     if now == from {
         return (stayed, 0);
     }
-    if to_cell == from_cell {
-        return (stayed, slower(site_move_cost(from, to).into()) as u32);
-    }
-    let (moved, cost) = client.level_step(world, (from_cell, to_cell), wild, Some(landed_on));
-    // A step between two cells' middles costs what it always did; any other
-    // move between those cells in proportion to its length.
-    let between = Spot::middle_of(from_cell)
-        .distance(Spot::middle_of(to_cell))
-        .max(1);
-    let cost = slower(u64::from(cost) * from.distance(to) / between);
-    (stayed && moved, cost as u32)
+    let (moved, cost) = client.level_move(world, walked, wild);
+    (stayed && moved, slower(cost.into()) as u32)
 }

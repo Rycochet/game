@@ -132,16 +132,24 @@ fn cancelling_gives_back_all_but_the_penalty() {
 }
 
 #[test]
-fn sneaking_holds_steps_to_a_cell_every_two_seconds() {
+fn sneaking_holds_moves_to_a_cell_every_two_seconds() {
+    let span = crate::spot::CELL_SPAN as u64;
     let step = site_step_cost((0, 0), (1, 0));
-    let sneaking = sneak_step_energy(step, 1, NORMAL_SPEED);
+    let sneaking = sneak_move_energy(step, span, NORMAL_SPEED);
     let seconds = f64::from(sneaking) / f64::from(NORMAL_SPEED) / ACTION_TICKS_PER_SECOND;
     assert_eq!(seconds, 2.0);
-    // A jump covers two cells: four seconds.
-    assert_eq!(sneak_step_energy(2 * step, 2, NORMAL_SPEED), 2 * sneaking);
+    // Two cells' width: four seconds; half a cell, one.
+    assert_eq!(
+        sneak_move_energy(2 * step, 2 * span, NORMAL_SPEED),
+        2 * sneaking
+    );
+    assert_eq!(
+        sneak_move_energy(step / 2, span / 2, NORMAL_SPEED),
+        sneaking / 2
+    );
     // Something already slower stays as it is.
     assert_eq!(
-        sneak_step_energy(u32::MAX / 2, 1, NORMAL_SPEED),
+        sneak_move_energy(u32::MAX / 2, span, NORMAL_SPEED),
         u32::MAX / 2
     );
 }

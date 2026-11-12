@@ -1,8 +1,8 @@
-//! Sneaking (`Ability::Sneak`, a toggle): on, a player's steps on a level take
-//! at least `energy::SNEAK_TICKS_PER_CELL` each; and the pace they have kept
+//! Sneaking (`Ability::Sneak`, a toggle): on, a player's moves on a level take
+//! at least `energy::SNEAK_TICKS_PER_CELL` a cell's width; and the pace they have kept
 //! lately, which Sneaking is learned at only when slow enough.
 
-use shared::energy::{SNEAK_TICKS_PER_CELL, sneak_step_energy};
+use shared::energy::{SNEAK_TICKS_PER_CELL, sneak_move_energy};
 use shared::protocol::ServerMessage;
 use std::collections::VecDeque;
 
@@ -50,11 +50,11 @@ impl Client {
         self.link.send(&ServerMessage::Sneaking(on))
     }
 
-    /// What a step on a level costing `cost` and covering `cells` takes,
+    /// What a move on a level costing `cost` and `length` units long takes,
     /// sneaking or not.
-    pub(super) fn sneak_cost(&self, cost: u32, cells: u32) -> u32 {
+    pub(super) fn sneak_cost(&self, cost: u32, length: u64) -> u32 {
         if self.learning.sneak.on {
-            sneak_step_energy(cost, cells, self.speed)
+            sneak_move_energy(cost, length, self.speed)
         } else {
             cost
         }
