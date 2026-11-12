@@ -30,6 +30,17 @@ pub(super) fn number_field(json: &str, name: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
+/// A number field anywhere in `json`, by name, fractions too.
+pub(super) fn float_field(json: &str, name: &str) -> Option<f64> {
+    let start = json.find(&format!("\"{name}\":"))? + name.len() + 3;
+    let number: String = json[start..]
+        .chars()
+        .skip_while(|c| c.is_whitespace())
+        .take_while(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | 'e' | 'E' | '+'))
+        .collect();
+    number.parse().ok()
+}
+
 /// `json` indented, for reading.
 pub(super) fn pretty(json: &str) -> String {
     let mut out = String::new();

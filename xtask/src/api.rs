@@ -16,7 +16,7 @@ mod wait;
 use http::call;
 #[cfg(test)]
 use http::unchunk;
-use json::{number_field, pretty, string_field};
+use json::{float_field, number_field, pretty, string_field};
 use request::Request;
 #[cfg(test)]
 use request::quote;
@@ -72,6 +72,12 @@ pub fn perform(args: &[String]) -> Result<(), String> {
             return Err(format!("==> {} didn't appear", file.display()));
         }
         println!("==> Saved {}", file.display());
+        if let Some(scale) = float_field(&body, "logical_per_pixel") {
+            // Points read off the picture are not what `client.click` takes.
+            println!(
+                "==> In physical pixels: multiply by {scale:.4} for client.click (more if a viewer shrank it), or aim by widget id (client.ui.list)"
+            );
+        }
     }
     if body.contains("\"wait_for_input\":true") {
         if !wait_for_input(request.port) {

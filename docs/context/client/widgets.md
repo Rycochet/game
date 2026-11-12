@@ -36,7 +36,7 @@ The toolkit under the markup. Screens are written in markup (`dom.md`), and `dom
 - `crates/client/src/widgets/queued_stripe.rs`: hazard stripes for something waiting its turn (`assets/shaders/queued_stripe.wesl`): `queued_stripe`, one material for all; `chase_stripes` moves them round clockwise at 60 px a second by real time (still with Reduce Motion). Unit tests.
 - `crates/client/src/widgets/skill_ring.rs`: how good a skill is, as a ring round the inside of a round node's edge (`assets/shaders/skill_ring.wesl`): `SkillRing`, `skill_ring`, `give_rings` (a material per ring, changed in place when the ring changes), `slide_rings` (a specialisation's bands slide with `common::BandShift`). Unit tests.
 - `crates/client/src/widgets/ui_id.rs`: `UiId`, `Checked` (put on check buttons by `spawn_check_button`; change it and the tick follows, `buttons::show_checks`), `duplicate_ids`, `warn_of_duplicates` (`Last`, when ids are added). Unit tests.
-- `crates/client/src/widgets/debug_api.rs` (debug API only): the `client.ui.*` methods (see `debug-api.md`) and `Widgets`, what they read widgets by (kind, shown, covered by a layer, disabled, label). In `debug_api/`: `describe.rs` (list, get), `set.rs` (set, press, close).
+- `crates/client/src/widgets/debug_api.rs` (debug API only): the `client.ui.*` methods (see `debug-api.md`) and `Widgets`, what they read widgets by (kind, shown, covered by a layer, disabled, label). In `debug_api/`: `describe.rs` (list, get), `set.rs` (set, press, close), `place.rs` (`WidgetPlaces`).
 - `crates/client/src/widgets/hold_button.rs`: `HoldButton`, `hold_buttons` (`PreUpdate`, in `Presses` after `track_pointer`, before `take_presses`: which hold buttons the mouse button and the first finger went down on, and whether they are still on them). Unit tests.
 - `crates/client/src/widgets/moveable.rs`: `spawn_moveable_panel`, `spawn_grip_panel`, `PanelPlace`, `place_panels` (keeps them on the screen), `take_presses` (`PreUpdate`, takes clicks and touches for widgets). Unit tests. In `moveable/`: `spawn.rs`, `place.rs`, `drag.rs`.
 
@@ -46,6 +46,7 @@ The toolkit under the markup. Screens are written in markup (`dom.md`), and `dom
 
 ## Public API
 
+- `WidgetPlaces` (debug API only, a `SystemParam`): `point(id, from_corner)`, a point on the one widget on show with that id in the window's logical pixels (its centre, or that far from its top left), refused as `client.ui.get` refuses; for `dev_tools`' fake mouse aiming by id.
 - `Spinner`: give a sized node it to show a turning spinner while it is on show.
 - `WidgetsPlugin`. The order input is read in is `dom::DomInput`'s (`Find`, `Presses`, `Send`, `Front`, `Modal`).
 - `INTERFACE_PERCENTS`: the sizes Settings offers after Auto. `TouchOnly(bool)` (resource): the device has only a touch screen (browsers say, with `any-pointer: fine`; natively never), so touch is on whatever the setting.

@@ -10,8 +10,8 @@ use std::{fs, path, process};
 
 use super::super::FakeCursor;
 use crate::common::{
-    CurrentDungeon, GameView, MapPosition, OtherLevels, PointerPosition, ServerClock, SpotPosition,
-    Target,
+    CurrentDungeon, Facing, GameView, MapPosition, OtherLevels, PointerPosition, ServerClock,
+    SpotPosition, Target,
 };
 use crate::debug_menu::DebugMenu;
 use crate::minimap::FullMap;
@@ -31,7 +31,7 @@ pub(super) fn done() -> BrpResult {
 pub(super) fn state(
     _: In<Option<Value>>,
     view: Res<State<GameView>>,
-    player: Query<(&MapPosition, &SpotPosition), With<Player>>,
+    player: Query<(&MapPosition, &SpotPosition, &Facing), With<Player>>,
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     clock: Res<ServerClock>,
@@ -47,9 +47,11 @@ pub(super) fn state(
         "pid": process::id(),
         "data": server::default_data_folder(),
         "view": format!("{view:?}"),
-        "position": player.single().ok().map(|(at, _)| json!({ "x": at.x, "y": at.y })),
+        "position": player.single().ok().map(|(at, _, _)| json!({ "x": at.x, "y": at.y })),
         // On a level or in the Hall, exactly, in units (240 a cell).
-        "spot": player.single().ok().map(|(_, at)| json!({ "x": at.0.x, "y": at.0.y })),
+        "spot": player.single().ok().map(|(_, at, _)| json!({ "x": at.0.x, "y": at.0.y })),
+        // Which way they face (`shared::facing::Heading`: 0 east, growing clockwise).
+        "facing": player.single().ok().map(|(_, _, facing)| facing.0.0),
         "level": if view == GameView::Dungeon { dungeon.info.as_ref() } else { None },
         "showing_floor": levels.showing(),
         "target": target.0,
@@ -82,8 +84,15 @@ pub(super) struct ScreenshotParams {
 /// `client.screenshot { "path": "target/shots/a.png" }`: saves the window as
 /// it is at the end of this frame. Answers at once with the full path; the
 /// file follows a frame or two later (`cargo xtask api` waits for files it is
-/// told of in `wait_for_file`). The game carries on.
-pub(super) fn screenshot(In(request): In<Option<Value>>, mut commands: Commands) -> BrpResult {
+/// told of in `wait_for_file`). The game carries on. The image is in physical
+/// pixels: `logical_per_pixel` turns a point on it into what `client.click`
+/// takes (a viewer that shrinks it to show it changes that again, so aim by
+/// widget id where there is one).
+pub(super) fn screenshot(
+    In(request): In<Option<Value>>,
+    mut commands: Commands,
+    window: Query<&Window, With<PrimaryWindow>>,
+) -> BrpResult {
     let ScreenshotParams { path } = params(request)?;
     let path = path::absolute(&path).map_err(BrpError::internal)?;
     if let Some(folder) = path.parent() {
@@ -94,5 +103,12 @@ pub(super) fn screenshot(In(request): In<Option<Value>>, mut commands: Commands)
     commands
         .spawn(Screenshot::primary_window())
         .observe(save_to_disk(path.clone()));
-    Ok(json!({ "path": path, "wait_for_file": path }))
+    let logical_per_pixel = window
+        .single()
+        .map_or(1.0, |window| 1.0 / window.scale_factor());
+    Ok(json!({
+        "path": path,
+        "wait_for_file": path,
+        "logical_per_pixel": logical_per_pixel,
+    }))
 }

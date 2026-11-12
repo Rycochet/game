@@ -12,6 +12,7 @@ use bevy::prelude::*;
 use server::debug_api::AddDebugMethod;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod aim;
 mod keys;
 mod mouse;
 mod play;

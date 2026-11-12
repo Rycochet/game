@@ -4,7 +4,10 @@
 //! could use: on show and not disabled.
 
 mod describe;
+mod place;
 mod set;
+
+pub use place::WidgetPlaces;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
