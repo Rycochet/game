@@ -15,6 +15,8 @@ use shared::spot::Spot;
 use shared::world::{ClockRate, WorldId, WorldSeed};
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::spot_map::SpotMap;
+
 /// Which site: a world map poi's, or a made-up one (dev tools).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SiteId {
@@ -102,10 +104,11 @@ pub struct LevelSave {
     pub records: BTreeMap<Id, MobRecord>,
     /// Mobs that weren't at rest when last saved, by number, to carry on.
     pub unsettled: BTreeMap<u32, SavedMob>,
-    /// What is lying on the ground, by cell, oldest first. Stays until taken: a
-    /// reset never touches it.
+    /// The bags lying on the ground, by where each is in units (older saves'
+    /// cells read as their middles), what is in each oldest first. Stays until
+    /// taken: a reset never touches it.
     #[serde(default)]
-    pub ground: BTreeMap<(i64, i64), Vec<Item>>,
+    pub ground: SpotMap<Vec<Item>>,
     /// Which of its spawns have died, by number: they aren't made again.
     #[serde(default)]
     pub dead: BTreeSet<u32>,
@@ -224,7 +227,8 @@ pub struct CharacterWorldSave {
     pub pois: BTreeMap<ChunkPos, KnownPoi>,
     /// The cells they have seen of each site level.
     pub memory: BTreeMap<SiteId, BTreeMap<u32, CellMasks>>,
-    /// The bags they last saw on each site level, by cell, as they looked then.
+    /// The bags they last saw on each site level, by where they are, as they
+    /// looked then.
     #[serde(default)]
     pub bags: BTreeMap<SiteId, BTreeMap<u32, RememberedBags>>,
     /// The doors they last saw on each site level, by cell, as they were then:
@@ -275,8 +279,8 @@ impl CharacterWorldSave {
     }
 }
 
-/// The bags a character remembers on a level, by cell.
-pub type RememberedBags = BTreeMap<(i64, i64), Load>;
+/// The bags a character remembers on a level, by where each is in units.
+pub type RememberedBags = SpotMap<Load>;
 
 /// The doors a character remembers on a level, by cell, as they last saw them.
 pub type RememberedDoors = BTreeMap<(i64, i64), shared::door::Swing>;

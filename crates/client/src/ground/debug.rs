@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use shared::ground::Load;
+use shared::spot::Spot;
 
 use super::{BagAssets, Bags, set_bag};
 use crate::common::MapPosition;
@@ -10,7 +11,8 @@ use crate::player::Player;
 /// For looking at the bags (`dev_tools`).
 #[derive(Message, Clone, Copy, Debug)]
 pub enum GroundDebug {
-    /// A row of every look, starting from the player's cell and going east.
+    /// A row of every look, a cell apart, starting from the player's cell's
+    /// middle and going east.
     ShowLooks,
 }
 
@@ -24,8 +26,8 @@ pub(super) fn run_debug(
 ) {
     for GroundDebug::ShowLooks in asked.read() {
         for (index, load) in Load::ALL.into_iter().enumerate() {
-            let cell = (player.x + index as i64, player.y);
-            set_bag(&mut bags, &mut commands, &assets, cell, load);
+            let at = Spot::middle_of((player.x + index as i64, player.y));
+            set_bag(&mut bags, &mut commands, &assets, at, load);
         }
     }
 }

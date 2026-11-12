@@ -1,15 +1,19 @@
-//! What is on the ground under the player: a section of the Character panel, to the
-//! right of the inventory, only while there is something there. The Drop icon is in
-//! `panels`.
+//! What is in the bags on the ground in the player's reach: a section of the
+//! Character panel, to the right of the inventory, only while there is something
+//! there. The Drop icon is in `panels`.
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
+use shared::ground::in_reach;
 use shared::id::Id;
 use shared::protocol::ServerMessage;
+use shared::spot::Spot;
 
 use super::Carried;
 use super::filter::{GridFilter, filter_options};
-use crate::common::{GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, MapPosition, TookItem};
+use crate::common::{
+    GROUND, GameView, GaveItem, HeldOverGifts, HeldStock, PlayerSize, SpotPosition, TookItem,
+};
 use crate::connection::FromServer;
 use crate::dom::{Dom, GridShown, Template, document_in};
 use crate::html;
@@ -19,17 +23,18 @@ use crate::widgets::{ButtonTooltip, StockGrid, StockGridNode, StockOf, UiId, sho
 /// How many cells across it is: the longest thing there can be.
 const COLUMNS: u8 = 8;
 
-/// What is on the ground where the server last said.
+/// What is in the bags in reach, as the server last said: where they are, and
+/// all that is in them.
 #[derive(Resource)]
 pub(super) struct Ground {
-    at: Option<(i64, i64)>,
+    bags: Vec<Spot>,
     pub(super) grid: StockGrid,
 }
 
 impl Default for Ground {
     fn default() -> Self {
         Self {
-            at: None,
+            bags: Vec::new(),
             grid: StockGrid::new(GROUND, COLUMNS, &[]),
         }
     }
@@ -113,12 +118,12 @@ pub(super) fn read_server(
     }
     for FromServer(message) in from_server.read() {
         match message {
-            ServerMessage::GroundItems { x, y, items } => {
-                if ground.at == Some((*x, *y)) {
+            ServerMessage::GroundItems { bags, items } => {
+                if ground.bags == *bags {
                     ground.grid.heard(items);
                 } else {
-                    // Places are only for the one pile, while standing on it.
-                    ground.at = Some((*x, *y));
+                    // Places are only for the same bags, while they are in reach.
+                    ground.bags = bags.clone();
                     ground.grid = StockGrid::new(GROUND, COLUMNS, items);
                 }
             }
@@ -132,13 +137,15 @@ pub(super) fn read_server(
     }
 }
 
-/// Shows the section only over what the player is really standing on, and draws its
+/// Shows the section only while a bag it is of is still in the player's reach where
+/// they really are (the server answers moves late), and draws its
 /// grid again when what is in it changes, or when something is picked up from it or
 /// put back. What is held isn't drawn where it was.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn show_section(
     view: Res<State<GameView>>,
-    player: Single<&MapPosition, With<Player>>,
+    player: Single<&SpotPosition, With<Player>>,
+    size: Res<PlayerSize>,
     held: Res<HeldStock>,
     mut ground: ResMut<Ground>,
     mut sections: Query<&mut Node, With<GroundSection>>,
@@ -147,8 +154,8 @@ pub(super) fn show_section(
     mut commands: Commands,
     mut drawn_without: Local<Option<Id>>,
 ) {
-    let here = Some((player.x, player.y));
-    let shown = *view.get() == GameView::Dungeon && ground.at == here && !ground.grid.is_empty();
+    let reached = (ground.bags.iter()).any(|&bag| in_reach(size.0, player.0, bag));
+    let shown = *view.get() == GameView::Dungeon && reached && !ground.grid.is_empty();
     let display = if shown { Display::Flex } else { Display::None };
     for mut node in &mut sections {
         if node.display != display {

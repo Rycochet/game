@@ -8,7 +8,7 @@ use shared::spot::Spot;
 /// cell is tried first: RON would read a bare pair as a `Spot` too.
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum SpotOrCell {
+pub(super) enum SpotOrCell {
     Cell((i64, i64)),
     Spot(Spot),
 }

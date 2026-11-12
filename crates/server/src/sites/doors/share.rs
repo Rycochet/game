@@ -106,11 +106,9 @@ impl ServerWorld {
             .is_some_and(|population| population.mobs.iter().any(|mob| mob.position == at));
         let bag = places.iter().any(|&(site, index, cell)| {
             let level = self.site(site).levels.get(&index);
+            // A bag anywhere in the doorway's cell.
             level.is_some_and(|level| {
-                level
-                    .ground
-                    .get(&cell)
-                    .is_some_and(|items| !items.is_empty())
+                (level.ground.iter()).any(|(at, items)| at.cell() == cell && !items.is_empty())
             })
         });
         visit.position() == at || player || mob || bag

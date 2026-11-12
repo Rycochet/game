@@ -16,11 +16,11 @@ pub(super) fn read_server(
 ) {
     for FromServer(message) in from_server.read() {
         match message {
-            ServerMessage::GroundSeen { x, y, load } => {
-                set_bag(&mut bags, &mut commands, &assets, (*x, *y), *load);
+            ServerMessage::GroundSeen { at, load } => {
+                set_bag(&mut bags, &mut commands, &assets, *at, *load);
             }
-            ServerMessage::GroundGone { x, y } => {
-                if let Some(old) = bags.0.remove(&(*x, *y)) {
+            ServerMessage::GroundGone { at } => {
+                if let Some(old) = bags.0.remove(at) {
                     commands.entity(old.root).despawn();
                 }
             }

@@ -1,6 +1,7 @@
 //! Showing each bag as it is now: in colour, remembered or gone.
 
 use bevy::prelude::*;
+use shared::spot::Spot;
 
 use super::{BagPart, OfBag, Sparkle, Star, TURN_PER_SECOND, TWINKLE, TWINKLE_PER_SECOND};
 use crate::common::HoveredBag;
@@ -19,9 +20,10 @@ pub(super) fn show_bags(
     mut sparkles: Query<(&Sparkle, &mut Transform, &mut Visibility), Without<Star>>,
     mut stars: Query<(&Star, &ChildOf, &mut Transform), Without<Sparkle>>,
 ) {
-    let in_sight = |cell: (i64, i64)| {
+    let in_sight = |at: Spot| {
+        let (x, y) = at.cell();
         let sight = shown.sight.as_ref();
-        sight.is_some_and(|sight| sight.is_seen(cell.0, cell.1))
+        sight.is_some_and(|sight| sight.is_seen(x, y))
     };
     for (part, of_bag, mut visibility) in &mut parts {
         let seen = in_sight(of_bag.0);
@@ -45,7 +47,7 @@ pub(super) fn show_bags(
     // Straight behind on the ground, so that it shows above the bag.
     let behind = Vec3::new(forward.x, 0.0, forward.z).normalize_or_zero();
     for (sparkle, mut transform, mut visibility) in &mut sparkles {
-        visibility.set_if_neq(if in_sight(sparkle.cell) {
+        visibility.set_if_neq(if in_sight(sparkle.at) {
             Visibility::Inherited
         } else {
             Visibility::Hidden

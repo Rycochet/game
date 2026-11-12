@@ -2,13 +2,14 @@
 
 use bevy::prelude::*;
 use shared::ground::Load;
+use shared::spot::Spot;
 use std::collections::BTreeMap;
 
 use crate::view3d::XrayMaterial;
 
-/// The bags known of on this level, by cell, as last seen.
+/// The bags known of on this level, by where they are in units, as last seen.
 #[derive(Resource, Default)]
-pub(super) struct Bags(pub(super) BTreeMap<(i64, i64), Bag>);
+pub(super) struct Bags(pub(super) BTreeMap<Spot, Bag>);
 
 pub(super) struct Bag {
     pub(super) load: Load,
@@ -17,7 +18,7 @@ pub(super) struct Bag {
 
 /// The bag the player is walking to, to open on arrival.
 #[derive(Resource, Default)]
-pub(super) struct Heading(pub(super) Option<(i64, i64)>);
+pub(super) struct Heading(pub(super) Option<Spot>);
 
 /// What a bag is drawn with.
 #[derive(Resource)]
@@ -45,7 +46,7 @@ pub(super) struct BagMeshes {
     pub(super) star_hover_outline: Handle<Mesh>,
 }
 
-/// What depends on the state of the bag at this cell.
+/// What depends on the state of the bag here.
 #[derive(Component, Clone, Copy)]
 pub(super) enum BagPart {
     /// Shows while it is in sight.
@@ -60,12 +61,12 @@ pub(super) enum BagPart {
 
 /// On each of a bag's parts: whose it is.
 #[derive(Component, Clone, Copy)]
-pub(super) struct OfBag(pub(super) (i64, i64));
+pub(super) struct OfBag(pub(super) Spot);
 
 /// A sparkle, standing behind its bag and facing the camera.
 #[derive(Component, Clone, Copy)]
 pub(super) struct Sparkle {
-    pub(super) cell: (i64, i64),
+    pub(super) at: Spot,
     /// How far up it stands, how far behind the middle, and how big it is.
     pub(super) up: f32,
     pub(super) behind: f32,

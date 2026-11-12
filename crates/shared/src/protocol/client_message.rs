@@ -140,14 +140,15 @@ pub enum ClientMessage {
     /// Puts on something the character carries, answered with `Inventory`, whether
     /// or not it could go on. Taking it off is `MoveItem`.
     WearItem { item: Id },
-    /// Puts something carried or worn on the ground, on the cell the player is on, in
-    /// a site, after any steps to get there. Answered with `Inventory` and
+    /// Puts something carried or worn on the ground, in the nearest bag in the
+    /// player's reach or a new one at their feet (`ground::nearest_in_reach`), in
+    /// a site, after any moves to get there. Answered with `Inventory` and
     /// `GroundItems`, whether or not it could be done, as are the three below.
     DropItem { item: Id },
-    /// Puts as much of something on the ground under the player as fits on a
+    /// Puts as much of something in a bag in the player's reach as fits on a
     /// carried stack that looks the same, the rest staying on the ground.
     StackFromGround { item: Id, onto: Id },
-    /// Takes something from the ground under the player, to this place.
+    /// Takes something from a bag in the player's reach, to this place.
     TakeFromGround {
         item: Id,
         to: Holder,
@@ -155,9 +156,9 @@ pub enum ClientMessage {
         y: u8,
         rotation: Rotation,
     },
-    /// Puts on something from the ground under the player.
+    /// Puts on something from a bag in the player's reach.
     WearFromGround { item: Id },
-    /// Throws away something from the ground under the player, as `BinItem`.
+    /// Throws away something from a bag in the player's reach, as `BinItem`.
     BinFromGround { item: Id },
     /// Developer tools: new items of this kind in the character's inventory, or
     /// for `to`, made for this size (or the one getting them's own) and their

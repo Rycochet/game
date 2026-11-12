@@ -1,10 +1,14 @@
 //! What can be told of something on the ground from afar: how full its bag looks.
-//! What is in it is only told to someone standing there. See
+//! What is in it is only told to someone within reach of it. See
 //! `docs/context/shared/ground.md`.
 
 use serde::{Deserialize, Serialize};
 
 use crate::item::Item;
+
+mod reach;
+
+pub use reach::{ARM_REACH, in_reach, nearest_in_reach, reach};
 
 /// How full a bag on the ground looks, by the weight of all in it. Saved in what
 /// characters remember.
