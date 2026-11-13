@@ -9,6 +9,7 @@ use shared::quest::{Quest, QuestId};
 use super::{MOST_TAKEN, log, offers, tell_markers};
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::ids::new_id;
 use crate::storage::Progress;
 use crate::world_map::learn_place;
 
@@ -38,6 +39,16 @@ pub(crate) fn accept(
     if client.character.quests.taken.len() >= MOST_TAKEN {
         return refuse(client, id, QuestRefusal::TooMany);
     }
+    // A delivery's parcels, all or none (owner).
+    let mut inventory = client.inventory.clone();
+    let parcels = super::parcels::parcels_for(world, &quest);
+    let handed = !parcels.is_empty();
+    for parcel in parcels {
+        if inventory.give(parcel, world.stacks, &mut new_id).is_err() {
+            return refuse(client, id, QuestRefusal::NoRoom);
+        }
+    }
+    client.inventory = inventory;
     let counts = vec![0; quest.steps.len()];
     client.character.quests.taken.insert(
         id,
@@ -49,6 +60,12 @@ pub(crate) fn accept(
     );
     client.unsaved = true;
     info!("{} took quest {id:?}", client.in_log());
+    if handed {
+        client.update_speed(world.action_clock.ticks());
+        if !client.send_inventory() {
+            return false;
+        }
+    }
     let dealt = super::boss_kill::already_dealt(client, &quest);
     (!dealt || super::boss_kill::tell_slain(client, world))
         && learn_targets(client, world, &quest)

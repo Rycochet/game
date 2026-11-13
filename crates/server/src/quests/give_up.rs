@@ -1,6 +1,6 @@
 //! A quest given up or failed: its progress is lost and it can be taken again
-//! an hour later (owner). Quest items vanishing with it come with them (Quest
-//! system PR 7).
+//! an hour later (owner), and its quest items vanish wherever they are
+//! carried (they can't be put down: dropping destroys them).
 
 use bevy::prelude::*;
 use shared::quest::QuestId;
@@ -26,10 +26,16 @@ pub(crate) fn end(
     }
     book.ended.insert(id, Ended { at: now, failed });
     client.unsaved = true;
+    let vanished = client.inventory.remove_quest_items(id) > 0;
     info!(
         "{} {} quest {id:?}",
         client.in_log(),
         if failed { "failed" } else { "gave up" }
     );
-    log::tell_changed(client, world, id) && tell_markers(client, world, id.town, now)
+    if vanished {
+        client.update_speed(world.action_clock.ticks());
+    }
+    (!vanished || client.send_inventory())
+        && log::tell_changed(client, world, id)
+        && tell_markers(client, world, id.town, now)
 }

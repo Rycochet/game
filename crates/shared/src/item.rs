@@ -22,6 +22,7 @@ mod made;
 mod neck_def;
 mod placed;
 mod quality;
+mod quest_items;
 mod refused;
 mod saved;
 mod secrets;
@@ -64,6 +65,8 @@ mod coin_tests;
 
 #[cfg(test)]
 mod look_up_tests;
+#[cfg(test)]
+mod quest_item_tests;
 
 #[cfg(test)]
 mod stack_tests;

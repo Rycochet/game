@@ -13,6 +13,7 @@ mod gem;
 mod looks;
 mod model;
 mod morph;
+mod parcel;
 mod ring;
 mod under;
 

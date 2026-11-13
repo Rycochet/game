@@ -385,3 +385,41 @@ fn anything_in_reach_can_be_picked_up_and_is_told_of() {
     assert!(carrying(&answers).bin.is_some());
     assert_eq!(bags_here(&mut test), [(a, 1)], "the emptied bag went");
 }
+
+#[test]
+fn a_quest_item_dropped_is_destroyed_not_left_for_anyone() {
+    let (mut test, key) = holding(ItemKind::Key);
+    let quest = shared::quest::QuestId {
+        town: shared::poi::ChunkPos { x: 3, y: 4 },
+        slot: shared::quest::Slot::Feeder,
+    };
+    let carried = &mut test.client.inventory.items[0].item;
+    assert_eq!(carried.id, key);
+    carried.quest = Some(quest);
+    let answers = test.send(&[ClientMessage::DropItem { item: key }]);
+    assert!(
+        carrying(&answers).find(key).is_none(),
+        "gone from the hands"
+    );
+    let visit = test.client.visit.as_ref().unwrap();
+    let (id, index) = (visit.id(), visit.index());
+    let level = test.world.site(id).levels.get(&index);
+    assert!(
+        level.is_none_or(|level| level.ground.is_empty()),
+        "and not on the ground"
+    );
+}
+
+#[test]
+fn a_quest_item_cant_be_given() {
+    let (mut test, key) = holding(ItemKind::Key);
+    test.client.inventory.items[0].item.quest = Some(shared::quest::QuestId {
+        town: shared::poi::ChunkPos { x: 3, y: 4 },
+        slot: shared::quest::Slot::Feeder,
+    });
+    let answers = test.send(&[ClientMessage::GiveItem {
+        item: key,
+        to: Id::for_test(77),
+    }]);
+    assert!(carrying(&answers).find(key).is_some(), "still carried");
+}

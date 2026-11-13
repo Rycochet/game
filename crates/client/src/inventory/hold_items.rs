@@ -74,6 +74,8 @@ pub(super) struct Outbox<'w> {
         Res<'w, crate::common::GodMode>,
         Res<'w, Time<Real>>,
     ),
+    /// A quest item let go of over the ground, asked about first.
+    quest_drop: ResMut<'w, super::quest_drop::QuestDrop>,
 }
 
 /// Picking up with the mouse, and keeping what is held as it should be. In

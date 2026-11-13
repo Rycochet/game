@@ -20,6 +20,7 @@ mod give_up;
 mod log;
 mod needs;
 mod offers;
+mod parcels;
 mod planet_log;
 mod planets;
 mod progress;
@@ -80,6 +81,8 @@ mod dots_tests;
 mod extras_tests;
 #[cfg(test)]
 mod log_tests;
+#[cfg(test)]
+mod parcel_tests;
 #[cfg(test)]
 mod planets_tests;
 #[cfg(test)]

@@ -7,6 +7,7 @@ mod ground;
 mod hands;
 mod hold;
 mod panels;
+mod quest_drop;
 
 use bevy::prelude::*;
 use give::NearbyPanel;
@@ -56,6 +57,7 @@ impl Plugin for InventoryPlugin {
             .init_resource::<HeldOverGifts>()
             .init_resource::<HeldStock>()
             .init_resource::<wear_note::WearNote>()
+            .init_resource::<quest_drop::QuestDrop>()
             .add_message::<TookItem>()
             .add_message::<OpenCharacter>()
             .add_message::<GaveItem>()
@@ -63,6 +65,7 @@ impl Plugin for InventoryPlugin {
                 Startup,
                 (
                     panels::spawn_fixed_parts,
+                    quest_drop::spawn_requester,
                     filter::make_icons,
                     sort::make_icon,
                 ),
@@ -122,6 +125,10 @@ impl Plugin for InventoryPlugin {
             panels::mark_grids.after(crate::dom::DrawObjects),
         );
         app.add_systems(Update, early_pictures::ask_early);
+        app.add_systems(
+            Update,
+            (quest_drop::answer_requester, quest_drop::show_requester).chain(),
+        );
         app.add_systems(Update, panels::switch_pages.after(panels::toggle_inventory));
         // Before the grids are drawn, so a sort shows at once.
         app.add_systems(Update, sort::press_sort.before(panels::show_grids));
