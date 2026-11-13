@@ -1,5 +1,6 @@
 //! The Gender toggle row: Male, Female or Neutral, into the draft. Its bonus
-//! shows in the triangles' gold layer and the values below the choices.
+//! shows in the triangles' gold layer and the values below the choices. Female
+//! has no beard: the looks are made again without its list.
 
 use bevy::prelude::*;
 use shared::gender::Gender;
@@ -21,7 +22,7 @@ pub(super) fn choose_gender(mut events: MessageReader<UiEvent>, mut draft: ResMu
             && let Some(&gender) = Gender::ALL.get(index)
             && draft.gender != gender
         {
-            draft.gender = gender;
+            draft.choose_gender(gender);
         }
     }
 }

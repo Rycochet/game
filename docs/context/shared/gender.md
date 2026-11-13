@@ -1,6 +1,6 @@
 # shared: gender
 
-Every creature's gender, players and mobs alike, animals too: Male, Female or Neutral, with a small bonus to one row of the attribute grid. Later text takes its pronouns from it. Not how anyone looks: models don't change with it.
+Every creature's gender, players and mobs alike, animals too: Male, Female or Neutral, with a small bonus to one row of the attribute grid. Later text takes its pronouns from it. Not how anyone looks, but for one rule: a female has no beard (`shared::sheet`'s `Trait::applies`, owner 2026-11-13). Models don't change with it otherwise.
 
 ## Files
 

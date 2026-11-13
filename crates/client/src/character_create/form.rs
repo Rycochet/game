@@ -7,7 +7,8 @@ use super::draft::Draft;
 use super::looks::{PatternPictures, spawn_looks};
 use super::screen::{BeginButton, CancelButton, KindList, LooksBox, NameBox};
 use crate::common::{
-    CharacterChoice, IRONMAN_QUESTION, MakingCharacter, PlayDifficulty, Preferences,
+    CharacterChoice, CharacterRefused, IRONMAN_QUESTION, MakingCharacter, PlayDifficulty,
+    Preferences,
 };
 use crate::connection::ToServer;
 use crate::dom::Dom;
@@ -19,10 +20,13 @@ use crate::widgets::{
 #[derive(Component)]
 pub(super) struct LookList(pub Trait);
 
-/// Shows the screen while the server waits for a character, starting afresh each
-/// time, with the keyboard in the name box.
+/// Shows the screen while the server waits for a character, with the keyboard
+/// in the name box: afresh each time, or, when the server turned the last one
+/// down, with everything as it was and why under the name (owner, 2026-11-13).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn show_screen(
     making: Res<MakingCharacter>,
+    refused: Res<CharacterRefused>,
     play: Res<PlayDifficulty>,
     preferences: Res<Preferences>,
     mut draft: ResMut<Draft>,
@@ -33,7 +37,13 @@ pub(super) fn show_screen(
     if !making.is_changed() {
         return;
     }
-    if making.0 {
+    show_refusal(refused.0.as_deref(), &mut name.1, &mut dom);
+    if making.0 && refused.0.is_some() {
+        // The boxes and lists still show the draft: only the name may have
+        // been folded since.
+        name.1.text.clone_from(&draft.name);
+        focus.0 = Some(name.0);
+    } else if making.0 {
         *draft = Draft {
             // The player's own, or the nearest the server allows.
             difficulty: play.allowed.closest(preferences.difficulty),
@@ -55,7 +65,17 @@ pub(super) fn show_screen(
     dom.set_flag("character_create/layer", "hidden", !making.0);
 }
 
-/// Takes what is typed and chosen into the draft.
+/// Why the server turned the name down, in red under it, the box edged in red;
+/// or nothing.
+fn show_refusal(reason: Option<&str>, name: &mut TextBox, dom: &mut Dom) {
+    name.error = reason.is_some();
+    dom.set_text("character_create/name_refused", reason.unwrap_or_default());
+    dom.set_flag("character_create/name_refused", "hidden", reason.is_none());
+}
+
+/// Takes what is typed and chosen into the draft. Typing in the name puts
+/// away why the last was turned down.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn read_choices(
     mut edited: MessageReader<TextEdited>,
     mut chosen: MessageReader<DropdownChosen>,
@@ -64,9 +84,13 @@ pub(super) fn read_choices(
     kinds: Query<(), With<KindList>>,
     looks: Query<&LookList>,
     mut draft: ResMut<Draft>,
+    mut dom: Dom,
 ) {
     for edit in edited.read() {
         if let Ok(mut name) = names.get_mut(edit.0) {
+            if name.error {
+                show_refusal(None, &mut name, &mut dom);
+            }
             // Only what can be in a name: lookalikes made plain as they are
             // typed (the server folds and checks it again).
             let folded: String = shared::name::fold(&name.text)
@@ -98,19 +122,21 @@ pub(super) fn read_choices(
     }
 }
 
-/// The kind's own looks to choose from, again whenever the kind changes.
+/// The kind's own looks to choose from, again whenever the kind or gender
+/// changes.
 pub(super) fn fill_looks(
     mut commands: Commands,
     draft: Res<Draft>,
     looks_box: Single<Entity, With<LooksBox>>,
     mut pictures: ResMut<PatternPictures>,
     mut images: ResMut<Assets<Image>>,
-    mut shown_for: Local<Option<shared::creature::CreatureKind>>,
+    mut shown_for: Local<Option<(shared::creature::CreatureKind, shared::gender::Gender)>>,
 ) {
-    if *shown_for == Some(draft.kind) {
+    let now = (draft.kind, draft.gender);
+    if *shown_for == Some(now) {
         return;
     }
-    *shown_for = Some(draft.kind);
+    *shown_for = Some(now);
     commands
         .entity(*looks_box)
         .despawn_related::<Children>()

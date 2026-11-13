@@ -52,3 +52,17 @@ fn the_gender_chosen_is_sent_and_its_bonus_shown() {
     );
     assert_eq!(bonus.strength, kind.strength);
 }
+
+#[test]
+fn choosing_female_drops_a_chosen_beard_and_nothing_else() {
+    let mut draft = Draft::default();
+    draft.choose_gender(Gender::Male);
+    draft.appearance.0.insert(Trait::Beard, 2);
+    draft.appearance.0.insert(Trait::HairColour, 3);
+    draft.choose_gender(Gender::Neutral);
+    assert_eq!(draft.appearance.0.get(&Trait::Beard), Some(&2));
+    draft.choose_gender(Gender::Female);
+    assert_eq!(draft.appearance.0.get(&Trait::Beard), None);
+    assert_eq!(draft.appearance.0.get(&Trait::HairColour), Some(&3));
+    assert!(draft.appearance.suits(draft.kind, draft.gender));
+}

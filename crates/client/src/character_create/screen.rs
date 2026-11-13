@@ -34,6 +34,7 @@ pub(super) static CHARACTER_CREATE: Template = html!(
             <input id="name" type="text"/>
             <button id="random_name" title="Random name"><img src="picture:new_seed"/></button>
           </span>
+          <p id="name_refused" class="warning" hidden/>
           <label class="field" for="kind">Kind</label>
           <select id="kind"><option>Human</option></select>
           <label class="field" for="gender">Gender</label>
@@ -52,7 +53,13 @@ pub(super) static CHARACTER_CREATE: Template = html!(
           <button id="cancel" width="148">Cancel</button>
         </span>
       </div>
-      <canvas id="triangles" width="480" height="480"/>
+      <div width="480">
+        <span nowrap align="right">
+          <button id="reset_triangles" title="Every dot back in the middle">Reset</button>
+          <button id="random_triangles" title="Every dot somewhere at random">Random</button>
+        </span>
+        <canvas id="triangles" width="480" height="480"/>
+      </div>
     </span>
   </dialog>
   <dialog id="ironman" title="Ironman" depth="1" hidden>

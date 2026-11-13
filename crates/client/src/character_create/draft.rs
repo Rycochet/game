@@ -72,6 +72,12 @@ impl Draft {
         }
     }
 
+    /// Another gender: a look it can't have (a female's beard) goes.
+    pub fn choose_gender(&mut self, gender: Gender) {
+        self.gender = gender;
+        self.appearance.fit(gender);
+    }
+
     /// Whether it can be sent: it needs a name that can be one.
     pub fn ready(&self) -> bool {
         shared::name::checked(&self.name).is_ok()

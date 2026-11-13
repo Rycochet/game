@@ -4,12 +4,10 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use super::Landed;
-use super::OnlineState;
-use super::Strike;
 use super::characters::ListedCharacter;
 use super::level::{LevelChunk, LevelInfo, RememberedLevel};
 use super::login::{EmailAddress, LoginMethod, SessionToken};
+use super::{Landed, OnlineState, Strike};
 use super::{WorldChunk, WorldInfo};
 use crate::ability::{Ability, ActionBar};
 use crate::alignment::Alignment;
@@ -37,6 +35,9 @@ pub enum ServerMessage {
         can_create: bool,
         difficulties: Difficulties,
     },
+    /// The new character asked for wasn't made, and why (its name taken...):
+    /// the client goes on choosing, back on its screen with nothing lost.
+    CharacterRefused(String),
     /// The character's difficulty (`None` while there is no character yet) and
     /// the ones the server allows: after `Welcome`, after `SetDifficulty`, and
     /// whenever the server's change.

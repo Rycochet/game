@@ -70,6 +70,13 @@ pub struct CancelledEnergy(pub u32);
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MakingCharacter(pub bool);
 
+/// Why the server turned down the character just sent
+/// (`ServerMessage::CharacterRefused`): `character_create` opens again with
+/// everything as it was and says why. `connection` sets it as it sets
+/// `MakingCharacter` again, and clears it for a new character or on hanging up.
+#[derive(Resource, Clone, Debug, Default, PartialEq, Eq)]
+pub struct CharacterRefused(pub Option<String>);
+
 /// Whether a new character is made with `character_create`'s screen, which
 /// `connection` tells the server in `Hello`. Off, the server makes a plain one
 /// of the usual kind: `dev_tools` turns it off for runs that skip the menu
