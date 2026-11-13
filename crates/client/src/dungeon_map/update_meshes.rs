@@ -155,8 +155,14 @@ pub(super) fn update_meshes(
             }
         })
         .collect();
+    // The Hall of Worlds has no sky, and gives its own even light.
+    let in_hall = dungeon
+        .info
+        .as_ref()
+        .is_some_and(|i| matches!(i.kind, LevelKind::Hall { .. }));
     // What needs a remembered copy for the mask to show: drawn as in sight, but
-    // not all of it is.
+    // not all of it is. None in the Hall: the mask is off there (`pictures`), so
+    // a grey copy would fight the lit cell; its cone's edge goes by whole cells.
     let mut cut = Sight::new(level);
     // What is in sight is remembered from now on (only cells the server has
     // sent: the rest are wall here until it does). Not a change that needs
@@ -168,7 +174,8 @@ pub(super) fn update_meshes(
             if lines.touched.as_ref().is_some_and(|t| t.is_seen(x, y)) {
                 drawn.insert(x, y);
             }
-            if drawn.is_seen(x, y)
+            if !in_hall
+                && drawn.is_seen(x, y)
                 && (lines.crossed.as_ref().is_some_and(|c| c.is_seen(x, y))
                     || lines.touched.as_ref().is_none_or(|t| !t.is_seen(x, y)))
             {
@@ -193,11 +200,6 @@ pub(super) fn update_meshes(
     if !is_town && (dungeon.is_changed() || outside.is_changed()) {
         *spill = Spill::work_out(level, &dungeon.stairs, outside.travel, open_air);
     }
-    // The Hall of Worlds has no sky, and gives its own even light.
-    let in_hall = dungeon
-        .info
-        .as_ref()
-        .is_some_and(|i| matches!(i.kind, LevelKind::Hall { .. }));
     let mut light = if in_hall {
         LightGrid::filled(level, Vec3::splat(HALL_LIGHT))
     } else {
@@ -254,12 +256,13 @@ pub(super) fn update_meshes(
     let memory = memory
         .iter_mut()
         .map(|(part, mesh, shown)| (part.0 as usize, mesh, shown));
-    let remembered_shown = settings.1 && !in_hall;
+    // In the Hall too, where the whole stretch is remembered (`site::hall`),
+    // so the gates never hang over black outside the player's cone.
     put_meshes(
         &mut meshes,
         built.memory,
         &built.has_memory,
-        remembered_shown,
+        settings.1,
         memory,
     );
     let through = stairs_through.iter_mut();
