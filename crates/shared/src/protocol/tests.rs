@@ -278,6 +278,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             can_create: true,
             difficulties: crate::difficulty::Difficulties::ALL,
         },
+        ServerMessage::CharacterRefused("Bo is taken: choose another name".into()),
         ServerMessage::Killed { permanent: true },
         ServerMessage::Difficulty {
             current: Some(crate::difficulty::Difficulty::Easy),
@@ -374,6 +375,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                     slot: crate::quest::Slot::Feeder,
                 },
                 kind: crate::quest::QuestKind::Normal,
+                giver: crate::story::Person {
+                    kind: crate::creature::CreatureKind::Human,
+                    gender: crate::gender::Gender::Female,
+                    given: "Mara".into(),
+                    family: Some("Tull".into()),
+                },
                 state: super::OfferState::Locked(vec![
                     super::Hint::Standing {
                         least: crate::quest::Standing::Known,
@@ -382,6 +389,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 ]),
             }],
         }),
+        ServerMessage::Quest(super::QuestNews::Planets(vec![super::PlanetQuests {
+            world: crate::world::WorldSeed::new(5).id(),
+            ready: true,
+        }])),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],
             items: Vec::new(),

@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::poi::ChunkPos;
 use crate::quest::{QuestId, QuestKind, Standing, Step};
 use crate::skill::SkillId;
-use crate::story::{Ending, RewardPart, Story};
+use crate::story::{Ending, Person, RewardPart, Story};
+use crate::world::WorldId;
 
 /// What a client asks about quests.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +64,17 @@ pub enum QuestNews {
     TurnedIn { id: QuestId, ending: Ending },
     /// Something asked couldn't be done, and why.
     Refused { id: QuestId, why: QuestRefusal },
+    /// The planets where the character has quests taken, for the Hall's
+    /// gates: sent on coming into the Hall.
+    Planets(Vec<PlanetQuests>),
+}
+
+/// A planet where the character has quests taken.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlanetQuests {
+    pub world: WorldId,
+    /// Some of them wait to be handed in ("?" over its gates, not "!").
+    pub ready: bool,
 }
 
 /// One quest a giver talks about.
@@ -70,6 +82,8 @@ pub enum QuestNews {
 pub struct Offer {
     pub id: QuestId,
     pub kind: QuestKind,
+    /// Who gives it: the building's household's member for its slot.
+    pub giver: Person,
     pub state: OfferState,
 }
 

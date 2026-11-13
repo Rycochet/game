@@ -10,8 +10,8 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use super::socket::Target;
 use super::{Connecting, FromServer, ServerConnection};
 use crate::common::{
-    AccountEmail, CharacterChoice, CharacterSelect, ChosenServer, MakingCharacter, PlayDifficulty,
-    PlayFor, PlayableHere, Preferences, Session,
+    AccountEmail, CharacterChoice, CharacterRefused, CharacterSelect, ChosenServer,
+    MakingCharacter, PlayDifficulty, PlayFor, PlayableHere, Preferences, Session,
 };
 
 /// What `Preferences::played_on` calls a server.
@@ -49,6 +49,8 @@ pub(super) fn answer_characters(
     mut select: ResMut<CharacterSelect>,
     play_for: Res<PlayFor>,
     mut preferences: ResMut<Preferences>,
+    mut making: ResMut<MakingCharacter>,
+    mut refused: ResMut<CharacterRefused>,
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -85,6 +87,11 @@ pub(super) fn answer_characters(
                     }
                 }
             }
+            // Back to making it, nothing lost (owner, 2026-11-13).
+            ServerMessage::CharacterRefused(reason) => {
+                refused.0 = Some(reason.clone());
+                making.0 = true;
+            }
             ServerMessage::Welcome { .. } => {
                 if !preferences
                     .played_on
@@ -106,6 +113,7 @@ pub(super) fn choose_character(
     connection: Option<Res<ServerConnection>>,
     mut select: ResMut<CharacterSelect>,
     mut making: ResMut<MakingCharacter>,
+    mut refused: ResMut<CharacterRefused>,
     mut session: ResMut<Session>,
 ) {
     for choice in choices.read() {
@@ -123,6 +131,7 @@ pub(super) fn choose_character(
             CharacterChoice::New => {
                 select.open = false;
                 making.0 = true;
+                refused.0 = None;
             }
             CharacterChoice::CancelNew if select.reached => {
                 making.0 = false;

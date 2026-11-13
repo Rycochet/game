@@ -7,7 +7,7 @@
 #
 # Port 24691 serves the web client's files and the game's WebSocket (`/ws`) over
 # HTTPS, with a self-signed certificate kept in /data unless HOW_TLS_CERTIFICATE
-# and HOW_TLS_KEY name your own (readable by the `hall` user), or
+# and HOW_TLS_KEY name your own (readable by the server's user, below), or
 # HOW_LETS_ENCRYPT_DOMAIN asks Let's Encrypt for one (publish it as -p 443:24691).
 # Port 24690 only answers that connections must be secure.
 #
@@ -18,6 +18,12 @@
 #   docker run -p 24690:24690 -e HOW_BEHIND_PROXY=true -e HOW_DISABLE_SSL=true -v hall-of-worlds:/data hall-of-worlds
 #
 # Saves go in /data: mount a volume there to keep them.
+#
+# The server runs as user and group 1000:1000 unless PUID and PGID say
+# otherwise, given when building (--build-arg) or when starting (-e). Started
+# as root, as by default, the image first gives anything in /data that isn't
+# theirs to them. Started with --user (Compose's `user:`), it runs as that user
+# and leaves /data's owner to you.
 #
 # The web client is at /web/ (where / sends browsers). Every port also answers
 # /_healthz (200 while the game runs) and /_version (what the server is, as
@@ -62,16 +68,55 @@ COPY --from=build /srv/web /srv/web
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-RUN useradd --system --no-create-home hall \
+# The user and group the server runs as: PUID and PGID, when building or when
+# starting (see entrypoint.sh below). setpriv comes with Debian (util-linux).
+ARG PUID=1000
+ARG PGID=1000
+RUN groupadd --non-unique --gid "$PGID" hall \
+ && useradd --non-unique --uid "$PUID" --gid hall --no-create-home --shell /usr/sbin/nologin hall \
  && mkdir /data \
- && chown hall /data
-USER hall
-ENV HOW_ADDRESS=0.0.0.0:24690 \
+ && chown hall:hall /data \
+ && command -v setpriv
+# Started as root, it gives /data to PUID:PGID (only what isn't theirs already)
+# and then runs the server as them. Started as another user (Docker's `user:`
+# or --user), it leaves /data alone and runs the server as that user, stopping
+# with a message if /data can't be written. Either way the server replaces the
+# script (exec), so it gets Docker's stop signal and saves everyone.
+COPY --chmod=755 <<'EOF' /usr/local/bin/entrypoint.sh
+#!/bin/sh
+set -eu
+server=/usr/local/bin/hall-of-worlds-server
+data="${HOW_DATA:-/data}"
+if [ "$(id -u)" != 0 ]; then
+    if [ ! -w "$data" ]; then
+        echo "$data can't be written by user $(id -u):$(id -g). Give it to that user (chown -R $(id -u):$(id -g) on the volume), or leave out user: and set PUID and PGID instead." >&2
+        exit 1
+    fi
+    exec "$server" "$@"
+fi
+for id in "$PUID" "$PGID"; do
+    case "$id" in
+        '' | *[!0-9]*)
+            echo "PUID and PGID must be numbers, not '$PUID' and '$PGID'." >&2
+            exit 1
+            ;;
+    esac
+done
+mkdir -p "$data"
+if ! find "$data" \( ! -user "$PUID" -o ! -group "$PGID" \) -exec chown -h "$PUID:$PGID" {} +; then
+    echo "Some files in $data couldn't be given to $PUID:$PGID." >&2
+fi
+exec setpriv --reuid="$PUID" --regid="$PGID" --clear-groups -- "$server" "$@"
+EOF
+ENV PUID=$PUID \
+    PGID=$PGID \
+    HOW_ADDRESS=0.0.0.0:24690 \
     HOW_WEB=/srv/web \
     HOW_DATA=/data
 VOLUME /data
 EXPOSE 24690 24691
 # Asks /_healthz on the plain port (HOW_ADDRESS), which answers even while
 # only the secure port serves the game. Making a new world takes a while.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3     CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]
-ENTRYPOINT ["/usr/local/bin/hall-of-worlds-server"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["/usr/local/bin/hall-of-worlds-server", "--health"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

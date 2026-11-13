@@ -214,7 +214,7 @@ fn the_claim_code_as_a_name_makes_the_account_the_owner() {
     );
     let told = server.send(&guest, named(&code));
     assert!(
-        matches!(&told[..], [ServerMessage::Refused(why)] if why.contains("guest")),
+        matches!(&told[..], [ServerMessage::CharacterRefused(why)] if why.contains("guest")),
         "{told:?}"
     );
 

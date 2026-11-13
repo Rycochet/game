@@ -59,6 +59,7 @@ mod window_follow;
 mod window_open;
 #[cfg(not(target_arch = "wasm32"))]
 mod window_save;
+mod wording;
 mod world;
 
 pub use account_role::{AccountRole, OpenAccounts};
@@ -66,8 +67,8 @@ pub use browser::open_in_browser;
 pub use characters::{CharacterChoice, CharacterSelect, PlayFor, PlayableHere};
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
-    AbilitiesPage, CancelledEnergy, CarryLimit, Dressing, MakesCharacters, MakingCharacter, Other,
-    PlayerGait, PlayerSize, PlayerSpeed, SkillsPage, SpentEnergy,
+    AbilitiesPage, CancelledEnergy, CarryLimit, CharacterRefused, Dressing, MakesCharacters,
+    MakingCharacter, Other, PlayerGait, PlayerSize, PlayerSpeed, SkillsPage, SpentEnergy,
 };
 pub use debug::{
     CreateMobOrder, DebugInfo, DebugTools, DetectMonsters, FreezeMobs, GodMode, InspectedMob,
@@ -119,6 +120,7 @@ pub use view::{ViewFacing, ViewStats, ViewTurn};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};
 pub use window::{KeepDrawing, frame_settings};
+pub use wording::Wording;
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
 pub struct CommonPlugin;
@@ -134,6 +136,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<RememberWindow>()
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
+            .init_resource::<Wording>()
             .init_resource::<KeepDrawing>()
             .init_resource::<OwnVitals>()
             .init_resource::<BottomHud>()
@@ -185,6 +188,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<Sneaking>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
+            .init_resource::<CharacterRefused>()
             .init_resource::<CharacterSelect>()
             .init_resource::<PlayFor>()
             .init_resource::<PlayableHere>()

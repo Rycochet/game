@@ -19,6 +19,7 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
 | Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map (going into a place you know of whose circle your own overlaps by about a fifth) | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
 | Close the open doors beside you, and lock the closed ones you have the key for | L | Not yet |
+| Talk to someone in a town: their quests, and a shop's wares (a "!" over a door has a quest for you, a "?" one to hand in, a grey "!" one for later) | Click their door, and walk there | Tap the door |
 | Turn to face a place | Right-click it | Hold a finger on it |
 | Turn left or right (a tap turns an eighth, holding keeps turning) | Choose keys for Turn Left and Turn Right in Settings, Controls (none to begin with), or the movement pad's curved arrows | The movement pad's curved arrows |
 

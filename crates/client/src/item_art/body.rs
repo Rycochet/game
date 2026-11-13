@@ -168,13 +168,34 @@ fn limbs(triangles: &mut Vec<Triangle>, layout: &Layout) {
 /// The neck from the top of the spine, and the head on it with its snout, ears, horns
 /// and tusks.
 fn neck_and_head(triangles: &mut Vec<Triangle>, layout: &Layout) {
-    // An animal's measured head, on a neck carrying on from its trunk.
+    // A measured head: an animal's on a neck carrying on from its trunk, a beast
+    // people's on a person's neck, which neck armour is made to fit.
     if let Some(shape) = layout.head.shape {
+        if layout.frame().is_some() {
+            neck(triangles, layout);
+        } else {
+            head::neck(triangles, layout);
+        }
         head::build(triangles, layout, &shape);
         extras::build(triangles, layout);
         return;
     }
-    // The neck, a little into the trunk and the head.
+    neck(triangles, layout);
+    let head = layout.head;
+    blob(
+        triangles,
+        features::skull(layout),
+        Vec3::new(
+            head.half.0 as f32,
+            head.length as f32 / 2.0,
+            head.half.1 as f32,
+        ),
+    );
+    features::head(triangles, layout, &layout.parts);
+}
+
+/// A person's neck: round, from a little into the trunk to a little into the head.
+fn neck(triangles: &mut Vec<Triangle>, layout: &Layout) {
     let axes = trunk::Axes::of(layout);
     let neck_base = trunk::neck_root(layout);
     let chin = point(layout.chin());
@@ -187,17 +208,6 @@ fn neck_and_head(triangles: &mut Vec<Triangle>, layout: &Layout) {
             (chin + up_neck * 20.0, neck),
         ],
     );
-    let head = layout.head;
-    blob(
-        triangles,
-        features::skull(layout),
-        Vec3::new(
-            head.half.0 as f32,
-            head.length as f32 / 2.0,
-            head.half.1 as f32,
-        ),
-    );
-    features::head(triangles, layout, &layout.parts);
 }
 
 /// The body's skin, and apart from it the coat of a taur's lower body, which may be

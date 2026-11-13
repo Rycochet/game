@@ -23,6 +23,7 @@ pub(crate) fn answer_quest(client: &mut Client, world: &mut ServerWorld, ask: Qu
                 .map(|offered| Offer {
                     id: offered.quest.id,
                     kind: offered.quest.kind,
+                    giver: offered.quest.story.cast.giver().person.clone(),
                     state: offered.state,
                 })
                 .collect();

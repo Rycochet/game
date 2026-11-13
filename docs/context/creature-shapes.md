@@ -1,6 +1,6 @@
 # Plan: more accurate creature models
 
-Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks), PR 3 (animal heads, ears, necks, tails) and PR 4 (humanoid trunks) are built. Each PR keeps this file up to date.
+Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks), PR 3 (animal heads, ears, necks, tails), PR 4 (humanoid trunks) and PR 5 (beast peoples' heads) are built. Each PR keeps this file up to date.
 
 ## Goal
 
@@ -50,7 +50,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 | 2 | Trunk outlines for the four-legged animals (built) | 1 | blocking |
 | 3 | Animal heads, ears, necks, tails (built) | 2 | independent |
 | 4 | Humanoid trunk and limbs from the base human (built) | 2 | independent |
-| 5 | Beast peoples' heads | 3 | waits for 3 |
+| 5 | Beast peoples' heads (built) | 3 | waits for 3 |
 | 6 | Markings | 2 | independent |
 
 ### PR 1: measuring tool (built)
@@ -94,9 +94,12 @@ How it measures, and what to know when using the figures:
 - Client: an upright ring is drawn as half an oval in front of the spine and half behind (a level one, a beast's, as one oval round its middle as before; between for a leaning spine), and `trunk_half` gives a `Girth { across, front, back }` in that shape; `trunk_depth` takes which side. Torso shells, waist `Hips` (and so underclothes), neck `Around`, shoulders and capes follow it; beards and hanging hair keep off the rings' front and back.
 - Limbs were left as they were: the measured bones match the frames within a few millimetres (thigh 82 to 54 mm, shin 56 to 30, upper arm 45 to 38, forearm 38 to 23 against our 42 to 28).
 
-### PR 5: beast peoples' heads
-- Minotaur from the cow head, kobold and lizardfolk from the reptile mouth, others where a target fits.
-- Helmets already allow for snouts (`crates/client/src/item_art/armour/head/face.rs`): check them against the new shapes.
+### PR 5: beast peoples' heads (built)
+- The tool also measures the base person's own head (`PERSON_HEAD`) and JALdMIC's reptile muzzle on a person (`REPTILE_HEAD`, `animal02/jaldmic_furry_mouth_reptile.target`, already in the sources), and prints each head's length in the mesh, now kept as `MeasuredHead::length` (the hen's is 0): heads on the same person compare by it.
+- `Biped::head` (an optional `MeasuredHead`): the minotaur the cow's, the kobold and lizardfolk the reptile's. `MeasuredHead::on_frame(frame, snout)` (`body/head_on_frame.rs`, and `snout.rs`, `inside.rs` beside it) fits the person's head to the frame's oval and puts the other head where it sits on the same body, then: stretches what is in front of the face so the nose is the people's own `snout_length` past it (the reptile muzzle measured only about 50 mm; the cow's already about 110), its top never under a straight line from the brow to the nose; keeps the skull (behind 0.3 of the way from the oval's middle to its front) inside the oval's slice ring by ring; and keeps the muzzle's top 12 mm under the brow (0.6 of the head's height, as helmets' faces have it), so brims and face openings aren't pierced. The frame is unchanged (`Head::length` and `half` stay the frame's for bipeds), so everything worn is built as before.
+- Client: a shaped biped head keeps a person's round neck (neck armour fits it) and is drawn from its rings, with ears (the minotaur's `Ears::Sideways`) and horns placed on its crown; `features::head` (the old snout cones) is only for oval heads. `item_art/body/head/tests.rs` checks each beast people's skull stays within 8 mm of the oval and its muzzle under the brow.
+- Closed helmets already don't go over a snout, beak or horns (`shared::wear`, owner 2026-11-04), so only open ones were checked: Item Pictures' Bodies page now ends with each beast people bare, in a coif, a helmet and aventail and 29 open helmets (`debug_menu/panels/beast_heads.rs`). All fit; horns pass out through bowls and brims, as before.
+- No other people changed: human, elf, dwarf, halfling, orc and goblin keep their oval heads (no target fits better), and birdfolk keep their beak (no bird head in the packs). `DOG_HEAD` is still unused.
 
 ### PR 6: markings
 - New `Pattern` options (`crates/shared/src/sheet.rs`: pale belly, face mask, patches), chosen when a creature is made, as other looks are.

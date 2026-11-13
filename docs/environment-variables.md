@@ -71,6 +71,15 @@ Every secret can be given in a file instead, by adding `_FILE` to its name. The 
 | `LOG_LEVEL` | `info` | How much to log: `error`, `warn`, `info`, `debug` or `trace`. `debug` adds a line a second for each connection's round trip, for looking into network trouble. |
 | `RUST_LOG` | none | Filters the log by crate, overriding `LOG_LEVEL`. For example `server=debug,info`. |
 
+## Docker image
+
+Only the [Docker image](hosting/#user-and-group) reads these, before it starts the server.
+
+| Variable | Default | What it does |
+| -------- | ------- | ------------ |
+| `PUID` | `1000` | The user the server runs as. The container gives it anything in `/data` that isn't its own first. Ignored when the container is started as another user (Docker's `user:`). |
+| `PGID` | `1000` | The group the server runs as, and gives `/data` to, as for `PUID`. |
+
 ## Debugging
 
 A real server can ignore these.

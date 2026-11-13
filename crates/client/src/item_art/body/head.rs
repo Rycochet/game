@@ -53,9 +53,8 @@ pub(in crate::item_art) fn crown(shape: &HeadShape) -> Ring {
         .unwrap_or_default()
 }
 
-/// The neck and the head, with what is on the head.
+/// The head, with what is on it (the neck is drawn first, by `neck` for an animal).
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout, shape: &HeadShape) {
-    neck(triangles, layout);
     let axes = HeadAxes::of(layout, shape);
     let rings: Vec<Vec<Vec3>> = shape
         .rings
@@ -86,7 +85,7 @@ fn oval(middle: Vec3, across: Vec3, deep: Vec3) -> Vec<Vec3> {
 
 /// From a little inside the trunk's last ring, as wide and deep as it, narrowing up to
 /// the head as thick as the neck says, a little deeper than wide.
-fn neck(triangles: &mut Vec<Triangle>, layout: &Layout) {
+pub(super) fn neck(triangles: &mut Vec<Triangle>, layout: &Layout) {
     let rings = neck_rings(layout).map(|(middle, across, under)| oval(middle, across, under));
     loft(triangles, &rings);
 }
@@ -261,3 +260,6 @@ fn comb(triangles: &mut Vec<Triangle>, tall: f32, shape: &HeadShape, axes: &Head
         );
     }
 }
+
+#[cfg(test)]
+mod tests;

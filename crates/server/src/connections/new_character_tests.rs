@@ -2,7 +2,9 @@
 
 use shared::creature::CreatureKind;
 use shared::gender::Gender;
-use shared::protocol::{ClientLink, ClientMessage, ServerMessage, local_pair};
+use shared::protocol::{
+    ClientLink, ClientMessage, Credentials, GuestToken, ServerMessage, local_pair,
+};
 use shared::sheet::{Appearance, Build, Dot, Sheet};
 use shared::world::WorldSeed;
 
@@ -101,7 +103,7 @@ fn what_a_new_guest_asks_for_is_checked() {
         let _ = tick(connections, world);
         let told = answers(&end);
         assert!(
-            matches!(told[..], [ServerMessage::Refused(_)]),
+            matches!(told[..], [ServerMessage::CharacterRefused(_)]),
             "{asked:?}: {told:?}"
         );
     }
@@ -188,4 +190,66 @@ fn deleting_a_character_offers_the_rest_and_a_new_one_has_a_new_id() {
     let characters = &connections.accounts.account(&account).unwrap().characters;
     assert_eq!(characters.len(), 1);
     assert_eq!((characters[0].id, characters[0].name.as_str()), (new, "Bo"));
+}
+
+#[test]
+fn a_taken_name_is_turned_down_and_the_player_chooses_again() {
+    let (first, connections, world) = new_guest();
+    first.send(&make("Brin", CreatureKind::Dwarf, strong()));
+    let (mut connections, world) = tick(connections, world);
+    let _ = answers(&first);
+
+    let (end, link) = local_pair();
+    connections.add(link);
+    end.send(&MAKES);
+    // Another guest.
+    end.send(&ClientMessage::Login(Credentials::Guest(GuestToken(
+        [2; 32],
+    ))));
+    let (connections, world) = tick(connections, world);
+    let _ = answers(&end);
+    // Whatever its capitals.
+    end.send(&make("brin", CreatureKind::Dwarf, strong()));
+    let (connections, world) = tick(connections, world);
+    let told = answers(&end);
+    assert!(
+        matches!(&told[..], [ServerMessage::CharacterRefused(why)] if why.contains("taken")),
+        "{told:?}"
+    );
+    // Still connected and choosing: another name will do.
+    assert_eq!(connections.clients[1].phase, Phase::Choosing);
+    end.send(&make("Ash", CreatureKind::Dwarf, strong()));
+    let _ = tick(connections, world);
+    let told = answers(&end);
+    assert!(matches!(told[0], ServerMessage::Welcome { .. }), "{told:?}");
+}
+
+#[test]
+fn a_female_character_may_not_have_a_beard() {
+    let bearded = Appearance(std::collections::BTreeMap::from([(
+        shared::sheet::Trait::Beard,
+        2,
+    )]));
+    let asked = |gender| {
+        ClientMessage::CreateCharacter(shared::protocol::NewCharacter {
+            gender,
+            appearance: bearded.clone(),
+            ..match make("Brin", CreatureKind::Dwarf, strong()) {
+                ClientMessage::CreateCharacter(new) => new,
+                _ => unreachable!(),
+            }
+        })
+    };
+    let (end, connections, world) = new_guest();
+    end.send(&asked(Gender::Female));
+    let _ = tick(connections, world);
+    let told = answers(&end);
+    assert!(
+        matches!(told[..], [ServerMessage::CharacterRefused(_)]),
+        "{told:?}"
+    );
+    let (end, connections, world) = new_guest();
+    end.send(&asked(Gender::Male));
+    let _ = tick(connections, world);
+    assert!(matches!(answers(&end)[0], ServerMessage::Welcome { .. }));
 }

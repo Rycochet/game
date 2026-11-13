@@ -39,11 +39,14 @@ pub(crate) fn accept(
         return refuse(client, id, QuestRefusal::TooMany);
     }
     let counts = vec![0; quest.steps.len()];
-    client
-        .character
-        .quests
-        .taken
-        .insert(id, Progress { at: now, counts });
+    client.character.quests.taken.insert(
+        id,
+        Progress {
+            at: now,
+            counts,
+            ready: false,
+        },
+    );
     client.unsaved = true;
     info!("{} took quest {id:?}", client.in_log());
     learn_targets(client, world, &quest)

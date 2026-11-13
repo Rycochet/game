@@ -16,6 +16,15 @@ use crate::world_map::{gate_picture, gate_picture_name, poi_picture, poi_picture
 /// where it goes and how opaque it is.
 pub(super) type Stamp = (String, Part, u32, (f32, f32), f32);
 
+/// The world points a box of the map covers, as whole points round it.
+pub(super) fn area_of(grid_box: ((f64, f64), (f64, f64))) -> ((i64, i64), (i64, i64)) {
+    let ((min_x, min_y), (max_x, max_y)) = grid_box;
+    (
+        (min_x.floor() as i64, min_y.floor() as i64),
+        (max_x.ceil() as i64, max_y.ceil() as i64),
+    )
+}
+
 /// Gets ready what is stamped on a map: shop signs in a site, pois and World
 /// Gates on the world map. Also says whether any picture is still loading.
 pub(super) fn prepare_stamps(
@@ -54,11 +63,7 @@ pub(super) fn prepare_stamps(
                 .filter_map(|(portal, _)| portal.poi())
                 .map(|poi| (poi.x.rem_euclid(width), poi.y))
                 .collect();
-            let ((min_x, min_y), (max_x, max_y)) = grid_box;
-            let area = (
-                (min_x.floor() as i64, min_y.floor() as i64),
-                (max_x.ceil() as i64, max_y.ceil() as i64),
-            );
+            let area = area_of(grid_box);
             for poi in world.pois.in_area(area.0, area.1) {
                 let at = projection.to_picture(poi.x as f64, poi.y as f64);
                 let opacity = if completed.contains(&(poi.x.rem_euclid(width), poi.y)) {

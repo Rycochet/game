@@ -1,6 +1,6 @@
 # Quests (plan)
 
-The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins), PR 1 (this note), PR 2 (`shared::quest`, see `shared/quest.md`) and PR 3 (the server, `server/server.md`'s `quests`) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
+The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins), PR 1 (this note), PR 2 (`shared::quest`, see `shared/quest.md`), PR 3 (the server, `server/server.md`'s `quests`) and PR 4 (the talk panel and markers: `client/talk.md`, `client/quests.md`) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
 
 ## Goal
 
@@ -115,7 +115,7 @@ Future skill-tree nodes quests will use through alternatives and skill requireme
 | 1 | **This design note** (built), decisions.md entries, CLAUDE.md row | | |
 | 2 | **`shared::quest`** (built): model, generator (givers, slots, nearby pois, templates, roles), step graph, poi hooks, room for alignment requirements and changes; names and text through `shared::story`; golden tests and a print-to-text test | 1, Flavour text PR 3 | |
 | 3 | **Server** (built): offers by door, accept, abandon, fail (an hour before retaking), turn in (all-or-nothing coin rewards), progress events (kills, visits, exploring, deliveries by arriving), per-planet lists and cap, standing from quests and hostile kills, character saves, protocol messages, `server.quests` / `server.quest` | 0, 2 | |
-| 4 | Client: talk panel (markup), door markers ("!", "?", grey "!", colours), poi markers, Hall gate markers | 3 | |
+| 4 | **Client** (built): talk panel (markup) folding in the shop panel, door markers ("!", "?", grey "!", colours), poi markers (world map and maps), Hall gate markers (`QuestNews::Planets`) | 3 | |
 | 5 | Quest Log panel (L) with the planet dropdown and history; Close Doors to O as Open/Close Doors | 4 | independent |
 | 6 | Tracked quest under the minimap, objective dots and arrows | 4 | independent |
 | 7 | Quest items (tag, unique items, drops), shared quest mobs, lone bosses with red "!", "already done" answers, slay top-ups | 4 | independent |

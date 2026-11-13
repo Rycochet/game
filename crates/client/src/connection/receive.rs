@@ -146,6 +146,7 @@ pub(super) fn receive(
             Ok(Some(
                 message @ (ServerMessage::LoginOptions { .. }
                 | ServerMessage::Characters { .. }
+                | ServerMessage::CharacterRefused(_)
                 | ServerMessage::Role(_)
                 | ServerMessage::OpenLogin { .. }
                 | ServerMessage::LoggedIn { .. }

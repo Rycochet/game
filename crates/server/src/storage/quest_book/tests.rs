@@ -22,6 +22,7 @@ fn a_book_comes_back_from_ron_as_it_was() {
         Progress {
             at: 100,
             counts: vec![2, 0],
+            ready: true,
         },
     );
     book.done.insert(

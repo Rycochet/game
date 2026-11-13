@@ -10,10 +10,10 @@ use super::{accept::accept, cache, give_up::end, offers, turn_in::turn_in};
 use crate::connections::tests::TestClient;
 use crate::storage::RETAKE_AFTER;
 
-const NOW: i64 = 1_800_000_000;
+pub(super) const NOW: i64 = 1_800_000_000;
 
 /// A town near the start with a quest anyone may take that pays coins.
-fn a_town(test: &mut TestClient) -> (ChunkPos, Quest) {
+pub(super) fn a_town(test: &mut TestClient) -> (ChunkPos, Quest) {
     let (x, y) = test.client.world_position();
     let reach = 12 * CHUNK_SIZE;
     let mut towns: Vec<_> = (test
@@ -200,6 +200,7 @@ fn kills_and_arrivals_move_steps_on() {
         crate::storage::Progress {
             at: NOW,
             counts: vec![0; quest.steps.len()],
+            ready: false,
         },
     );
     let other = if kind == CreatureKind::Kobold {

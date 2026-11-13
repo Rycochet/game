@@ -102,7 +102,7 @@ pub(crate) fn answer(
         ClientMessage::CreateCharacter(asked) => {
             match create(client, asked, accounts, options.difficulties) {
                 Ok(()) => true,
-                Err(reason) => refuse(client, reason),
+                Err(not_made) => not_made.tell(client),
             }
         }
         // Choosing again after one was deleted (dev tools, Ironman): steps and
