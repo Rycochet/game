@@ -1,6 +1,6 @@
 # Quests (plan)
 
-The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins), PR 1 (this note) and PR 2 (`shared::quest`, see `shared/quest.md`) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
+The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins), PR 1 (this note), PR 2 (`shared::quest`, see `shared/quest.md`) and PR 3 (the server, `server/server.md`'s `quests`) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
 
 ## Goal
 
@@ -54,7 +54,7 @@ Quests from talking to the people of a town, sending a character to nearby place
 
 ## Standing, chains and alignment
 
-- **Standing** per character per town, tiers Stranger, Known, Trusted, Honoured, Champion (Claude), from quests and helpful acts: killing hostile mobs within the town's radius, trading at its shops, giving to its beggars (`mob::Memory` records gifts) (Claude).
+- **Standing** per character per town, tiers Stranger, Known, Trusted, Honoured, Champion (Claude), from quests and helpful acts: killing hostile mobs within the town's radius, trading at its shops, giving to its beggars (`mob::Memory` records gifts) (Claude). Built in PR 3 (Claude's figures, to balance): Known from 15 points, Trusted 30, Honoured 75, Champion 150; a normal quest handed in 15, a daily 5, a hostile kill within a town's reach 1, kills alone up to 15 (Known); trading and gifts are left for PR 10.
 - **Chains in a town:** a shared seed and cast, N+1 needs N; "I heard you helped X" is a quest done for another giver (**owner**).
 - **Across towns (owner):** commoner from smaller to larger, and with no recursive generation, only town size by step: a quest may only require one from a **smaller** town joined by road (ties by chunk order), so City → Town → Village → Hamlet, at most four deep, and each town's quests come from its own seed alone. The smaller town has one **feeder** quest, fixed by its own seed, which may name the larger town (its name only, not its quests).
 - **From the plot research (owner):** dark quests (murder, revenge, theft, framing, silencing) only for characters with a bad alignment, and a quest with an alignment requirement is **hidden entirely** (no grey "!", no hint); twists and moral quandaries only in later chain steps, and finishing them may move alignment; Learning is an eighth reason, and training a skill can be a direct reward; the text names the real reward; checkable season and weather beats only in higher-reward quests.
@@ -114,7 +114,7 @@ Future skill-tree nodes quests will use through alternatives and skill requireme
 | 0 | **Coin items** (built, #447): Copper, Silver, Gold kinds turning into the next, mob spawns by copper amount, saved coins as copper | | independent of 1, 2 |
 | 1 | **This design note** (built), decisions.md entries, CLAUDE.md row | | |
 | 2 | **`shared::quest`** (built): model, generator (givers, slots, nearby pois, templates, roles), step graph, poi hooks, room for alignment requirements and changes; names and text through `shared::story`; golden tests and a print-to-text test | 1, Flavour text PR 3 | |
-| 3 | Server: offers by door, accept, abandon, fail (an hour before retaking), turn in (all-or-nothing coin rewards), progress events, per-planet lists and cap, standing, character saves, protocol messages | 0, 2 | |
+| 3 | **Server** (built): offers by door, accept, abandon, fail (an hour before retaking), turn in (all-or-nothing coin rewards), progress events (kills, visits, exploring, deliveries by arriving), per-planet lists and cap, standing from quests and hostile kills, character saves, protocol messages, `server.quests` / `server.quest` | 0, 2 | |
 | 4 | Client: talk panel (markup), door markers ("!", "?", grey "!", colours), poi markers, Hall gate markers | 3 | |
 | 5 | Quest Log panel (L) with the planet dropdown and history; Close Doors to O as Open/Close Doors | 4 | independent |
 | 6 | Tracked quest under the minimap, objective dots and arrows | 4 | independent |

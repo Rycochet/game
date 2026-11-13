@@ -24,6 +24,7 @@ mod latency;
 mod lets_encrypt;
 mod network;
 mod oidc;
+mod quests;
 mod roads;
 mod roles;
 mod save_queue;
@@ -193,6 +194,7 @@ impl Plugin for ServerPlugin {
                     connections::run_mobs,
                     connections::share_doors,
                     connections::sync_entities,
+                    connections::follow_quests,
                     connections::sync_ground,
                     connections::tell_the_time,
                     connections::tell_of_lightning,

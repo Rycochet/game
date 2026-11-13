@@ -33,7 +33,9 @@ pub(crate) fn add_server_methods(app: &mut App, data: Option<PathBuf>) {
     .add_debug_method("server.sites", sites)
     .add_debug_method("server.worlds", worlds::worlds)
     .add_debug_method("server.save", save)
-    .add_debug_method("server.tick", tick::tick);
+    .add_debug_method("server.tick", tick::tick)
+    .add_debug_method("server.quests", crate::quests::debug_api::quests)
+    .add_debug_method("server.quest", crate::quests::debug_api::quest);
     app.init_resource::<crate::clock::TickHold>();
 }
 

@@ -94,6 +94,8 @@ pub struct ServerWorld {
     forgotten: Forgotten,
     /// The wilderness's generator and what was made of it lately.
     pub(crate) wilderness: crate::wilderness::WildernessMaps,
+    /// Each town's quests, as worked out so far.
+    pub(crate) quests: crate::quests::TownQuests,
 }
 
 impl ServerWorld {
@@ -191,6 +193,7 @@ impl ServerWorld {
             stacks: crate::stack_limits::from_environment(),
             forgotten: Forgotten::default(),
             wilderness: crate::wilderness::WildernessMaps::new(&params),
+            quests: crate::quests::TownQuests::new(&params),
             params,
         };
         // Only new worlds, and those saved before going by the server's clock:

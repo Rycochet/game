@@ -137,6 +137,10 @@ fn saves_are_read_back() {
             visit: None,
             hall: Some(shared::spot::Spot::new(4, 1)),
         }),
+        quests: crate::storage::QuestBook {
+            standing: BTreeMap::from([(ChunkPos { x: -2, y: 3 }, 20)]),
+            ..Default::default()
+        },
         visit: Some(VisitSave {
             site,
             level: 1,

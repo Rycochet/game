@@ -117,7 +117,7 @@ fn looks(first: &SiteLevel, (ox, oy): (i64, i64)) -> (Vec<BuildingLook>, Vec<Fie
 
 /// A poi's site made with the generator version saved with it (the current one
 /// if nobody has been in), without starting a save for it.
-fn site_as_saved(world: &mut ServerWorld, poi: &Poi) -> Option<Site> {
+pub(in crate::sites) fn site_as_saved(world: &mut ServerWorld, poi: &Poi) -> Option<Site> {
     let id = SiteId::Poi(poi.chunk);
     let generator = Generator::for_site(poi.kind, poi.seed, poi.desert);
     let version = match world.sites.get(&id) {

@@ -243,17 +243,9 @@ pub struct CharacterWorldSave {
     /// Developer tools: where leaving a Dev Area takes them, while in one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dev_return: Option<DevReturn>,
-}
-
-/// Where a character was before going into a Dev Area, to go back to.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct DevReturn {
-    pub world_position: (i64, i64),
-    /// The site level, or the wilderness, they were on, if any.
-    pub visit: Option<VisitSave>,
-    /// Where in the Hall they were, if there.
-    #[serde(default, deserialize_with = "super::spot_compat::optional_spot")]
-    pub hall: Option<Spot>,
+    /// Their quests on this planet, and their standing in its towns.
+    #[serde(default)]
+    pub quests: super::QuestBook,
 }
 
 impl CharacterWorldSave {
@@ -297,4 +289,5 @@ pub struct VisitSave {
     pub from_wilderness: bool,
 }
 
+pub use super::dev_return::DevReturn;
 pub use super::known_poi::KnownPoi;

@@ -242,6 +242,7 @@ pub(super) fn receive(
                 | ServerMessage::EntitySeen(_)
                 | ServerMessage::Moves(_)
                 | ServerMessage::Turned(_)
+                | ServerMessage::Quest(_)
                 | ServerMessage::EntityGone { .. }),
             )) => {
                 from_server.write(FromServer(message));

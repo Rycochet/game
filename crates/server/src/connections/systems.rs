@@ -100,6 +100,15 @@ pub(crate) fn sync_entities(
     });
 }
 
+/// Every tick: follows everyone for quests (their log, arriving at places,
+/// the markers of the town they are in).
+pub(crate) fn follow_quests(
+    mut connections: ResMut<Connections>,
+    mut worlds: ResMut<ServerWorlds>,
+) {
+    for_each_world(&mut connections.clients, &mut worlds, crate::quests::follow);
+}
+
 /// Every tick: tells everyone what has come to be on the ground under them.
 pub(crate) fn sync_ground(mut connections: ResMut<Connections>, mut worlds: ResMut<ServerWorlds>) {
     for_each_world(&mut connections.clients, &mut worlds, ground::sync);

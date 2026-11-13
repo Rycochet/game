@@ -293,4 +293,6 @@ pub enum ServerMessage {
     /// they face now (a stretch in `Moves` turns them by itself): one message
     /// a tick at most.
     Turned(Vec<(Id, crate::facing::Heading)>),
+    /// About quests (`QuestNews`).
+    Quest(super::QuestNews),
 }

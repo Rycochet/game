@@ -57,6 +57,8 @@ Server (`server/src/debug_api/methods.rs`; `--server` for the embedded one):
 - `server.cells {player?, radius?}`: a player's level around them as the server has it (secret doors included), rows from the north, `@` the player, blank outside the level, with a `legend` of the letters used, and `from` (the top-left cell).
 - `server.sites {world?}`: a world's sites loaded (the home unless given its id), their generator version and the levels with saves.
 - `server.tick {hold?, count?}` (`methods/tick.rs`): holds the action clock (`clock::TickHold`, a resource only the debug API adds) so it no longer follows real time, and moves it on by `count` ticks, one a frame; `hold: false` lets it run again. Answers `ticks`, `held`, `steps` still to come. For watching fights and mobs a step at a time.
+- `server.quests {player?, town?}` (`quests/debug_api.rs`): the player's quest book as saved (taken with counts, done, ended, dailies, standing points), standing with tiers, the log as the client is told it, and every giver of `town` (`{"x", "y"}`; the town the player is in if missing) with what they offer now: each quest's `id`, kind, `state`, steps and requirements.
+- `server.quest {player?, act, id?, step?, town?, points?}`: drives quests as if at the giver's door: `act` is `accept`, `turn_in`, `abandon`, `fail`, `step` (finishes `step`, or every step), or `standing` (adds `points` in `town`). `id` as `server.quests` gives it.
 - `server.save`: saves everything changed and answers once it is written (`written`: whether all of it was, within 8 s).
 
 ## Scenarios

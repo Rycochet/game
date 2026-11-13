@@ -21,7 +21,9 @@ use crate::saves::{LoadError, Save, SaveKey};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod characters;
+mod dev_return;
 mod known_poi;
+mod quest_book;
 mod roads;
 mod saves;
 mod sites;
@@ -30,6 +32,9 @@ mod spot_map;
 mod unsaved;
 
 pub use characters::Everywhere;
+#[cfg(test)]
+pub use quest_book::RETAKE_AFTER;
+pub use quest_book::{Ended, Progress, QuestBook};
 pub use roads::RoadSave;
 pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, DevReturn, KnownPoi, LevelSave, MobRecord,

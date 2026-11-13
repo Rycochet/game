@@ -22,7 +22,7 @@ Also keeps `common::ServerClock`: `run_clock` runs the server's clock in real ti
 
 - `ServerProbe`, `ProbeResult`: asking an address whether a Hall of Worlds server is there before connecting (Connect's check).
 - `ToServer(ClientMessage)` (message): send this to the server (at the end of the frame).
-- `FromServer(ServerMessage)` (message): a map message from the server (`Welcome`, `EnterLevel`, `LevelCells`, `OnWorldMap`, `Teleported`), read by `site`; `Inventory`, read by `inventory`.
+- `FromServer(ServerMessage)` (message): a map message from the server (`Welcome`, `EnterLevel`, `LevelCells`, `OnWorldMap`, `Teleported`), read by `site`; `Inventory`, read by `inventory`; `Quest`, forwarded for the quest screens to come (Quest system PR 4), read by nothing yet.
 - `ServerConnection` (resource): the link to the server, and the embedded server (native); removed while disconnected and on quitting.
 - `server_key(text)` (native): the key fingerprint in a pasted certificate or fingerprint, for `system_menu`'s Connect.
 
