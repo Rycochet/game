@@ -9,6 +9,7 @@ mod anti_aliasing;
 mod bands;
 mod camera;
 mod clearance;
+mod light_clusters;
 mod render_scale;
 mod token;
 
@@ -32,6 +33,11 @@ pub const CAMERA_FOV_DEGREES: f32 = 20.0;
 /// Starting camera distance from the point it looks at; with the narrow field
 /// of view this frames the world map's whole 400×400 window.
 pub const CAMERA_DISTANCE: f32 = 1100.0;
+
+/// How far the camera draws: well beyond the default range, as it is far
+/// away (in the Hall of Worlds it looks 70 tiles along, further out). Its
+/// light slices end here too (`light_clusters`).
+const DRAW_DISTANCE: f32 = CAMERA_DISTANCE * 3.0;
 
 /// Starting camera angle above the horizon.
 pub const CAMERA_PITCH_DEGREES: f32 = 34.0;
@@ -154,11 +160,10 @@ fn spawn_camera(
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
             fov: CAMERA_FOV_DEGREES.to_radians(),
-            // The camera is far away, so draw well beyond the default range:
-            // in the Hall of Worlds it looks 70 tiles along, further out.
-            far: CAMERA_DISTANCE * 3.0,
+            far: DRAW_DISTANCE,
             ..default()
         }),
+        light_clusters::light_clusters(DRAW_DISTANCE),
         orbit.transform(Vec3::ZERO),
         // The default tonemapping desaturates colours (pastel); show the
         // colours as authored instead.
