@@ -1,5 +1,6 @@
 //! The marks layer: a see-through picture over each map holding only what
-//! moves (the player's mark, and dots for mobs and other players), so that
+//! moves (the player's mark, dots for mobs and other players, and the
+//! followed quest's dots), so that
 //! someone stepping redraws this layer and not the map under it.
 
 use bevy::prelude::*;
@@ -10,8 +11,10 @@ use super::canvas::Canvas;
 use super::marks::player_mark;
 use super::others::{Seen, draw_others, seen};
 use super::projection::Projection;
+use super::quest_dots::{QuestMarks, draw_quest_dots};
 use crate::common::{CurrentDungeon, MapPosition, Other, OtherLevels, SmoothPosition, Token};
 use crate::player::Player;
+use crate::quests::TrackedDots;
 
 /// What the map under the marks was last drawn with, which they must match:
 /// set by `draw_maps` whenever it draws.
@@ -41,6 +44,7 @@ pub(super) struct MarksFrom {
     under: Under,
     player: (f64, f64),
     others: Vec<Seen>,
+    quest: QuestMarks,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -52,6 +56,7 @@ pub(super) fn draw_marks(
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     others: Query<(&MapPosition, &Token), With<Other>>,
+    dots: Res<TrackedDots>,
     mut last: Local<Option<MarksFrom>>,
 ) {
     let Some(under) = layer.0 else {
@@ -66,6 +71,7 @@ pub(super) fn draw_marks(
             Some(_) => Vec::new(),
             None => seen(&others, spot, under.wrap),
         },
+        quest: QuestMarks::of(&dots, spot, &under),
     };
     if last.as_ref() == Some(&now) {
         return;
@@ -98,10 +104,12 @@ pub(super) fn draw_marks(
     *last = Some(now);
 }
 
-/// Paints the marks on a cleared layer: others first, so the player is on top.
+/// Paints the marks on a cleared layer: the followed quest's dots, then
+/// others, so the player is on top.
 pub(super) fn paint(canvas: &mut Canvas, from: &MarksFrom) {
     canvas.fill([0, 0, 0, 0]);
     let under = &from.under;
+    draw_quest_dots(canvas, under, &from.quest);
     draw_others(canvas, under, &from.others);
     let player_at = under.projection.to_picture(from.player.0, from.player.1);
     player_mark(
@@ -120,6 +128,7 @@ pub(super) fn marks_from(under: Under, player: (f64, f64), others: Vec<Seen>) ->
         under,
         player,
         others,
+        quest: QuestMarks::default(),
     }
 }
 

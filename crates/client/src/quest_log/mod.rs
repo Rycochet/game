@@ -28,6 +28,7 @@ impl Plugin for QuestLogPlugin {
             (
                 open::notice_closed,
                 open::toggle_log,
+                open::open_on_quest,
                 read::read_server,
                 input::read_events,
                 show::show_log,

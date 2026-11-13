@@ -10,6 +10,20 @@ use super::{
 use crate::dom::Dom;
 use crate::widgets::CLOSE_PIXELS;
 
+/// How far down the minimap's top edge is, as in its markup.
+const MINIMAP_TOP: f32 = 8.0;
+
+/// Where the minimap is, in interface pixels from the window's top right
+/// corner (`right` 8, as in its markup), for what goes under it: its picture's
+/// bottom edge and size, and whether it shows (not while the full map is
+/// open).
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+pub struct MinimapArea {
+    pub bottom: f32,
+    pub across: f32,
+    pub shown: bool,
+}
+
 /// What the maps' elements were last told.
 #[derive(Clone, Default, PartialEq)]
 pub(super) struct Placed {
@@ -26,7 +40,12 @@ pub(super) struct Placed {
 
 /// Shows the minimap or the full map, and keeps their sizes, the full map's
 /// place in the middle of the window and its title.
-pub(super) fn place_maps(sources: Sources, mut dom: Dom, mut was: Local<Option<Placed>>) {
+pub(super) fn place_maps(
+    sources: Sources,
+    mut dom: Dom,
+    mut area: ResMut<MinimapArea>,
+    mut was: Local<Option<Placed>>,
+) {
     let window = Room::of(&sources.window, &sources.ui_scale);
     let open = sources.full.open;
     let mut now = was.clone().unwrap_or_default();
@@ -47,6 +66,14 @@ pub(super) fn place_maps(sources: Sources, mut dom: Dom, mut was: Local<Option<P
     }
     if was.as_ref() == Some(&now) {
         return;
+    }
+    let shown = MinimapArea {
+        bottom: MINIMAP_TOP + now.minimap,
+        across: now.minimap,
+        shown: !now.open,
+    };
+    if *area != shown {
+        *area = shown;
     }
     tell(&mut dom, was.as_ref(), &now);
     *was = Some(now);

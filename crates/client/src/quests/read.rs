@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::protocol::{QuestNews, ServerMessage};
 
-use super::{DoorMarkers, GateQuests, QuestBook, QuestPlanets};
+use super::{DoorMarkers, GateQuests, LevelDots, QuestBook, QuestPlanets};
 use crate::connection::FromServer;
 
 pub(super) fn read_server(
@@ -12,6 +12,7 @@ pub(super) fn read_server(
     mut doors: ResMut<DoorMarkers>,
     mut gates: ResMut<GateQuests>,
     mut planets: ResMut<QuestPlanets>,
+    mut dots: ResMut<LevelDots>,
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -21,6 +22,12 @@ pub(super) fn read_server(
                 *doors = DoorMarkers::default();
                 *gates = GateQuests::default();
                 *planets = QuestPlanets::default();
+                *dots = LevelDots::default();
+            }
+            ServerMessage::Quest(QuestNews::Dots(told)) => {
+                dots.0 = (told.iter())
+                    .map(|quest| (quest.id, quest.cells.clone()))
+                    .collect();
             }
             ServerMessage::Quest(QuestNews::Planets(told)) => {
                 gates.0 = (told.iter())

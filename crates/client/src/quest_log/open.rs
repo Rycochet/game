@@ -1,6 +1,7 @@
 //! Opening and closing the Quest Log: its key (L) opens it or closes it, and
 //! so does its close button; leaving the game closes it. Opening asks the
-//! server which planets the character has quest history on.
+//! server which planets the character has quest history on. Asked to open on
+//! a quest (`quests::OpenQuestLog`), it opens there.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, QuestAsk};
@@ -10,6 +11,7 @@ use super::state::LogPanel;
 use crate::common::{Action, GameView, Preferences, Session};
 use crate::connection::ToServer;
 use crate::dom::{UiEvent, UiValue, document, top_strip};
+use crate::quests::OpenQuestLog;
 use crate::widgets::UiId;
 
 pub(super) fn toggle_log(
@@ -29,6 +31,42 @@ pub(super) fn toggle_log(
         commands.entity(document).despawn();
         return;
     }
+    open_log(&mut panel, &mut to_server, &mut commands);
+}
+
+/// Opens the log on a quest of this planet when asked (the tracked quest
+/// under the minimap, clicked), or shows it there if open.
+pub(super) fn open_on_quest(
+    mut asked: MessageReader<OpenQuestLog>,
+    view: Res<State<GameView>>,
+    mut panel: ResMut<LogPanel>,
+    mut to_server: MessageWriter<ToServer>,
+    mut commands: Commands,
+) {
+    let Some(&OpenQuestLog(id)) = asked.read().last() else {
+        return;
+    };
+    if *view.get() == GameView::Connecting {
+        return;
+    }
+    if !panel.is_open() {
+        open_log(&mut panel, &mut to_server, &mut commands);
+    }
+    if panel.planet.take().is_some() {
+        // The chooser back on "Here".
+        panel.planets_dirty = true;
+    }
+    panel.chosen = Some(id);
+    panel.abandoning = false;
+    panel.dirty = true;
+}
+
+/// Opens the log, asking the server which planets it has quests on.
+fn open_log(
+    panel: &mut LogPanel,
+    to_server: &mut MessageWriter<ToServer>,
+    commands: &mut Commands,
+) {
     let document = commands
         .spawn(document(&QUEST_LOG))
         .insert(top_strip())

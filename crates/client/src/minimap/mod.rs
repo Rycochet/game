@@ -39,6 +39,7 @@ mod others;
 mod overlay;
 mod parts;
 mod place;
+mod quest_dots;
 mod quest_marks;
 mod redraw;
 mod room;
@@ -61,6 +62,7 @@ use layout::{
 use marks::{full_map_compass, minimap_border, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title};
 use parts::{FullMapDarkening, HoverRunesPicture, MapPictures};
+pub use place::MinimapArea;
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};
 use sources::{DrawnFrom, Sources};
@@ -146,6 +148,7 @@ pub struct MinimapPlugin;
 impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FullMap>()
+            .init_resource::<MinimapArea>()
             .init_resource::<hold::MinimapHold>()
             .init_resource::<WorldTiles>()
             .init_resource::<MapRivers>()

@@ -16,6 +16,13 @@ impl Visit {
         (stairs.x, stairs.y)
     }
 
+    /// The stairs at a cell of the level, for tests.
+    pub(crate) fn stairs_at(&self, (x, y): (i64, i64)) -> Option<shared::site::Stairs> {
+        (self.level.stairs.iter())
+            .find(|stairs| (stairs.x, stairs.y) == (x, y))
+            .copied()
+    }
+
     /// A walkable cell the player can't see, for tests.
     pub(crate) fn walkable_out_of_sight(&mut self) -> (i64, i64) {
         const SEARCH: i64 = 200;

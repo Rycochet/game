@@ -26,6 +26,7 @@ mod levels;
 mod moves;
 mod place;
 mod place_name;
+mod quest_dots;
 mod quest_place;
 mod remembered;
 mod shop_here;

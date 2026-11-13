@@ -41,6 +41,7 @@ mod system_menu;
 mod talk;
 mod target;
 mod touch;
+mod tracked_quest;
 mod ui;
 mod view3d;
 mod vitals;
@@ -143,6 +144,7 @@ fn main() {
     app.add_plugins(accounts_panel::AccountsPanelPlugin);
     app.add_plugins(quests::QuestsPlugin);
     app.add_plugins(quest_log::QuestLogPlugin);
+    app.add_plugins(tracked_quest::TrackedQuestPlugin);
     app.add_plugins(app_icon::AppIconPlugin);
 
     // Native only: developer tools. (The embedded single-player server is

@@ -8,6 +8,7 @@ use shared::poi::ChunkPos;
 use shared::world::WorldId;
 
 use super::clock::unix_now;
+use super::dots::{DotsSeen, tell_dots};
 use super::planets::tell_planets;
 use super::progress::{Event, advance};
 use super::{log, send_markers, standing};
@@ -17,7 +18,7 @@ use crate::sites::QuestPlace;
 use crate::storage::SiteId;
 
 /// What a client was last told about, for quests (`Client::quest_seen`).
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Seen {
     /// The world whose log it was sent.
     world: Option<WorldId>,
@@ -29,6 +30,8 @@ pub(crate) struct Seen {
     hall: bool,
     /// A planet whose log they asked for this tick (`planet_log`).
     planet_log: Option<WorldId>,
+    /// The maps' quest dots, as last sent.
+    pub(super) dots: DotsSeen,
 }
 
 impl Seen {
@@ -77,10 +80,15 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
     client.quest_seen.hall = in_hall;
     let place: Option<QuestPlace> = client.visit.as_ref().and_then(|visit| visit.quest_place());
     let key = place.map(|place| (place.poi.chunk, place.level));
-    if key == client.quest_seen.place {
-        return;
+    if key != client.quest_seen.place {
+        arrive(client, world, place, now);
     }
-    client.quest_seen.place = key;
+    tell_dots(client, world);
+}
+
+/// On coming to another place: steps moving on, and the town's markers.
+fn arrive(client: &mut Client, world: &mut ServerWorld, place: Option<QuestPlace>, now: i64) {
+    client.quest_seen.place = place.map(|place| (place.poi.chunk, place.level));
     client.quest_seen.town = place
         .filter(|place| place.poi.kind.is_town())
         .map(|place| place.poi.chunk);
