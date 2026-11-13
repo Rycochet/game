@@ -27,6 +27,7 @@ The Character Select screen: the account's characters in a grid on the left, eac
 
 ## Notes
 
+- Every login reaches it, guests and single player too (only Continue goes straight in). A guest's server offers no "+" while they have their one character, and offers it again once it is deleted.
 - Widget ids: `character_select/character.<n>` (in the grid's order, latest first), `/new`, `/play`, `/delete`, `/cancel`, `/change_user`, and the requester's `/really_delete` and `/keep`.
 - Pictures are to one scale: `item_art`'s portrait draws every kind with its frame at its usual height (`Frame::usual_height`), the tallest playable kind filling 85% of the picture's height, feet on the floor.
 - Health and Mana aren't shown: their most is worked out on joining, from playtime the client isn't told. Speed isn't either, as it goes by what is carried.

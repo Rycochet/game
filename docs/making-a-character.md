@@ -13,7 +13,7 @@ On your own you can have up to 8 characters, and so can an account on a server. 
 
 Characters on the startup menu shows your characters on this computer's own server, and Connect... shows them on the server you connect to, the one you played last first, each drawn to the same scale, so a kobold stands much shorter than a minotaur. Under each is its name and when you last played it. Choose one to see what it is like and when you made it, then press Play. Delete removes the chosen character for good, after asking you first. Cancel goes back to the startup menu. While you are logged in to an account (not as a guest), **Change User** at the bottom left forgets that login and asks again how to log in, so you can use another account or play as a guest.
 
-Play on the startup menu goes straight back to the character you played last on that server. It is greyed out until you have a character there.
+Continue on the startup menu goes straight back to the character you played last on that server. It is greyed out until you have a character there and are logged in to it (single player needs no login); as a guest, use Characters. A guest who deletes their character can make another.
 
 ## Kind and looks
 

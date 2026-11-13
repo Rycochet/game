@@ -29,9 +29,6 @@ pub(super) struct Connecting {
     /// Whether the server has offered characters since connecting: only its
     /// first offer may be played at once (`characters`).
     pub(super) offered: bool,
-    /// Whether this connection logged in as a guest, who goes straight into
-    /// play however it connected (owner, 2026-11-10).
-    pub(super) as_guest: bool,
     /// Counting down to the next try; `None` to try now.
     pub(super) retry: Option<Timer>,
 }
@@ -113,7 +110,6 @@ pub(super) fn connect(world: &mut World) {
     world.insert_resource(connection);
     let mut connecting = world.resource_mut::<Connecting>();
     connecting.offered = false;
-    connecting.as_guest = false;
     // Steps start again from the server's word.
     world.insert_resource(Prediction::default());
 }

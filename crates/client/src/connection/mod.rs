@@ -75,7 +75,6 @@ impl Plugin for ConnectionPlugin {
                 methods: Vec::new(),
                 tried_session: false,
                 offered: false,
-                as_guest: false,
                 retry: None,
             })
             .add_systems(
