@@ -8,7 +8,6 @@ use bevy::prelude::*;
 use server::debug_api::AddDebugMethod;
 
 // Split into files (`cargo xtask lint` keeps files small).
-mod burst;
 mod drawing;
 mod items;
 mod login;
@@ -30,10 +29,7 @@ use view::{cursor, interface, view, window_size};
 use world::{celestial, reveal_pois, set_time};
 
 pub(super) fn add(app: &mut App) {
-    app.init_resource::<burst::Burst>()
-        .add_systems(Last, burst::shoot)
-        .add_debug_method("tmp.burst", burst::burst)
-        .add_debug_method("client.state", state)
+    app.add_debug_method("client.state", state)
         .add_debug_method("client.screenshot", screenshot)
         // Asking the server.
         .add_debug_method("client.teleport", teleport)
