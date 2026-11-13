@@ -7,6 +7,7 @@ use crate::creature::{Location, Size};
 use crate::id::Id;
 use crate::item::{Favour, ItemKind, Known, Made, Placed, Quality, Saved, Shape};
 use crate::item_form::ItemForm;
+use crate::quest::QuestId;
 use crate::world::WorldId;
 
 /// When and where an item was made. Each world has its own clock, so a minute
@@ -59,6 +60,11 @@ pub struct Item {
     /// whole stack holds, of either sort.
     #[serde(default = "one")]
     pub count: u32,
+    /// The quest it belongs to, for a quest item (owner): worth nothing else,
+    /// never bought, given or traded, destroyed if dropped, and gone if the
+    /// quest fails or is given up. Each character's own.
+    #[serde(default)]
+    pub quest: Option<QuestId>,
 }
 
 /// What `count` is when a save doesn't say.
@@ -82,6 +88,7 @@ impl Item {
             known: Known::default(),
             above: Vec::new(),
             count: 1,
+            quest: None,
         }
     }
 

@@ -1,13 +1,13 @@
 //! Steps moving on: kills of a step's kind at its poi, and arriving at a
-//! step's poi (visiting it, reaching its deepest level, or a town delivered
-//! to). Only open steps count (`Quest::open_steps`). Bosses, quest items,
+//! step's poi (visiting it, reaching its deepest level, or a town its parcel
+//! is delivered to). Only open steps count (`Quest::open_steps`). Bosses, quest items,
 //! escorts and gathering count once those exist (later Quest system PRs).
 
 use shared::creature::CreatureKind;
 use shared::poi::ChunkPos;
 use shared::quest::{Hook, QuestId, Step, Target};
 
-use super::{cache, done_flags, log, tell_markers};
+use super::{cache, done_flags, log, parcels, tell_markers};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::QuestPlace;
@@ -77,15 +77,28 @@ pub(crate) fn moved_on(
     };
     progress.counts.resize(quest.steps.len(), 0);
     let mut moved = false;
+    let mut delivered = false;
     for i in quest.open_steps(&done_flags(&quest, &progress.counts)) {
         let step = &quest.steps[i];
         if event.counts_for(step) {
+            // A delivery needs its parcel, which is handed over on arriving.
+            if matches!(step.target, Target::Town { .. })
+                && !parcels::deliver(&mut client.inventory, id)
+            {
+                continue;
+            }
+            delivered |= matches!(step.target, Target::Town { .. });
             let most = step.count.unwrap_or(1);
             progress.counts[i] = (progress.counts[i] + 1).min(most);
             moved = true;
         }
     }
     progress.ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
+    if delivered {
+        // A client gone is noticed when its messages are next read.
+        client.update_speed(world.action_clock.ticks());
+        client.send_inventory();
+    }
     moved
 }
 

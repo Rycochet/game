@@ -100,6 +100,14 @@ fn dropped(
         .inventory
         .hand_over(item)
         .ok_or("can't put that down")?;
+    // The client asks first: `put_down` destroys quest items.
+    if item.holds_quest_item() {
+        info!(
+            "{} destroyed quest items with {:?}",
+            client.in_log(),
+            item.id
+        );
+    }
     put_down(client, world, item);
     Ok(cost)
 }

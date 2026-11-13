@@ -38,7 +38,10 @@ pub(crate) fn turn_in(
     if !ready {
         return refuse(client, id, QuestRefusal::NotReady);
     }
+    // The quest's own items go back to the giver first (a delivery's parcel
+    // is long gone; anything found is handed over).
     let mut inventory = client.inventory.clone();
+    inventory.remove_quest_items(id);
     for item in reward_items(world, &quest) {
         if inventory.give(item, world.stacks, &mut new_id).is_err() {
             return refuse(client, id, QuestRefusal::NoRoom);

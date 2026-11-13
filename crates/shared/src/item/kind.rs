@@ -57,6 +57,8 @@ pub enum ItemKind {
     Necklace,
     PaddedChausses,
     PaddedGloves,
+    /// A quest's delivery: wrapped in brown paper and tied with string (owner).
+    Parcel,
     Polearm,
     Pouch,
     Ring,
@@ -89,7 +91,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 75] = [
+    pub const ALL: [Self; 76] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -142,6 +144,7 @@ impl ItemKind {
         Self::Necklace,
         Self::PaddedChausses,
         Self::PaddedGloves,
+        Self::Parcel,
         Self::Petticoat,
         Self::Polearm,
         Self::Pouch,

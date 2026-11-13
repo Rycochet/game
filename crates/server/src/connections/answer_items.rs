@@ -122,8 +122,12 @@ pub(super) fn answer_items(
         ClientMessage::GiveItem { item, to } => {
             let mut stock = None;
             let cost = client.inventory.put_down_cost(item);
+            let quest_item = (client.inventory.find(item)).is_some_and(Item::holds_quest_item);
             let given = if !client.may_take_off(item) {
                 Err("it won't come off")
+            } else if quest_item {
+                // Quest items are the character's own (owner).
+                Err("quest items can't be given")
             } else if sites::keeper_building(client, world, to).is_some() {
                 sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
             } else {

@@ -182,6 +182,10 @@ fn add_bands(model: &mut Model, shell: &Shell) {
 }
 
 /// Three domed discs on the breast, and on the back if it has one: two above, one below.
+/// How far a flat disc stands off the shell at its middle, so its rim stays
+/// clear where a back curves in under it (a minotaur's).
+const DISC_STANDOFF: f32 = 5.0;
+
 fn add_discs(model: &mut Model, front: &Shell, back: bool) {
     const PLACES: [(f32, f32, f32); 3] =
         [(0.36, 0.75, 70.0), (0.64, 0.75, 70.0), (0.5, 0.35, 85.0)];
@@ -191,10 +195,10 @@ fn add_discs(model: &mut Model, front: &Shell, back: bool) {
     };
     for (u, v, radius) in PLACES {
         let (point, out) = front.at(u, v);
-        add_disc(model, point, out, radius);
+        add_disc(model, point + out * DISC_STANDOFF, out, radius);
         if back {
             let (point, out) = behind.at(u, v);
-            add_disc(model, point, out, radius);
+            add_disc(model, point + out * DISC_STANDOFF, out, radius);
         }
     }
 }

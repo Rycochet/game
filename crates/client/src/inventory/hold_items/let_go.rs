@@ -8,6 +8,7 @@ use shared::item::Item;
 use shared::protocol::ClientMessage;
 
 use super::super::hold::{Target, stack_onto};
+use super::super::quest_drop::holds_quest_item;
 use super::super::wear_note::try_wearing;
 use super::super::{Carried, HeldBy, Holding};
 use super::Outbox;
@@ -31,6 +32,7 @@ pub(super) fn let_go_of(
         dressing,
         stacks,
         wear: (note, god, time),
+        quest_drop,
         ..
     } = out;
     if aim == (Target::Body { allowed: false }) {
@@ -109,6 +111,21 @@ pub(super) fn let_go_of(
                 took.write(TookItem { with, item });
                 spent.write(SpentEnergy(handling_cost(grams)));
             }
+        }
+        return;
+    }
+    // A quest item is never given, and dropping one destroys it: asked first,
+    // all of it (owner).
+    let dropping = matches!(
+        aim,
+        Target::Drop { allowed: true } | Target::Someone(GROUND)
+    );
+    let giving = matches!(aim, Target::Someone(to) if to != GROUND);
+    if (dropping || giving) && holds_quest_item(carried, held.item.id) {
+        holding.group.take();
+        holding.counted.take();
+        if dropping {
+            quest_drop.asking = Some(held.item.id);
         }
         return;
     }

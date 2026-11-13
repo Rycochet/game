@@ -48,7 +48,13 @@ pub(crate) fn drop_at(
 }
 
 /// Puts this on the ground by the player, as the newest in its bag.
-pub(crate) fn put_down(client: &Client, world: &mut ServerWorld, item: Item) {
+pub(crate) fn put_down(client: &Client, world: &mut ServerWorld, mut item: Item) {
+    // Quest items are destroyed rather than left for anyone (owner): one on
+    // its own, or any inside what is put down.
+    if item.is_quest_item() {
+        return;
+    }
+    item.strip_quest_items();
     let size = client.size();
     if let Some((.., at)) = standing_at(client)
         && let Some(level) = level_mut(world, client)
