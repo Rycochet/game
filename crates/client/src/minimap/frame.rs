@@ -10,6 +10,7 @@ mod secret_door_icon;
 mod stairs_icon;
 
 pub use compass::compass;
+pub(super) use player_mark::arrow_corners;
 pub use player_mark::{arrow, arrow_place, dot, floor_hint, player_dot};
 use round::ridged;
 pub use round::{FrameCache, RoundFrame, line_distance};

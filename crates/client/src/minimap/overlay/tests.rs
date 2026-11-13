@@ -93,6 +93,7 @@ fn marks_app() -> (App, MapPictures, Entity) {
     app.init_resource::<Assets<Image>>()
         .init_resource::<CurrentDungeon>()
         .init_resource::<OtherLevels>()
+        .init_resource::<crate::quests::TrackedDots>()
         .insert_resource(MarksLayer(Some(under(Some(((50.0, 50.0), 50.0))))))
         .add_systems(Update, draw_marks);
     let mut images = app.world_mut().resource_mut::<Assets<Image>>();

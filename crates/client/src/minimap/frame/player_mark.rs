@@ -85,7 +85,7 @@ pub fn arrow_place(
 }
 
 /// The corners of an arrowhead pointing along `direction` (a unit vector).
-pub(super) fn arrow_corners(
+pub(in crate::minimap) fn arrow_corners(
     centre: (f32, f32),
     direction: (f32, f32),
     size: f32,

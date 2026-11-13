@@ -398,6 +398,13 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             ready: true,
         }])),
         ServerMessage::Quest(super::QuestNews::Tracked(None)),
+        ServerMessage::Quest(super::QuestNews::Dots(vec![super::QuestDots {
+            id: crate::quest::QuestId {
+                town: crate::poi::ChunkPos { x: 1, y: -2 },
+                slot: crate::quest::Slot::Feeder,
+            },
+            cells: vec![(4, -7)],
+        }])),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],
             items: Vec::new(),

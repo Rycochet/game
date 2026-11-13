@@ -9,6 +9,7 @@ use bevy::prelude::*;
 // Split into files (`cargo xtask lint` keeps files small).
 mod anchors;
 mod book;
+mod dots;
 mod look;
 mod over_view;
 mod poi_marks;
@@ -16,6 +17,7 @@ mod read;
 mod words;
 
 pub use book::{DoorMarkers, GateQuests, QuestBook, QuestPlanets, done_steps};
+pub use dots::{LevelDots, OpenQuestLog, TrackedDots};
 pub use look::MarkLook;
 pub use poi_marks::QuestPois;
 pub use words::{or_partly, plain, reward_line, step_lines};
@@ -29,9 +31,17 @@ impl Plugin for QuestsPlugin {
             .init_resource::<GateQuests>()
             .init_resource::<QuestPlanets>()
             .init_resource::<QuestPois>()
+            .init_resource::<LevelDots>()
+            .init_resource::<TrackedDots>()
+            .add_message::<OpenQuestLog>()
             .add_systems(
                 Update,
-                (read::read_server, poi_marks::find_quest_pois).chain(),
+                (
+                    read::read_server,
+                    poi_marks::find_quest_pois,
+                    dots::find_tracked_dots,
+                )
+                    .chain(),
             )
             // After everything has moved, so the markers stay on what they mark.
             .add_systems(

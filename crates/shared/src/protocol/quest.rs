@@ -90,6 +90,18 @@ pub enum QuestNews {
     /// gates (those with quests taken) and the Quest Log: sent on coming into
     /// the Hall, and when asked.
     Planets(Vec<PlanetQuests>),
+    /// Where on the level the player is on each quest taken has an objective
+    /// that can be done now, for the maps' dots: only places the character
+    /// may know (stairs they remember, a giver's door, a known poi). Sent
+    /// whenever it changes; none for a quest means no dot on this level.
+    Dots(Vec<QuestDots>),
+}
+
+/// The cells of the level the player is on that one quest's dots go on.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuestDots {
+    pub id: QuestId,
+    pub cells: Vec<(i64, i64)>,
 }
 
 /// A planet where the character has quest history.

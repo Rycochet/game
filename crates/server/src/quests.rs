@@ -10,6 +10,7 @@ mod cache;
 mod clock;
 #[cfg(feature = "debug-api")]
 pub(crate) mod debug_api;
+mod dots;
 mod follow;
 mod give_up;
 mod log;
@@ -66,6 +67,8 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
         .send(&ServerMessage::Quest(QuestNews::Markers { town, markers }))
 }
 
+#[cfg(test)]
+mod dots_tests;
 #[cfg(test)]
 mod log_tests;
 #[cfg(test)]
