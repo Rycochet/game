@@ -147,14 +147,20 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             if let Some(doors) = doors
                 && let Some((at, swing)) = open_on_the_way(mob, level, was_spot)
             {
-                doors.open = level.with_doors_open();
                 let poi = doors.poi;
-                opened.push(Opened {
-                    place,
-                    poi,
-                    at,
-                    swing,
-                });
+                // A gate's other leaf opens with it.
+                let other = shared::door::gate_partner(level, at.0, at.1);
+                let other = other.filter(|&(x, y)| level.is_shut(x, y));
+                for at in std::iter::once(at).chain(other) {
+                    level.set_swing(at.0, at.1, swing);
+                    opened.push(Opened {
+                        place,
+                        poi,
+                        at,
+                        swing,
+                    });
+                }
+                doors.open = level.with_doors_open();
             }
             mob.turn_after(was_spot, &spots);
             // Mobs leave scent too.

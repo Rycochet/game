@@ -487,6 +487,20 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             livestock: true,
             variety: 77,
         }]),
+        ServerMessage::Walls(vec![crate::site::WallLook {
+            rect: crate::site::Rect {
+                x: -4,
+                y: -5,
+                width: 40,
+                height: 36,
+            },
+            material: crate::site::WallMaterial::Log,
+            gates: vec![crate::site::Gate {
+                x: 15,
+                y: 30,
+                runs_east_west: true,
+            }],
+        }]),
         ServerMessage::LevelCells(LevelChunk {
             chunk: (-1, 2),
             mask: 0b101,

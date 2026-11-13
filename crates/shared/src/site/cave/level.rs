@@ -128,6 +128,7 @@ impl Plan {
             entrance,
             buildings: Vec::new(),
             fields: Vec::new(),
+            walls: Vec::new(),
         };
         (made, mouths)
     }

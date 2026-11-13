@@ -27,6 +27,7 @@ mod oasis;
 mod outlined;
 mod picking;
 mod rain;
+mod rampart;
 mod sight_lines;
 mod stairs;
 mod theme;

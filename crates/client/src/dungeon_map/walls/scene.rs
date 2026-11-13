@@ -5,7 +5,7 @@ use super::super::wild_ground::Tints;
 use crate::common::DrawnGround;
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
-use shared::site::{BuildingLook, FieldLook};
+use shared::site::{BuildingLook, FieldLook, WallLook};
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::mesh::{LightGrid, View};
@@ -25,6 +25,8 @@ pub struct Scene<'a> {
     pub lit_buildings: &'a BTreeSet<u16>,
     /// A farm's fields.
     pub fields: &'a [FieldLook],
+    /// Walls round the level's buildings (`rampart`).
+    pub walls: &'a [WallLook],
     /// Whether the place is a ruin.
     pub ruined: bool,
     /// The wilderness's ground colours, cell by cell (none anywhere else).

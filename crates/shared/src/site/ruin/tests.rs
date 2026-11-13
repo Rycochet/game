@@ -33,8 +33,10 @@ fn ruined_plans(seeds: u64) -> Vec<(u8, Plan, Plan)> {
     plans
 }
 
+/// Its floors from the ground up, without any basement (forts have one).
 fn floors(plan: &Plan) -> Vec<SiteLevel> {
-    (0..plan.floors()).map(|n| plan.level(n)).collect()
+    let storeys = plan.floors() - u32::from(plan.has_basement());
+    (0..storeys).map(|n| plan.level(n)).collect()
 }
 
 /// No ruin is exactly a normal building.
@@ -192,6 +194,7 @@ fn floors_above_broken_stairs_are_dropped() {
         entrance: None,
         buildings: Vec::new(),
         fields: Vec::new(),
+        walls: Vec::new(),
     };
     assert!(stairs_connect(&floor));
     floor.level.set(4, 1, Cell::Hole);

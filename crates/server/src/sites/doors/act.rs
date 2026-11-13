@@ -5,7 +5,8 @@ use shared::door::{Side, Swing, carries_key, door_cost};
 use shared::dungeon::{Cell, Sight};
 use shared::protocol::{ServerMessage, level_chunk};
 
-use super::{VisitDoor, keep_door};
+use super::VisitDoor;
+use super::gate::{gate_blocked, set_with_gate};
 use crate::ServerWorld;
 use crate::connections::Client;
 use crate::sites::{Visit, update_sight};
@@ -61,8 +62,7 @@ pub(crate) fn open_door(
     let side = if secret { from } else { from.opposite() };
     door.door.swing = Swing::Open(side);
     let visit = client.visit.as_mut().expect("checked above");
-    set_here(visit, (x, y), door);
-    keep_door(world, door.key, door.door);
+    set_with_gate(visit, world, (x, y), door);
     (update_sight(client), cost)
 }
 
@@ -92,13 +92,13 @@ pub(crate) fn close_near(client: &mut Client, world: &mut ServerWorld) -> (bool,
             if let Some(lock) = &mut door.door.lock {
                 lock.locked = true;
             }
-        } else if world.someone_in_doorway(client, at, door.key) {
+        } else if world.someone_in_doorway(client, at, door.key) || gate_blocked(client, world, at)
+        {
             continue;
         }
         door.door.swing = Swing::Closed;
         let visit = client.visit.as_mut().expect("checked above");
-        set_here(visit, at, door);
-        keep_door(world, door.key, door.door);
+        set_with_gate(visit, world, at, door);
         closed = true;
     }
     if !closed {
@@ -123,15 +123,17 @@ pub(crate) fn dev_all(client: &mut Client, world: &mut ServerWorld, open: bool) 
         let runs = visit.level.level.opening_runs_east_west(at.0, at.1);
         let swing = match (open, door.door.swing) {
             (true, Swing::Closed) => Swing::Open(Side::of(runs, at, position).opposite()),
-            (false, Swing::Open(_)) if !world.someone_in_doorway(client, at, door.key) => {
+            (false, Swing::Open(_))
+                if !world.someone_in_doorway(client, at, door.key)
+                    && !gate_blocked(client, world, at) =>
+            {
                 Swing::Closed
             }
             _ => continue,
         };
         door.door.swing = swing;
         let visit = client.visit.as_mut().expect("checked above");
-        set_here(visit, at, door);
-        keep_door(world, door.key, door.door);
+        set_with_gate(visit, world, at, door);
     }
     update_sight(client)
 }

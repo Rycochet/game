@@ -10,6 +10,7 @@ use super::super::field;
 use super::super::holes::build_hole;
 use super::super::liquid::build_cell;
 use super::super::oasis::{build_grass_or_tree, build_tree};
+use super::super::rampart;
 use super::super::stairs::{build_stairs, hides_viewer};
 use super::super::town;
 use super::super::walls::{Layers, Scene, build_opening, build_secret_door, build_wall};
@@ -24,7 +25,12 @@ pub(super) fn build_cell_at(
 ) {
     let level = scene.level;
     let cell = level.cell(x, y);
-    if level.is_wall(x, y) {
+    if rampart::build_rampart(layers, scene, (x, y)) {
+        // A wall round a site, and its gates (which draw their own floor).
+        if level.is_wall(x, y) {
+            build_ground(layers, scene, (x, y));
+        }
+    } else if level.is_wall(x, y) {
         // A town's buildings are drawn whole, in `build`; seen from the
         // wilderness, which isn't told them, as walls.
         if level.room(x, y).is_none() || scene.buildings.is_empty() {
@@ -54,6 +60,22 @@ pub(super) fn build_cell_at(
         build_open_cell(layers, scene, (x, y), found);
         field::build_fence(layers, scene, (x, y));
     }
+}
+
+/// The land's own ground over a whole cell, as under a wall round a site.
+fn build_ground(layers: &mut Layers, scene: &Scene, (x, y): (i64, i64)) {
+    let centre = Vec3::new(x as f32 * CELL_SIZE, 0.0, y as f32 * CELL_SIZE);
+    let half = CELL_SIZE / 2.0;
+    let ground = Surface::Ground as usize;
+    if !scene.sight.is_seen(x, y) {
+        let grey = Vec3::splat(MEMORY_SHADE);
+        layers.memory[ground].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), |_| grey);
+        return;
+    }
+    let Scene { level, light, .. } = *scene;
+    let tint = scene.tint.map_or(Vec3::ONE, |tints| tints.at(x, y, false));
+    let lit = |p| with_ambient(corner_light(level, light, p).unwrap_or(light.at(x, y))) * tint;
+    layers.solid[ground].quad(centre, Vec3::Y, Vec3::NEG_Z, (half, half), lit);
 }
 
 /// A flat open cell, or stairs: lit if in sight, otherwise as memory.

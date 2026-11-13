@@ -16,6 +16,7 @@ mod oasis;
 mod output;
 mod shapes;
 mod underground;
+mod wall;
 
 pub use base::base_mesh;
 pub use build::build;

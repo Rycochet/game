@@ -11,6 +11,7 @@ use crate::item::Quality;
 use crate::material::Material;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod gate;
 mod keys;
 mod lock;
 mod look;
@@ -18,6 +19,7 @@ mod placing;
 mod start;
 mod swing;
 
+pub use gate::{gate_first_leaf, gate_partner};
 pub use keys::carries_key;
 pub use lock::Lock;
 pub use look::DoorLook;

@@ -2,6 +2,7 @@
 
 use super::farm::FieldLook;
 use super::town::TownBuilding;
+use super::wall::WallLook;
 use super::{Generator, Stairs};
 use crate::dungeon::Level;
 use crate::poi::PoiKind;
@@ -26,6 +27,8 @@ pub struct SiteLevel {
     pub buildings: Vec<TownBuilding>,
     /// A farm's fields, on its ground floor (no other level has any).
     pub fields: Vec<FieldLook>,
+    /// Walls round the level's buildings (a walled fort's ground floor).
+    pub walls: Vec<WallLook>,
 }
 
 #[cfg(test)]

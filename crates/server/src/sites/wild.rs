@@ -16,6 +16,7 @@ mod found;
 mod in_poi;
 mod town;
 mod window;
+mod window_looks;
 
 #[cfg(test)]
 mod arrival_tests;

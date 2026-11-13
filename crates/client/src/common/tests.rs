@@ -104,6 +104,7 @@ fn a_ruins_learned_name_says_it_is_ruined() {
             height: 20,
             floors: 3,
             ruin: 2,
+            wall: None,
         },
         chunk: ChunkPos { x: 0, y: 0 },
         x: 10,

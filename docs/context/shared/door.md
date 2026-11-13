@@ -4,14 +4,15 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 
 ## Files
 
-- `crates/shared/src/door.rs`: `Door { swing, quality, material, style, lock, damage }` (`look`, `is_locked`, `toughness`: `BASE_TOUGHNESS` 20 points for a Common wooden door, three times for metal, by quality rank), `DoorStyle` (only `Plain`: styles are a future research task), `door_cost` (opening or closing: a straight step's time). In `door/`: `swing.rs` (`Swing`, `Side`), `start.rs` (`starting_door`, `door_is_outside`, the closed and broken chances), `look.rs` (`DoorLook`), `lock.rs` (`Lock`), `keys.rs` (`carries_key`), `placing.rs` (`place_locks`, `reach_without`).
+- `crates/shared/src/door.rs`: `Door { swing, quality, material, style, lock, damage }` (`look`, `is_locked`, `toughness`: `BASE_TOUGHNESS` 20 points for a Common wooden door, three times for metal, by quality rank), `DoorStyle` (only `Plain`: styles are a future research task), `door_cost` (opening or closing: a straight step's time). In `door/`: `gate.rs` (`gate_partner`, `gate_first_leaf`), `swing.rs` (`Swing`, `Side`), `start.rs` (`starting_door`, `door_is_outside`, the closed and broken chances), `look.rs` (`DoorLook`), `lock.rs` (`Lock`), `keys.rs` (`carries_key`), `placing.rs` (`place_locks`, `reach_without`).
 
 ## Public API
 
 - `Swing::{Closed, Open(Side), Broken(Side)}`, `is_shut`. Open and broken say which side of the wall the leaf lies on.
 - `Side::{North, East, South, West}`: `of(runs_east_west, door, from)` (the side someone is on), `opposite`, `fits`, `beside`. A door opens away from its opener (`of(..).opposite()`); a secret door towards them.
 - `Lock { id, quality, locked }`: information on the door for now (later an item that can be taken out); its key opens it by `id` (`ItemForm::Key(id)`, `ItemKind::Key`). Only a closed door is locked; a locked one can't be opened without its key. `carries_key(inventory, lock)`: carried (in bags and stacks too) or worn.
-- `place_locks(seed, level, starts, holders)`: which closed doors to lock (10%, secret doors 2%) and which holder carries each key: only while every key, the new one's too, can be reached from `starts` with all locked and secret doors shut, so no key is behind its own door and none are in a loop. `reach_without(level, starts, shut)`.
+- `gate_partner(level, x, y)`: the other leaf of a gate (`site::Gate`: two doors side by side in a wall round a site), a door beside it along its wall; no other doors are ever side by side. `gate_first_leaf`: the west or north leaf, which both start from.
+- `place_locks(seed, level, starts, holders)`: which closed doors to lock (10%, secret doors 2%; never a gate's) and which holder carries each key: only while every key, the new one's too, can be reached from `starts` with all locked and secret doors shut, so no key is behind its own door and none are in a loop. `reach_without(level, starts, shut)`.
 - `Door`, `DoorStyle`, `DoorLook { x, y, swing, material, style, lock }` (`lock`: it has one, which can be seen; whether it is locked is found by trying it) (what a player is told, in `protocol::LevelChunk::doors`), `door_cost()`.
 - `starting_door(poi, ruined, index, at, secret, outside, runs_east_west)`: how a door starts, by a hash of the poi's seed, level and cell; `door_is_outside(level, x, y)` (outside ground beside it).
 
@@ -26,6 +27,7 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 ## Notes
 
 - Starting chances (`start.rs`): 70% of doors inside start closed, 90% of those leading outside; herbalists' huts 85% and 95%. A ruin's doors are 30% broken, and half as many of the rest closed. Secret doors always start closed. Quality is always Common and material Wood for now (better doors and other materials are for future generators).
+- Gates (owner, 2026-11-13): the server starts both leaves as the first one (`gate_first_leaf`) and opens and closes them together (`server sites/doors/gate.rs`; a mob opening one opens both); breaking one leaves the other. The client hinges each leaf at the gate's outer side so they meet in the middle (`dungeon_map` `walls/gate_leaf.rs`).
 - Locks are placed by the server the first time a level is used (`sites/doors/locks.rs`), keys going to its mobs.
 - Doors take damage from kicks (`damage`, thousandths of a point); at their `toughness` they break: `Broken` away from the kicker, any lock left unlocked on it (server `sites/doors/kick.rs`).
 - Not built yet: lock picking (with item durability, later), showing damage. (Leaves swing on the client: `dungeon_map/door_swing.rs`.)

@@ -40,6 +40,8 @@ pub(crate) struct WildChunk {
     /// wilderness cells.
     pub(crate) buildings: Vec<BuildingLook>,
     pub(crate) fields: Vec<FieldLook>,
+    /// Walls round a cutout's buildings (a walled fort), in wilderness cells.
+    pub(crate) walls: Vec<shared::site::WallLook>,
     /// A town cutout's buildings as its site has them, in the site's cells:
     /// what its shops are (`sites::shop_here`).
     pub(crate) town: Vec<TownBuilding>,

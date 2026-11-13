@@ -1,9 +1,10 @@
 //! A planned building's floors: the levels above ground, the basement and stilts.
 
-use super::super::{Exit, SiteLevel, Stairs, StairsDirection};
+use super::super::{Exit, PoiWall, SiteLevel, Stairs, StairsDirection};
 use super::{Outline, Plan, Shape, add_windows, pillars};
 use crate::dungeon::{Cell, Level};
 use crate::rng::Seed;
+use crate::site::Rect as CellRect;
 
 impl Plan {
     /// Whether it has a basement, its last level.
@@ -25,6 +26,18 @@ impl Plan {
     /// The ground floor's size in cells, without the border round it.
     pub fn footprint(&self) -> (i64, i64) {
         (self.floors[0].width, self.floors[0].height)
+    }
+
+    /// The wall round it as the world map shows it, if it has one.
+    pub fn poi_wall(&self) -> Option<PoiWall> {
+        let ground = self.floors[0];
+        let inside = CellRect {
+            x: ground.x,
+            y: ground.y,
+            width: ground.width,
+            height: ground.height,
+        };
+        (self.wall.as_ref()).map(|wall| PoiWall::of(&wall.look, inside))
     }
 
     /// The shape of the ground floor.
@@ -51,7 +64,7 @@ impl Plan {
         if index >= self.storeys() {
             return self.basement_level();
         }
-        match self.ruined.get(index as usize) {
+        let floor = match self.ruined.get(index as usize) {
             Some(floor) => floor.clone(),
             None => {
                 let mut floor = self.intact_level(index);
@@ -67,6 +80,10 @@ impl Plan {
                 }
                 floor
             }
+        };
+        match &self.wall {
+            Some(wall) if index == 0 => wall.surround(self.seed, floor),
+            _ => floor,
         }
     }
 
@@ -150,6 +167,7 @@ impl Plan {
             entrance: Some((shape.x + shape.width / 2, shape.y + shape.height)),
             buildings: Vec::new(),
             fields: Vec::new(),
+            walls: Vec::new(),
         }
     }
 }

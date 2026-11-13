@@ -6,7 +6,7 @@ use crate::dungeon::{Cell, Level};
 use crate::rng::Rng;
 
 /// The cells round a plot's edge, going round it from its north-west corner.
-pub(super) fn fence_line(plot: Plot) -> Vec<(i64, i64)> {
+pub(in crate::site) fn fence_line(plot: Plot) -> Vec<(i64, i64)> {
     let Plot { x0, y0, x1, y1 } = plot;
     let top = (x0..x1 - 1).map(|x| (x, y0));
     let right = (y0..y1 - 1).map(|y| (x1 - 1, y));

@@ -42,6 +42,7 @@ fn more_floors_stand_taller() {
             height: 15,
             floors,
             ruin: 0,
+            wall: None,
         };
         let model = build(PoiKind::StoneTower, look, 0);
         let top = model.corners.iter().flatten().map(|c| c.y);
@@ -71,6 +72,7 @@ fn the_more_ruined_the_less_is_left() {
             height: 30,
             floors: 2,
             ruin,
+            wall: None,
         };
         build(PoiKind::Castle, look, 1).corners.len()
     };

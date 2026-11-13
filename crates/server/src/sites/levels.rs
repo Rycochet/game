@@ -247,6 +247,12 @@ pub(super) fn enter_level(
             return false;
         }
     }
+    if !visit.level.walls.is_empty() {
+        let message = ServerMessage::Walls(visit.level.walls.clone());
+        if !client.link.send(&message) {
+            return false;
+        }
+    }
     if !send_remembered(client, &mut visit) {
         return false;
     }

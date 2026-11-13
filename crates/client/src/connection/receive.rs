@@ -211,6 +211,7 @@ pub(super) fn receive(
                 | ServerMessage::EnterHall { .. }
                 | ServerMessage::Buildings(_)
                 | ServerMessage::Fields(_)
+                | ServerMessage::Walls(_)
                 | ServerMessage::Borders(_)
                 | ServerMessage::FlatGround(_)
                 | ServerMessage::PoiFound { .. }

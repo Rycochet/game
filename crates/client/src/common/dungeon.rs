@@ -34,6 +34,8 @@ pub struct CurrentDungeon {
     pub buildings: Vec<BuildingLook>,
     /// A farm's fields (none anywhere else).
     pub fields: Vec<FieldLook>,
+    /// Walls round the level's buildings: a walled fort's (none anywhere else).
+    pub walls: Vec<shared::site::WallLook>,
     /// In the wilderness, the kind of poi set into it that the player stands
     /// in, as the server says (`ServerMessage::InPoi`).
     pub in_poi: Option<PoiKind>,
@@ -61,6 +63,7 @@ impl Default for CurrentDungeon {
             door_locks: Default::default(),
             buildings: Vec::new(),
             fields: Vec::new(),
+            walls: Vec::new(),
             in_poi: None,
             in_poi_name: None,
             borders: BTreeSet::new(),
@@ -80,6 +83,7 @@ impl CurrentDungeon {
         self.door_locks.clear();
         self.buildings.clear();
         self.fields.clear();
+        self.walls.clear();
         self.in_poi = None;
         self.in_poi_name = None;
         self.borders.clear();
