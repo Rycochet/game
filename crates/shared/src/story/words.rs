@@ -113,6 +113,10 @@ impl Story {
                 .text("destination-direction", lang.phrase(&to.direction)?)
                 .text("destination-distance", lang.phrase(&to.distance)?);
         }
+        if let Some(item) = &facts.item {
+            let plural = format!("{}-{}.plural", item.fact(), item.key());
+            args = args.text("items", lang.render(&plural, &Args::new())?);
+        }
         if !facts.reward.is_empty() {
             args = args.text("reward", reward(lang, &facts.reward)?);
         }

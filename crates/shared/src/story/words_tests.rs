@@ -73,7 +73,10 @@ fn english_names_and_places() {
     assert_eq!(tower.describe(&lang).unwrap(), "ruined tower");
     let hut = PlaceDescription::new(PlaceKind::HerbalistHut, false).describe(&lang);
     assert_eq!(lang.rules().indefinite(&hut.unwrap()), "a herbalist's hut");
-    assert_eq!(lang.phrase(&Direction::NorthEast).unwrap(), "north-east");
+    assert_eq!(
+        lang.phrase(&Direction::NorthEast).unwrap(),
+        "north-east of town"
+    );
     assert_eq!(
         lang.phrase(&DistanceBand::Day).unwrap(),
         "most of a day away"

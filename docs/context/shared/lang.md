@@ -11,7 +11,7 @@ Words in the player's language: every word sits in a language file (Fluent `.ftl
 - `lang/variables.rs`: `Lang::variables` and `missing`, read from the messages' syntax trees.
 - `lang/rules.rs`: the `Rules` trait. `lang/english.rs`: English's.
 - `lang/functions.rs`: the rules as functions files call: `A`, `POSSESSIVE`, `CAP` (and Fluent's `NUMBER`).
-- `lang/files.rs`: the built-in files per language. `lang/en/common.ftl`: genders by name, pronouns. `lang/en/story.ftl`: names' order, and `shared::story`'s values (epithets, pets, places, directions, distances). `lang/en/story-plots.ftl`: stories' facts, creatures, coins, beats, titles and steps (placeholder wordings until Flavour text PR 4).
+- `lang/files.rs`: the built-in files per language. `lang/en/common.ftl`: genders by name, pronouns. `lang/en/story.ftl`: names' order, and `shared::story`'s values (epithets, pets, places, directions, distances). `lang/en/story-plots.ftl`: stories' facts, creatures, coins, beats (five wordings each, as attributes), titles and steps.
 
 ## Public API
 
@@ -37,5 +37,7 @@ Words in the player's language: every word sits in a language file (Fluent `.ftl
 - Fluent can't pass a value into a term (named arguments are literals only), so a fact's words come from `phrase` or a select expression, not a term per fact. Messages referred to inside a message see the same values.
 - Lists are joined in Rust (`rules().list`), as a Fluent value holds one thing.
 - Neutral is "they" in English, and needs the plural verb (`{ $gender -> [neutral] were *[other] was }`).
+- A select expression's variants must each be on their own line, even inside a sentence; a one-line `{ $x -> [a] b *[c] d }` doesn't parse.
+- Messages can't be given values, so `pronoun-*` only serves `$gender`: stories use a message per role (`relative-he`, in `story-plots.ftl`). A message reference can be a function's argument (`CAP(the-place)`).
 - The server never renders: it sends values and the client writes the text, so changing wordings never desyncs anything.
 - Tests every language must pass: every file parses with no message written twice, and every message and attribute renders when given every value `variables` lists.

@@ -58,17 +58,17 @@ place-unnamed = { $condition ->
    *[whole] { $place-kind }
 }
 
-## Which way from town, and how far.
+## Which way from town, said after a place ("the cave north of town"), and how far.
 
-direction-north = north
-direction-north-east = north-east
-direction-east = east
-direction-south-east = south-east
-direction-south = south
-direction-south-west = south-west
-direction-west = west
-direction-north-west = north-west
-direction-here = here in town
+direction-north = north of town
+direction-north-east = north-east of town
+direction-east = east of town
+direction-south-east = south-east of town
+direction-south = south of town
+direction-south-west = south-west of town
+direction-west = west of town
+direction-north-west = north-west of town
+direction-here = in town
 
 distance-near = in sight of town
 distance-short = a short walk away
