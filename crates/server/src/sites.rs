@@ -20,6 +20,7 @@ mod cells;
 mod dev_area;
 mod doors;
 mod enter;
+mod generator;
 mod keepers;
 mod leave;
 mod levels;
@@ -47,6 +48,7 @@ use enter::enter_site;
 #[cfg(test)]
 pub(crate) use enter::test_enter_poi;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
+pub(crate) use generator::{seen_poi, site_generator};
 use keepers::{NewKeepers, keepers_in_window, keepers_of};
 pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_from_keeper};
 use leave::leave_for_poi;

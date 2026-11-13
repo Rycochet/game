@@ -103,8 +103,13 @@ impl Generator {
     }
 
     /// The generator of one poi's site: its kind's, ruined as its map seed
-    /// says, more often in desert (`Poi::desert`).
-    pub fn for_site(kind: PoiKind, seed: Seed, desert: bool) -> Self {
+    /// says, more often in desert (`Poi::desert`). A town's main roads leave
+    /// by `sides` (north, east, south, west: `road::town_sides`), which
+    /// nothing else takes notice of.
+    pub fn for_site(kind: PoiKind, seed: Seed, desert: bool, sides: [bool; 4]) -> Self {
+        if let Self::Town(options) = Self::for_poi(kind) {
+            return Self::Town(TownOptions { sides, ..options });
+        }
         if !Self::is_sturdy(kind) {
             return Self::for_poi(kind);
         }

@@ -132,10 +132,16 @@ fn wild_cells(wild: &Wilderness, plan: &ChunkPlan, (x, y, w, h): (i64, i64, i64,
 fn a_sites_first_level_has_its_cutouts_slopes() {
     let (wild, ground, found) = cutouts(12);
     assert!(found.len() >= 6, "found {}", found.len());
+    let pois = PoiMap::new(&WorldParams::from_seed(Seed::new(12345)), Seed::new(999));
     let mut sloping = 0;
     for (cutout, plan) in &found {
         let poi = *cutout.poi();
-        let generator = Generator::for_site(poi.kind, poi.seed, poi.desert);
+        let generator = Generator::for_site(
+            poi.kind,
+            poi.seed,
+            poi.desert,
+            crate::road::town_sides(&pois, &poi),
+        );
         let site = Site::with_generator(poi.kind, poi.seed, generator.version(), generator)
             .expect("the current version runs");
         let first = site.level(0);

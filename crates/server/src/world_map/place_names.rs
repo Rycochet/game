@@ -8,7 +8,7 @@ use shared::protocol::{ServerMessage, WorldChunk};
 use super::known_poi;
 use crate::ServerWorld;
 use crate::connections::Client;
-use crate::sites::place_name_of;
+use crate::sites::{place_name_of, seen_poi};
 
 /// A chunk as this client may know it: its poi, if they know of it, and the
 /// poi's name, if they have learned it.
@@ -28,7 +28,7 @@ pub(super) fn chunk_message(
         .and_then(|poi| place_name_of(world, &poi));
     ServerMessage::WorldChunk(WorldChunk {
         chunk,
-        poi: poi.map(Into::into),
+        poi: poi.map(|poi| seen_poi(world, poi)),
         name,
     })
 }

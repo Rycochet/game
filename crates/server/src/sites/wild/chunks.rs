@@ -4,9 +4,7 @@
 use shared::mob::{Spawn, spawns};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::SeenStairs;
-use shared::site::{
-    BuildingLook, Exit, FieldLook, Generator, Rect, Site, SiteLevel, StairsDirection,
-};
+use shared::site::{BuildingLook, Exit, FieldLook, Rect, Site, SiteLevel, StairsDirection};
 use shared::wilderness::{ChunkPlan, Cutout, gates_of};
 
 use super::super::levels::seen_stairs;
@@ -122,7 +120,7 @@ fn looks(first: &SiteLevel, (ox, oy): (i64, i64)) -> (Vec<BuildingLook>, Vec<Fie
 /// if nobody has been in), without starting a save for it.
 pub(in crate::sites) fn site_as_saved(world: &mut ServerWorld, poi: &Poi) -> Option<Site> {
     let id = SiteId::Poi(poi.chunk);
-    let generator = Generator::for_site(poi.kind, poi.seed, poi.desert);
+    let generator = crate::sites::site_generator(world, poi);
     let version = match world.sites.get(&id) {
         Some(save) => save.version,
         None => match world.storage.load_site(id) {

@@ -31,6 +31,9 @@ pub enum PoiLook {
     },
     Town {
         buildings: u16,
+        /// A wall round it: what it is made of and which sides its main
+        /// roads leave by, through gates (its gaps are all 0).
+        wall: Option<PoiWall>,
     },
     Farm {
         /// The farmhouse's ground floor, in cells.
@@ -51,9 +54,10 @@ impl PoiLook {
     }
 
     /// The look of the site a poi of this kind and map seed leads to, in
-    /// desert or not (`Poi::desert`).
-    pub fn of(kind: PoiKind, seed: Seed, desert: bool) -> Self {
-        match Generator::for_site(kind, seed, desert) {
+    /// desert or not (`Poi::desert`), a town with roads coming in on `sides`
+    /// (`road::town_sides`).
+    pub fn of(kind: PoiKind, seed: Seed, desert: bool, sides: [bool; 4]) -> Self {
+        match Generator::for_site(kind, seed, desert, sides) {
             Generator::Building(options) => {
                 let plan = super::building::Plan::new(&options, seed);
                 let (width, height) = plan.footprint();
@@ -70,9 +74,13 @@ impl PoiLook {
             Generator::Cave(options) => Self::Cave {
                 entrance: options.entrance,
             },
-            Generator::Town(options) => Self::Town {
-                buildings: super::town::Plan::new(&options, seed).target() as u16,
-            },
+            Generator::Town(options) => {
+                let plan = super::town::Plan::new(&options, seed);
+                Self::Town {
+                    buildings: plan.target() as u16,
+                    wall: plan.poi_wall(),
+                }
+            }
             Generator::Herbalist(options) => {
                 let plan = super::building::Plan::new(&options.house, seed);
                 let (width, height) = plan.footprint();

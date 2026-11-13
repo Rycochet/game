@@ -14,10 +14,12 @@
 //! adding to them later doesn't move anything.
 
 use super::SiteLevel;
+use super::wall::WallMaterial;
 use crate::dungeon::{Cell, Level};
 use crate::rng::{Rng, Seed};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod arms;
 mod corner;
 mod finish;
 mod fits;
@@ -33,6 +35,7 @@ mod plan;
 mod plot;
 mod road;
 mod town_building;
+mod wall;
 
 use finish::rects_of;
 pub use kind::BuildingKind;
@@ -42,6 +45,7 @@ pub use plan::{Plan, TownOptions};
 use plot::{Beside, Frame, Placed, Plot};
 use road::{Block, Road};
 pub use town_building::{BuildingLook, Rect, TownBuilding};
+pub(super) use wall::{CITY_WALLS, HAMLET_WALLS, TOWN_WALLS, VILLAGE_WALLS};
 
 /// How wide the ground round the whole town is.
 const BORDER: i64 = 3;
@@ -103,10 +107,14 @@ struct Town {
     behind: i64,
     /// The bare ground in front of their doors, kept clear.
     door_fronts: Vec<(i64, i64)>,
+    /// Which arms the middle has: north, east, south, west.
+    arms: [bool; 4],
+    /// What its wall is made of, if it has one.
+    wall: Option<WallMaterial>,
 }
 
 impl Town {
-    fn new(seed: Seed, target: i64) -> Self {
+    fn new(seed: Seed, target: i64, arms: [bool; 4], wall: Option<WallMaterial>) -> Self {
         // A generous area, cut down to what is used at the end.
         let span = (target * 90).isqrt().max(24) + 2 * BORDER;
         let mut level = Level::new(0, 0, span, span);
@@ -126,6 +134,8 @@ impl Town {
             middle: (span / 2, span / 2),
             behind: 0,
             door_fronts: Vec::new(),
+            arms,
+            wall,
         }
     }
 
@@ -156,3 +166,5 @@ impl Town {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wall_tests;

@@ -7,7 +7,14 @@ use crate::dungeon::{Cell, Level, RoomId};
 use crate::rng::Seed;
 
 fn town(target: i64, seed: u64) -> SiteLevel {
-    Town::new(Seed::new(seed), target).generate()
+    new_town(target, seed, None).generate()
+}
+
+/// A town of `target` buildings with no roads coming in, walled or not.
+fn new_town(target: i64, seed: u64, wall: Option<WallMaterial>) -> Town {
+    let mut rng = Seed::new(seed).derive("test arms").rng();
+    let arms = arms::choose_arms(&mut rng, target, [false; 4]);
+    Town::new(Seed::new(seed), target, arms, wall)
 }
 
 /// Towns of every size, from a few seeds.
@@ -244,7 +251,7 @@ fn long_lines_of_building_have_gaps() {
 fn roads_keep_apart() {
     for target in [12, 30, 60, 100, 150] {
         for seed in 0..12 {
-            let mut town = Town::new(Seed::new(seed), target);
+            let mut town = new_town(target, seed, None);
             town.lay_out();
             let roads = &town.roads;
             for (i, a) in roads.iter().enumerate() {
@@ -277,7 +284,7 @@ fn roads_keep_apart() {
 fn roads_at_the_border_reach_the_edge() {
     for target in [8, 20, 50, 80, 150] {
         for seed in 0..12 {
-            let mut town = Town::new(Seed::new(seed), target);
+            let mut town = new_town(target, seed, None);
             let (arms, middle, main) = town.lay_out();
             let roads = town.roads.clone();
             let site = town.finish(arms, middle, main);

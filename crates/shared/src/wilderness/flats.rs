@@ -2,7 +2,8 @@
 //! the open (`Cell::is_outside`) fall into groups, each held at one height,
 //! the land's at its ways in, while its outside cells follow the land. So a
 //! building's door is level with the street outside it, and a castle's wall
-//! may dip under the slope or stand above it.
+//! may dip under the slope or stand above it. A town's wall is left to follow
+//! the land, or it would hold the whole town at one height.
 
 use super::Cutout;
 use crate::movement::{FlatGround, WildHeights, WorldGround};
@@ -53,9 +54,13 @@ impl Cutout {
             .collect()
     }
 
-    /// Whether a cell is its own and covered: not out in the open.
+    /// Whether a cell is its own and covered: not out in the open. In a
+    /// town only a building's cells are: its wall (in no room) follows the
+    /// land like the streets.
     fn covered(&self, (x, y): (i64, i64)) -> bool {
-        self.contains(x, y) && !self.level().cell(x, y).is_outside()
+        let level = self.level();
+        let walling = self.poi().kind.is_town() && level.room(x, y).is_none();
+        self.contains(x, y) && !level.cell(x, y).is_outside() && !walling
     }
 
     /// Its covered cells in connected groups, row by row.

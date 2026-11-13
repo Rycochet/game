@@ -48,7 +48,13 @@ fn exploring_from_a_building_arrives_at_its_entrance() {
     let cutout = cutout_near_start(&test, |cutout| {
         cutout.offset().is_some()
             && Site::new(cutout.poi().kind, cutout.poi().seed).is_building()
-            && Generator::for_site(cutout.poi().kind, cutout.poi().seed, cutout.poi().desert).ruin()
+            && Generator::for_site(
+                cutout.poi().kind,
+                cutout.poi().seed,
+                cutout.poi().desert,
+                [false; 4],
+            )
+            .ruin()
                 == 0
     });
     let (ox, oy) = cutout.offset().unwrap();

@@ -87,7 +87,8 @@ impl ChunkPlan {
         let gates = gates_of(wild, pois);
         let poi = pois.in_chunk(chunk);
         let site = poi.map(|poi| {
-            let generator = Generator::for_site(poi.kind, poi.seed, poi.desert);
+            let sides = crate::road::town_sides(pois, &poi);
+            let generator = Generator::for_site(poi.kind, poi.seed, poi.desert, sides);
             Site::with_generator(poi.kind, poi.seed, generator.version(), generator)
                 .expect("the current version runs")
         });

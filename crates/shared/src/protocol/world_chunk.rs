@@ -32,11 +32,13 @@ pub struct SeenPoi {
     pub y: i64,
 }
 
-impl From<Poi> for SeenPoi {
-    fn from(poi: Poi) -> Self {
+impl SeenPoi {
+    /// What anyone may see of `poi`, a town with roads coming in on `sides`
+    /// (`road::town_sides`).
+    pub fn new(poi: Poi, sides: [bool; 4]) -> Self {
         Self {
             kind: poi.kind,
-            look: PoiLook::of(poi.kind, poi.seed, poi.desert),
+            look: PoiLook::of(poi.kind, poi.seed, poi.desert, sides),
             chunk: poi.chunk,
             x: poi.x,
             y: poi.y,

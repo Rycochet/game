@@ -146,3 +146,48 @@ fn larger_roads_are_faster_up_to_twice_open_land() {
     assert_eq!(speeds, [125, 150, 175, FASTEST_PERCENT]);
     assert_eq!(FASTEST_PERCENT, 200);
 }
+
+/// A town's sides face every town the network joins it to, and only those.
+#[test]
+fn town_sides_face_the_towns_joined() {
+    let (pois, roads) = (map(), Roads::new(&world()));
+    let links = roads.links_in_area(&pois, AREA.0, AREA.1);
+    let towns: Vec<_> = pois
+        .in_area(AREA.0, AREA.1)
+        .into_iter()
+        .filter(|poi| poi.kind.is_town())
+        .collect();
+    assert!(towns.len() >= 3);
+    let mut with_sides = 0;
+    for town in &towns {
+        let sides = town_sides(&pois, town);
+        let mut expected = [false; 4];
+        for (link, _) in &links {
+            let other = if link.a == town.chunk {
+                link.b
+            } else if link.b == town.chunk {
+                link.a
+            } else {
+                continue;
+            };
+            let other = pois.in_chunk(other).unwrap();
+            let (dx, dy) = (other.x - town.x, other.y - town.y);
+            let side = if dx.abs() > dy.abs() {
+                if dx > 0 { 1 } else { 3 }
+            } else if dy > 0 {
+                2
+            } else {
+                0
+            };
+            expected[side] = true;
+        }
+        assert_eq!(sides, expected, "{town:?}");
+        with_sides += usize::from(sides.contains(&true));
+    }
+    assert!(with_sides >= 2);
+    let not_a_town = pois
+        .in_area(AREA.0, AREA.1)
+        .into_iter()
+        .find(|p| !p.kind.is_town());
+    assert_eq!(town_sides(&pois, &not_a_town.unwrap()), [false; 4]);
+}

@@ -7,7 +7,7 @@
 use shared::door::{Door, Side, Swing, door_is_outside, gate_first_leaf, starting_door};
 use shared::dungeon::{Cell, Level};
 use shared::poi::Poi;
-use shared::site::PoiLook;
+use shared::site::Generator;
 use std::collections::BTreeMap;
 
 use shared::protocol::DoorAsk;
@@ -71,7 +71,7 @@ pub(super) fn set_doors(
     let saved = world.site(site.id).levels.get(&site.index);
     let saved = saved.map(|level| level.doors.clone()).unwrap_or_default();
     let poi = site.poi;
-    let ruined = PoiLook::of(poi.kind, poi.seed, poi.desert).is_ruined();
+    let ruined = Generator::for_site(poi.kind, poi.seed, poi.desert, [false; 4]).ruin() > 0;
     let mut doors = VisitDoors::new();
     for y in min_y..min_y + height {
         for x in min_x..min_x + width {
@@ -128,7 +128,7 @@ pub(crate) fn mob_opened(world: &mut ServerWorld, opened: Opened) {
     let door = saved.or_else(|| {
         let level = world.populations.0.get(&opened.place)?.level();
         let poi = &opened.poi;
-        let ruined = PoiLook::of(poi.kind, poi.seed, poi.desert).is_ruined();
+        let ruined = Generator::for_site(poi.kind, poi.seed, poi.desert, [false; 4]).ruin() > 0;
         Some(first_door(poi, ruined, index, level, opened.at, opened.at))
     });
     if let Some(mut door) = door {

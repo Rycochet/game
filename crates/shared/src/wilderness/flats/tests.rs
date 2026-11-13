@@ -4,8 +4,8 @@ use crate::rng::Seed;
 use crate::wilderness::{ChunkPlan, Cutout, Wilderness};
 use crate::world::WorldParams;
 
-/// A town's cutout near the middle of a world whose land under it rises by
-/// at least `rise` 16ths, and the world's ground.
+/// A town's cutout near the middle of a world whose land under its buildings
+/// rises by at least `rise` 16ths, and the world's ground.
 fn town_on_a_slope(rise: i32) -> (Cutout, WorldGround) {
     let params = WorldParams::from_seed(Seed::new(12345));
     let wild = Wilderness::new(&params);
@@ -18,8 +18,10 @@ fn town_on_a_slope(rise: i32) -> (Cutout, WorldGround) {
         .find(|cutout| {
             let land = WildHeights::new(&ground, cutout.level().bounds());
             let (min_x, min_y, width, height) = cutout.level().bounds();
+            // Where the buildings are, not the ground round a walled town.
             let all = (min_y..min_y + height)
                 .flat_map(|y| (min_x..min_x + width).map(move |x| (x, y)))
+                .filter(|&(x, y)| cutout.level().room(x, y).is_some())
                 .map(|(x, y)| land.at(x, y));
             let (low, high) = all.fold((i32::MAX, i32::MIN), |(l, h), v| (l.min(v), h.max(v)));
             high - low >= rise
@@ -41,7 +43,9 @@ fn covered_cells_are_level_and_open_ones_follow_the_land() {
             if !cutout.contains(x, y) {
                 continue;
             }
-            if cutout.level().cell(x, y).is_outside() {
+            // A town's wall, in no room, follows the land.
+            let wall = cutout.level().room(x, y).is_none();
+            if cutout.level().cell(x, y).is_outside() || wall {
                 assert_eq!(heights.at(x, y), land.at(x, y), "({x}, {y}) open");
             } else {
                 let flat = flats.iter().find(|flat| flat.contains(x, y));
