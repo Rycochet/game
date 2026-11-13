@@ -55,12 +55,16 @@ const RINGS: usize = shared::body::RINGS;
 const HEAD_RINGS: usize = shared::body::HEAD_RINGS;
 
 /// The heads measured: a name and its target, under `SOURCE`. The wolf's,
-/// cow's and dog's are on a person; the horse's is its whole body's.
-const HEADS: [(&str, &str); 4] = [
+/// cow's and dog's are on a person, as is the reptile's muzzle; the horse's
+/// is its whole body's; the person's is the base mesh itself (`BASE`), the
+/// head the others on a person are fitted to a frame by.
+const HEADS: [(&str, &str); 6] = [
     ("Wolf", "animal03/jaldmic_wolf_headv3.target"),
     ("Cow", "animal03/jaldmic_vaca_cow_head.target"),
     ("Dog", "animal03/jaldmic_perro_dog_head.target"),
     ("Horse", "animal04/jaldmic_horse.target"),
+    ("Reptile", "animal02/jaldmic_furry_mouth_reptile.target"),
+    ("Person", BASE),
 ];
 
 /// The four-legged beasts measured: a name and its target, under `SOURCE`.
@@ -110,7 +114,7 @@ fn measure_all(root: &Path, rings: usize) -> Result<Vec<String>, String> {
     Ok(tables)
 }
 
-/// A mesh with a target applied to it.
+/// A mesh with a target applied to it; `BASE` for the base mesh as it is.
 fn reshaped(root: &Path, target: &str) -> Result<Mesh, String> {
     let folder = root.join(SOURCE);
     let read = |file: &str| {
@@ -118,7 +122,9 @@ fn reshaped(root: &Path, target: &str) -> Result<Mesh, String> {
         fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))
     };
     let mut mesh = Mesh::read(&read(BASE)?).map_err(|error| format!("{BASE}: {error}"))?;
-    target::apply(&mut mesh, &read(target)?).map_err(|error| format!("{target}: {error}"))?;
+    if target != BASE {
+        target::apply(&mut mesh, &read(target)?).map_err(|error| format!("{target}: {error}"))?;
+    }
     Ok(mesh)
 }
 

@@ -154,6 +154,7 @@ fn head_figures(source: &'static str, head: &Head) -> MeasuredHead {
     }
     MeasuredHead {
         source,
+        length: (head.length * 100.0).round() as i32,
         pitch: head.pitch.round() as i32,
         rings,
     }

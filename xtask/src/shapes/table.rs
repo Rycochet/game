@@ -143,7 +143,8 @@ pub fn head(name: &str, source: &str, head: &Head) -> String {
     let _ = writeln!(text, "{name}'s head ({source})");
     let _ = writeln!(
         text,
-        "  In thousandths of its length from the back of the skull to the nose; nose down {} degrees.",
+        "  In thousandths of its length from the back of the skull to the nose ({} mm in the mesh); nose down {} degrees.",
+        (head.length * 100.0).round() as i64,
         head.pitch.round() as i64
     );
     let _ = writeln!(

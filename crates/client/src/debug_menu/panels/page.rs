@@ -5,7 +5,7 @@ use shared::blade::Family;
 use shared::material::Material;
 
 use super::{
-    RING_ROWS, armour, arms, feet, footwear, hair, legs, neck, sets, spawn_blade_row,
+    RING_ROWS, armour, arms, beast_heads, feet, footwear, hair, legs, neck, sets, spawn_blade_row,
     spawn_body_row, spawn_picture_heading, spawn_picture_row, spawn_ring_row, under, waist,
 };
 use crate::common::Preferences;
@@ -89,6 +89,7 @@ impl PicturePage {
             Self::Bodies => {
                 spawn_body_row(grid);
                 hair::spawn_hair_rows(grid);
+                beast_heads::spawn_beast_head_rows(grid);
             }
             Self::Hands => armour::spawn_hands_rows(grid),
             Self::Shoulders => armour::spawn_shoulders_rows(grid),

@@ -17,6 +17,9 @@ use super::rings::{HEAD_RINGS, Ring};
 pub struct MeasuredHead {
     /// The mesh it was measured from, under `spare_assets/makehuman/`.
     pub source: &'static str,
+    /// Its length in the mesh, in millimetres: heads on the same person's body
+    /// (`on_frame`) compare by it.
+    pub length: i32,
     pub pitch: i32,
     pub rings: [MeasuredRing; HEAD_RINGS],
 }
@@ -50,6 +53,7 @@ const fn ring(along: i32, half: i32, belly: i32, back: i32) -> MeasuredRing {
 /// The wolf's: a broad skull and cheeks, a long muzzle tapering to the nose.
 pub const WOLF_HEAD: MeasuredHead = MeasuredHead {
     source: "animal03/jaldmic_wolf_headv3.target",
+    length: 257,
     pitch: 1,
     rings: [
         ring(-172, 32, 104, 124),
@@ -66,6 +70,7 @@ pub const WOLF_HEAD: MeasuredHead = MeasuredHead {
 /// The cow's: a deep, broad brow narrowing a little to a wide muzzle.
 pub const COW_HEAD: MeasuredHead = MeasuredHead {
     source: "animal03/jaldmic_vaca_cow_head.target",
+    length: 331,
     pitch: 11,
     rings: [
         ring(-125, 2, 35, 43),
@@ -82,6 +87,7 @@ pub const COW_HEAD: MeasuredHead = MeasuredHead {
 /// The dog's, kept for beast peoples' heads: rounder than the wolf's.
 pub const DOG_HEAD: MeasuredHead = MeasuredHead {
     source: "animal03/jaldmic_perro_dog_head.target",
+    length: 332,
     pitch: 1,
     rings: [
         ring(-200, 99, -236, -232),
@@ -99,6 +105,7 @@ pub const DOG_HEAD: MeasuredHead = MeasuredHead {
 /// neck, as a horse's head grows out of it with no back of the skull to find.
 pub const HORSE_HEAD: MeasuredHead = MeasuredHead {
     source: "animal04/jaldmic_horse.target",
+    length: 380,
     pitch: 20,
     rings: [
         ring(-322, 3, -169, -168),
@@ -112,10 +119,48 @@ pub const HORSE_HEAD: MeasuredHead = MeasuredHead {
     ],
 };
 
+/// A person's head with a reptile's muzzle, for the kobold and lizardfolk: the skull a
+/// person's, the jaws long and deep.
+pub const REPTILE_HEAD: MeasuredHead = MeasuredHead {
+    source: "animal02/jaldmic_furry_mouth_reptile.target",
+    length: 274,
+    pitch: 6,
+    rings: [
+        ring(-225, 48, 204, 259),
+        ring(-85, 230, -143, 504),
+        ring(55, 275, -260, 560),
+        ring(195, 268, -260, 560),
+        ring(335, 241, -260, 500),
+        ring(475, 193, -252, 212),
+        ring(615, 171, -233, 115),
+        ring(755, 114, -75, 62),
+    ],
+};
+
+/// The person's own head, the base mesh's: what the heads on a person are fitted to a
+/// frame's oval head by (`MeasuredHead::on_frame`).
+pub const PERSON_HEAD: MeasuredHead = MeasuredHead {
+    source: "base.obj",
+    length: 210,
+    pitch: 2,
+    rings: [
+        ring(-275, 25, 282, 311),
+        ring(-135, 272, -138, 624),
+        ring(5, 340, -368, 700),
+        ring(145, 402, -368, 726),
+        ring(285, 343, -368, 717),
+        ring(425, 309, -366, 661),
+        ring(565, 223, -364, 522),
+        ring(705, 41, -29, 50),
+    ],
+};
+
 /// Every measured head, by the name `cargo xtask shapes` prints.
-pub const MEASURED_HEADS: [(&str, MeasuredHead); 4] = [
+pub const MEASURED_HEADS: [(&str, MeasuredHead); 6] = [
     ("Wolf", WOLF_HEAD),
     ("Cow", COW_HEAD),
     ("Dog", DOG_HEAD),
     ("Horse", HORSE_HEAD),
+    ("Reptile", REPTILE_HEAD),
+    ("Person", PERSON_HEAD),
 ];

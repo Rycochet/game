@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 mod armour;
 mod arms;
+mod beast_heads;
 mod feet;
 mod footwear;
 mod hair;
