@@ -2,13 +2,12 @@
 //! Accept and Decline), under way or done (how far along, Complete when every
 //! step is done), or just handed in (the giver's last words).
 
-use shared::lang::{Args, Lang};
-use shared::protocol::{LogEntry, OfferState, QuestState};
-use shared::story::{RewardPart, Story, reward_text};
+use shared::lang::Lang;
+use shared::protocol::{OfferState, QuestState};
+use shared::story::{RewardPart, Story};
 
 use super::OpenTalk;
-use super::words::{or_partly, plain};
-use crate::quests::{QuestBook, done_steps};
+use crate::quests::{QuestBook, or_partly, plain, reward_line, step_lines};
 
 /// What the detail shows, and which buttons.
 pub(super) struct Detail {
@@ -32,7 +31,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
             paragraphs: vec![or_partly(entry.story.ending_text(lang, ending))],
             steps_head: String::new(),
             steps: Vec::new(),
-            reward: reward(lang, &entry.reward),
+            reward: reward_line(lang, &entry.reward),
             accept: false,
             turn_in: false,
         });
@@ -61,7 +60,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
                 // The log moves on as steps are done; the offer only when
                 // the giver is asked again.
                 turn_in: entry.state == QuestState::Ready,
-                ..about(&entry.story, under_way(entry, lang), &entry.reward, lang)
+                ..about(&entry.story, step_lines(entry, lang), &entry.reward, lang)
             })
         }
         OfferState::Locked(_) => None,
@@ -76,32 +75,10 @@ fn about(story: &Story, mut steps: Vec<String>, pays: &[RewardPart], lang: &Lang
         paragraphs: or_partly_all(story.paragraphs_text(lang)),
         steps_head: plain(lang, "talk-steps"),
         steps,
-        reward: reward(lang, pays),
+        reward: reward_line(lang, pays),
         accept: false,
         turn_in: false,
     }
-}
-
-/// Each step of a quest taken, with how far along it is.
-fn under_way(entry: &LogEntry, lang: &Lang) -> Vec<String> {
-    let done = done_steps(entry);
-    (0..entry.steps.len())
-        .map(|i| {
-            let count = entry.counts.get(i).copied().unwrap_or(0);
-            let step = or_partly(entry.story.step_text(lang, i, count));
-            if done[i] {
-                let args = Args::new().text("step", step);
-                or_partly(lang.render("talk-step-done", &args))
-            } else {
-                step
-            }
-        })
-        .collect()
-}
-
-fn reward(lang: &Lang, parts: &[RewardPart]) -> String {
-    let pays = or_partly(reward_text(lang, parts));
-    or_partly(lang.render("talk-reward", &Args::new().text("reward", pays)))
 }
 
 fn or_partly_all(written: Result<Vec<String>, shared::lang::RenderError>) -> Vec<String> {

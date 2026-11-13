@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::hall::GateCode;
 use crate::poi::ChunkPos;
 use crate::quest::{QuestId, QuestKind, Standing, Step};
 use crate::skill::SkillId;
@@ -34,6 +35,17 @@ pub enum QuestAsk {
     /// Every quest of this planet the character has taken: answered with
     /// `QuestNews::Log` (also sent unasked on joining a world).
     Log,
+    /// The quests the character has taken on another planet, for the Quest
+    /// Log: answered with `QuestNews::PlanetLog`, or nothing if they have
+    /// none there.
+    PlanetLog(WorldId),
+    /// Every planet the character has quest history on: answered with
+    /// `QuestNews::Planets`.
+    Planets,
+    /// Follow this quest of this planet under the minimap, or none (the
+    /// newest taken then): kept on the character, per planet. Answered with
+    /// `QuestNews::Tracked`.
+    Track(Option<QuestId>),
 }
 
 /// What the server tells a client about quests.
@@ -51,11 +63,21 @@ pub enum QuestNews {
         town: ChunkPos,
         markers: Vec<(u16, Marker)>,
     },
-    /// The character's quests on this planet, and their daily givers.
+    /// The character's quests on this planet, their daily givers, and the
+    /// quest they chose to follow.
     Log {
         quests: Vec<LogEntry>,
         dailies: Vec<DailyDone>,
+        tracked: Option<QuestId>,
     },
+    /// The character's quests on another planet, for the Quest Log.
+    PlanetLog {
+        world: WorldId,
+        quests: Vec<LogEntry>,
+        dailies: Vec<DailyDone>,
+    },
+    /// The quest followed on this planet now.
+    Tracked(Option<QuestId>),
     /// One quest has changed: taken, a step moved on, finished, failed or
     /// given up.
     Changed(LogEntry),
@@ -64,15 +86,23 @@ pub enum QuestNews {
     TurnedIn { id: QuestId, ending: Ending },
     /// Something asked couldn't be done, and why.
     Refused { id: QuestId, why: QuestRefusal },
-    /// The planets where the character has quests taken, for the Hall's
-    /// gates: sent on coming into the Hall.
+    /// The planets where the character has quest history, for the Hall's
+    /// gates (those with quests taken) and the Quest Log: sent on coming into
+    /// the Hall, and when asked.
     Planets(Vec<PlanetQuests>),
 }
 
-/// A planet where the character has quests taken.
+/// A planet where the character has quest history.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlanetQuests {
     pub world: WorldId,
+    /// Its name in runes (its first World Gate's code), if it is one of the
+    /// Hall's and the server has learned it.
+    pub code: Option<GateCode>,
+    /// The planet the character is on (or came into the Hall from).
+    pub here: bool,
+    /// Some quests are taken there, not yet handed in ("!" over its gates).
+    pub taken: bool,
     /// Some of them wait to be handed in ("?" over its gates, not "!").
     pub ready: bool,
 }
@@ -121,7 +151,8 @@ pub enum Hint {
     Skill(SkillId),
 }
 
-/// A door's marker.
+/// A door's marker. A giver with quests in several states shows the first of
+/// `Ready`, `Taken`, `Available`, `Locked` they have (owner).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Marker {
     /// "!" in the kind's colour: a quest on offer.
@@ -130,6 +161,8 @@ pub enum Marker {
     Ready(QuestKind),
     /// "!" in grey: one the character can't take yet.
     Locked,
+    /// "?" in grey: one taken from them and not finished yet (owner).
+    Taken,
 }
 
 /// One of the character's quests, as their Quest Log shows it.
@@ -161,10 +194,14 @@ pub enum QuestState {
 }
 
 /// A daily giver the character has done dailies for.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DailyDone {
     pub town: ChunkPos,
     pub building: u16,
+    /// Who gives them, if their town's quests can still be made.
+    pub giver: Option<Person>,
+    /// The giver's town's name.
+    pub home: String,
     pub count: u32,
     /// When the last was handed in: Unix seconds.
     pub last: i64,

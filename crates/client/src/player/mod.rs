@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use crate::common::{CancelledEnergy, GameView, ServerStatus, SpentEnergy};
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod door_key;
 mod doors;
 mod drawn_ground;
 mod facing;
@@ -29,7 +30,8 @@ mod stride;
 mod travel;
 mod wild_heights;
 
-use doors::{AskDoor, close_doors, door_answers, send_door_asks};
+use door_key::open_or_close_doors;
+use doors::{AskDoor, door_answers, send_door_asks};
 use drawn_ground::keep_drawn_ground;
 use keys::move_player;
 use level_travel::travel_on_level;
@@ -97,7 +99,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     move_player.in_set(PlayerSystems::Input),
-                    close_doors.in_set(PlayerSystems::Input),
+                    open_or_close_doors.in_set(PlayerSystems::Input),
                     // After everything in `Input` asked for its steps.
                     (
                         (

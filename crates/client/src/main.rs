@@ -31,6 +31,7 @@ mod minimap;
 mod notices;
 mod planet_view;
 mod player;
+mod quest_log;
 mod quests;
 mod site;
 mod skills_page;
@@ -141,6 +142,7 @@ fn main() {
     app.add_plugins(notices::NoticesPlugin);
     app.add_plugins(accounts_panel::AccountsPanelPlugin);
     app.add_plugins(quests::QuestsPlugin);
+    app.add_plugins(quest_log::QuestLogPlugin);
     app.add_plugins(app_icon::AppIconPlugin);
 
     // Native only: developer tools. (The embedded single-player server is

@@ -2,16 +2,21 @@
 //! the planet, made again from its town's seed, and their daily givers.
 
 use shared::protocol::{DailyDone, LogEntry, QuestNews, QuestState};
-use shared::quest::{Quest, QuestId};
+use shared::quest::{Quest, QuestId, utc_day};
 
 use super::{cache, done_flags};
 use crate::ServerWorld;
 use crate::connections::Client;
+use crate::storage::QuestBook;
 
 /// One of the character's quests, as the log shows it, or `None` if it isn't
 /// theirs (or its town's quests have changed since).
 pub(crate) fn entry(client: &Client, world: &mut ServerWorld, id: QuestId) -> Option<LogEntry> {
-    let book = &client.character.quests;
+    entry_in(&client.character.quests, world, id)
+}
+
+/// One quest of `book`, a planet's, made again in `world`, that planet's.
+fn entry_in(book: &QuestBook, world: &mut ServerWorld, id: QuestId) -> Option<LogEntry> {
     let quest = cache::quest(world, id)?;
     let (state, at, counts) = if let Some(progress) = book.taken.get(&id) {
         let ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
@@ -57,6 +62,20 @@ fn as_entry(quest: Quest, state: QuestState, counts: Vec<u32>, at: i64) -> LogEn
 /// The whole log for this planet.
 pub(crate) fn whole_log(client: &Client, world: &mut ServerWorld) -> QuestNews {
     let book = &client.character.quests;
+    let (quests, dailies) = book_log(book, world);
+    QuestNews::Log {
+        quests,
+        dailies,
+        tracked: book.tracked,
+    }
+}
+
+/// Every quest in `book` and its daily givers, made again in `world`: the
+/// planet the book is for.
+pub(crate) fn book_log(
+    book: &QuestBook,
+    world: &mut ServerWorld,
+) -> (Vec<LogEntry>, Vec<DailyDone>) {
     let mut ids: Vec<QuestId> = book.taken.keys().copied().collect();
     ids.extend(book.done.keys());
     ids.extend(
@@ -66,17 +85,24 @@ pub(crate) fn whole_log(client: &Client, world: &mut ServerWorld) -> QuestNews {
     );
     let quests = ids
         .into_iter()
-        .filter_map(|id| entry(client, world, id))
+        .filter_map(|id| entry_in(book, world, id))
         .collect();
     let dailies = (book.dailies.iter())
-        .map(|(&(town, building), daily)| DailyDone {
-            town,
-            building,
-            count: daily.count,
-            last: daily.last,
+        .map(|(&(town, building), daily)| {
+            // Any day's daily names its giver and town.
+            let last = cache::daily(world, town, building, utc_day(daily.last));
+            DailyDone {
+                town,
+                building,
+                giver: (last.as_ref()).map(|quest| quest.story.cast.giver().person.clone()),
+                home: (last.as_ref())
+                    .map_or_else(String::new, |quest| quest.story.facts.home.clone()),
+                count: daily.count,
+                last: daily.last,
+            }
         })
         .collect();
-    QuestNews::Log { quests, dailies }
+    (quests, dailies)
 }
 
 /// Tells the client one quest has changed. `false` if it has gone.

@@ -18,8 +18,8 @@ The keys below are the ones the game starts with. To change them, open Settings,
 | Enter a place, take stairs, leave a site (in the wilderness, the hatched ground round a place you know leads back to the world map) | Click it, and walk there | Tap it |
 | Up / Leave: up the stairs you stand on, or leave for the world map: the wilderness or a place's ground level from anywhere out in the open, a cave only from the edge of its map (or a Dev Area, from anywhere in it) | Shift + , (`<`), or . on the number pad, or the movement pad's Up ladder | The movement pad's Up ladder |
 | Down / Explore: down the stairs you stand on, or explore the wilderness where you stand on the world map (going into a place you know of whose circle your own overlaps by about a fifth) | Shift + . (`>`), or 0 on the number pad, or the movement pad's Down ladder | The movement pad's Down ladder |
-| Close the open doors beside you, and lock the closed ones you have the key for | L | Not yet |
-| Talk to someone in a town: their quests, and a shop's wares (a "!" over a door has a quest for you, a "?" one to hand in, a grey "!" one for later) | Click their door, and walk there | Tap the door |
+| Open or close doors: closes the open doors beside you, or if none are open, opens the closed door you face (or else one beside you) | O | Not yet |
+| Talk to someone in a town: their quests, and a shop's wares (a "!" over a door has a quest for you, a "?" one to hand in, a grey "?" one of theirs you are still doing, a grey "!" one for later) | Click their door, and walk there | Tap the door |
 | Turn to face a place | Right-click it | Hold a finger on it |
 | Turn left or right (a tap turns an eighth, holding keeps turning) | Choose keys for Turn Left and Turn Right in Settings, Controls (none to begin with), or the movement pad's curved arrows | The movement pad's curved arrows |
 
@@ -80,6 +80,7 @@ A camera key moves the camera a little each time you press it, and keeps it movi
 | Open or close the Character panel | Click the person at the bottom left | Tap the person |
 | Show your character, your clothes and what you carry, or your abilities | C, I or B (the same key again closes it), or the tabs at the top of the panel | Tap the tabs |
 | Show the skills you know, as a tree round you | K (again closes it), or the Skills tab on the Character panel; drag to move the tree, the wheel to zoom, click a skill to see more | Tap the Skills tab; drag to move, pinch to zoom, tap a skill |
+| Open or close the Quest Log: your quests on any planet you have quested on (choose the planet by its runes at the top), under way, handed in or failed, and the dailies you have done for each giver; choose one to read it, follow it with Track, give it up with Abandon (pressed twice), or click a place it sends you to, to see it on the full map (from the world map) | L | Not yet |
 | Use an ability on the action bar (either side of the Health and Mana circle) | 1 to 0, or click it | Tap it |
 | Line up abilities while busy, or take one out of the line | Use them in turn; use one again to take it out (moving yellow and black stripes show it is waiting) | The same |
 | Put an ability on the action bar, move it, or take it off | Drag it from the Abilities tab onto a slot, from slot to slot, or from a slot back onto the Abilities tab | The same |

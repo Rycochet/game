@@ -14,7 +14,7 @@ const CAVE: ChunkPos = ChunkPos { x: 2, y: 1 };
 const CRYPT: ChunkPos = ChunkPos { x: -1, y: 3 };
 
 /// A quest of two steps in series: exploring the cave, then the crypt.
-fn entry(state: QuestState, counts: Vec<u32>) -> LogEntry {
+pub(crate) fn entry(state: QuestState, counts: Vec<u32>) -> LogEntry {
     let household = Household::new(CreatureKind::Human, Seed::new(7));
     let mut request = Request::new(Seed::new(3), household, 0, "Ashford", Goal::Visit);
     request.place = Some(Place {
@@ -102,4 +102,43 @@ fn no_system_asks_for_what_another_of_its_parameters_has() {
     starts(read::read_server);
     starts(poi_marks::find_quest_pois);
     starts(over_view::show_marks);
+}
+
+#[test]
+fn a_quest_under_way_shows_a_grey_question_mark() {
+    let taken = MarkLook::of(Marker::Taken);
+    assert!(taken.ready);
+    assert_eq!(taken.rgb, MarkLook::of(Marker::Locked).rgb);
+    assert_eq!(
+        MarkLook::of_state(QuestKind::Daily, QuestState::Taken),
+        taken
+    );
+    let ready = MarkLook::of_state(QuestKind::Daily, QuestState::Ready);
+    assert_eq!(ready, MarkLook::of(Marker::Ready(QuestKind::Daily)));
+    assert_eq!(ready.class(), "mark-blue");
+    assert_eq!(taken.class(), "mark-grey");
+}
+
+#[test]
+fn the_quest_followed_is_the_one_chosen_or_the_newest() {
+    let mut older = entry(QuestState::Taken, vec![0, 0]);
+    older.at = 10;
+    let mut newer = entry(QuestState::Ready, vec![1, 1]);
+    newer.id.slot = Slot::Giver {
+        building: 4,
+        slot: 1,
+        chain: 0,
+    };
+    newer.at = 20;
+    let mut book = book_of(older.clone());
+    book.entries.insert(newer.id, newer.clone());
+    assert_eq!(book.followed(), Some(newer.id));
+    book.tracked = Some(older.id);
+    assert_eq!(book.followed(), Some(older.id));
+    book.entries.get_mut(&older.id).unwrap().state = QuestState::Done;
+    assert_eq!(
+        book.followed(),
+        Some(newer.id),
+        "only one under way is followed"
+    );
 }

@@ -15,6 +15,7 @@ mod give_up;
 mod log;
 mod needs;
 mod offers;
+mod planet_log;
 mod planets;
 mod progress;
 mod standing;
@@ -23,6 +24,7 @@ mod turn_in;
 pub(crate) use ask::answer_quest;
 pub(crate) use cache::TownQuests;
 pub(crate) use follow::{Seen, follow, killed};
+pub(crate) use planet_log::answer_planet_logs;
 
 use shared::poi::ChunkPos;
 use shared::protocol::{QuestNews, ServerMessage};
@@ -64,6 +66,8 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
         .send(&ServerMessage::Quest(QuestNews::Markers { town, markers }))
 }
 
+#[cfg(test)]
+mod log_tests;
 #[cfg(test)]
 mod planets_tests;
 #[cfg(test)]

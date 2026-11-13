@@ -14,7 +14,7 @@ Talking at town doors (owner: no one is inside yet, so the door is the person). 
 - `talk/input.rs`: `read_events`: tabs, a row of the list, Accept and Complete (each followed by asking `Talk` again), Decline and Back.
 - `talk/quests_page.rs`: `show_pages` (when dirty or the quest book changes: tab bar and pages, the title "Name, occupation" from the first offer's giver, the refusal, then the list or a detail), `Ids`, `story_of`.
 - `talk/detail.rs`: `Detail`, `detail_of` (on offer: story, steps from its asks, return, reward, Accept / Decline; taken: steps with counts and "(done)", Complete once ready; handed in: the ending and reward).
-- `talk/words.rs`: `giver_title` (`occupation-<kind>` from `talk.ftl`, none for houses), `hint_text`, `refusal`, `plain`, `or_partly` (what could be written, missing parts in braces, logged).
+- `talk/words.rs`: `giver_title` (`occupation-<kind>` from `talk.ftl`, none for houses), `hint_text`, `refusal`; `plain` and `or_partly` are `quests`' (shared with the Quest Log).
 - `talk/close.rs`: `close_on_escape`, `close_when_left`.
 
 ## Public API
@@ -23,7 +23,7 @@ Talking at town doors (owner: no one is inside yet, so the door is the person). 
 
 ## Depends on
 
-- `common` (`CurrentDungeon`, `GameView`, `MapPosition`, `PointerSystems`, `TakesGifts`, `HeldOverGifts`, `GaveItem`, `TookItem`, `HeldStock`, `Truesight`, `Wording`), `quests` (`DoorMarkers`, `QuestBook`, `done_steps`), `inventory` (`Carried`), `connection` (`ToServer`, `FromServer`), `dungeon_map` (`DoorClicked`), `player` (`Player`, `Arrived`, `TakeStep`, `Walking`, `TravelTo`, `PlayerSystems`), `dom`, `widgets`, `shared::protocol` (`QuestAsk`, `QuestNews`, `Offer`, `OfferState`, `Hint`, `QuestRefusal`), `shared::story` (wording), `shared::lang`, `shared::shop`, `shared::item`.
+- `common` (`CurrentDungeon`, `GameView`, `MapPosition`, `PointerSystems`, `TakesGifts`, `HeldOverGifts`, `GaveItem`, `TookItem`, `HeldStock`, `Truesight`, `Wording`), `quests` (`DoorMarkers`, `QuestBook`, and its words: `or_partly`, `plain`, `step_lines`, `reward_line`), `inventory` (`Carried`), `connection` (`ToServer`, `FromServer`), `dungeon_map` (`DoorClicked`), `player` (`Player`, `Arrived`, `TakeStep`, `Walking`, `TravelTo`, `PlayerSystems`), `dom`, `widgets`, `shared::protocol` (`QuestAsk`, `QuestNews`, `Offer`, `OfferState`, `Hint`, `QuestRefusal`), `shared::story` (wording), `shared::lang`, `shared::shop`, `shared::item`.
 
 ## Used by
 
