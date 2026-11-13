@@ -3,7 +3,7 @@
 //! same frame (tested for every kind).
 
 use super::layout::{Bone, Girdle, Head, Layout, Limb, MAX_LIMBS, Neck, Role, Spine, Station};
-use super::rings::{RINGS, Ring, from_stations};
+use super::measured_person::PERSON_TRUNK;
 use super::{Frame, Parts, Side};
 
 /// A bone going this way, `span` far, this thick along it and at its end.
@@ -69,7 +69,7 @@ impl Layout {
         ]) {
             *slot = Some(limb);
         }
-        let mut layout = Layout {
+        Layout {
             spine: Spine {
                 base: [0, f.hip, 0],
                 pitch: 0,
@@ -87,7 +87,7 @@ impl Layout {
                 },
                 shoulders: from_hip(f.shoulder),
                 neck_base: from_hip(f.neck_base),
-                rings: [Ring::default(); RINGS],
+                rings: PERSON_TRUNK.rings(frame),
             },
             neck: Neck {
                 length: f.chin - f.neck_base,
@@ -102,9 +102,7 @@ impl Layout {
             limbs,
             parts,
             upper: None,
-        };
-        layout.spine.rings = from_stations(&layout);
-        layout
+        }
     }
 
     /// Its frame, if it stands upright on two legs with two arms (or wing-arms) and its

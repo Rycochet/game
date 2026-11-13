@@ -68,9 +68,12 @@ impl Around<'_> {
         self.neck() * 1.6
     }
 
-    /// On the trunk at this height, `off` out from it.
+    /// On the trunk at this height, `off` out from it: its front half in front, its
+    /// back half behind.
     pub fn trunk(&self, angle: f32, y: f32, off: f32) -> Vec3 {
-        on_ellipse(trunk_half(self.frame, y), y, angle, off)
+        let girth = trunk_half(self.frame, y);
+        let half = (girth.across, girth.deep(angle.cos() >= 0.0));
+        on_ellipse(half, y, angle, off)
     }
 
     /// On the head at this height, `off` out from it: its section there is the
@@ -118,7 +121,8 @@ impl Around<'_> {
             point = Vec3::new(out.x, point.y, out.y);
         }
         if point.y <= self.neck_base() {
-            let (a, d) = trunk_half(self.frame, point.y);
+            let girth = trunk_half(self.frame, point.y);
+            let (a, d) = (girth.across, girth.deep(point.z >= 0.0));
             let ellipse = Vec2::new(point.x / (a + off), point.z / (d + off)).length();
             if ellipse < 1.0 && ellipse > 0.0 {
                 point = Vec3::new(point.x / ellipse, point.y, point.z / ellipse);

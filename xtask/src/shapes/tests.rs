@@ -5,6 +5,7 @@ use super::leg::legs;
 use super::mesh::Mesh;
 use super::ring::ring;
 use super::target;
+use super::upright::Upright;
 
 /// A box's six faces in `.obj` lines, its corners numbered from `first`.
 fn faces(first: usize) -> String {
@@ -213,4 +214,55 @@ fn a_head_is_measured_from_the_back_of_the_skull_to_the_nose() {
         // Down to the jaw's underside, half a unit below the head's line.
         assert!((ring.belly + 0.5).abs() < 0.1, "{along}: {ring:?}");
     }
+}
+
+/// A person of boxes standing upright: a trunk 4 wide over two legs, an arm
+/// hanging beside it, and the joints a person is measured by. The hip
+/// joints are 1.5 behind the trunk's front and 1 in front of its back.
+fn person() -> Mesh {
+    mesh(
+        &[
+            ([-2.0, 5.0, -1.0], [2.0, 10.0, 1.5]),
+            ([0.5, 0.0, -0.5], [1.5, 5.5, 0.5]),
+            ([-1.5, 0.0, -0.5], [-0.5, 5.5, 0.5]),
+            ([2.5, 6.0, -0.4], [3.1, 9.5, 0.4]),
+        ],
+        &[
+            ("l-upper-leg", [1.0, 5.5, 0.0]),
+            ("l-knee", [1.0, 3.0, 0.0]),
+            ("l-ankle", [1.0, 0.5, 0.0]),
+            ("l-shoulder", [2.8, 9.5, 0.0]),
+            ("l-elbow", [2.8, 8.0, 0.0]),
+            ("l-hand", [2.8, 6.5, 0.0]),
+            ("neck", [0.0, 10.0, 0.0]),
+        ],
+    )
+}
+
+#[test]
+fn an_upright_body_is_measured_up_its_trunk_and_along_its_limbs() {
+    let body = Upright::measure(&person(), 5).unwrap();
+    assert!((body.height - 10.0).abs() < 0.01);
+    assert!((body.crotch - 5.0).abs() < 0.01, "{}", body.crotch);
+    for (got, want) in [(body.hips, 5.5), (body.shoulders, 9.5), (body.neck, 10.0)] {
+        assert!((got - want).abs() < 0.01, "{got} {want}");
+    }
+    // The top cut may or may not catch the box's very top edge.
+    assert!(body.trunk.len() >= 4, "{}", body.trunk.len());
+    for &(_, ring) in &body.trunk {
+        assert!((ring.half_width - 2.0).abs() < 0.01, "{ring:?}");
+        // Front and back from the line up through the hip joints.
+        assert!((ring.belly - 1.5).abs() < 0.01, "{ring:?}");
+        assert!((ring.back - 1.0).abs() < 0.01, "{ring:?}");
+    }
+    let thigh = &body.limbs[0];
+    assert_eq!(thigh.name, "thigh");
+    assert!((thigh.length - 2.5).abs() < 0.01, "{}", thigh.length);
+    for cut in &thigh.cuts {
+        let (across, deep) = cut.expect("the leg is cut");
+        assert!((across - 0.5).abs() < 0.01 && (deep - 0.5).abs() < 0.01);
+    }
+    let arm = &body.limbs[2];
+    let (across, deep) = arm.cuts[2].expect("the arm is cut");
+    assert!((across - 0.3).abs() < 0.01 && (deep - 0.4).abs() < 0.01);
 }

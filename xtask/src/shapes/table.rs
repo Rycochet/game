@@ -7,6 +7,7 @@ use std::fmt::Write;
 use super::fourfoot::Fourfoot;
 use super::head::Head;
 use super::leg::LegCut;
+use super::upright::{LIMB_CUTS, Upright};
 
 /// The tables for one beast, under its name and where it was measured from.
 pub fn fourfoot(name: &str, source: &str, beast: &Fourfoot) -> String {
@@ -72,6 +73,63 @@ pub fn fourfoot(name: &str, source: &str, beast: &Fourfoot) -> String {
             share(*height),
             leg(fore),
             leg(hind)
+        );
+    }
+    text
+}
+
+/// The tables for a body standing upright, in thousandths of its height.
+pub fn upright(name: &str, source: &str, body: &Upright) -> String {
+    let share = |value: f64| (value / body.height * 1000.0).round() as i64;
+    let mut text = String::new();
+    let _ = writeln!(text, "{name} ({source})");
+    let _ = writeln!(text, "  In thousandths of the height.");
+    let _ = writeln!(
+        text,
+        "  Crotch {}, hip joints {}, shoulder joints {}, neck's base {} above the ground.",
+        share(body.crotch),
+        share(body.hips),
+        share(body.shoulders),
+        share(body.neck)
+    );
+    let _ = writeln!(text);
+    let _ = writeln!(
+        text,
+        "  Trunk, crotch to the neck's base: height, front and back from the line up through the hip joints"
+    );
+    let _ = writeln!(text, "  ring  height  half width  front   back");
+    for (at, (height, ring)) in body.trunk.iter().enumerate() {
+        let _ = writeln!(
+            text,
+            "  {:>4}  {:>6}  {:>10}  {:>5}  {:>5}",
+            at + 1,
+            share(*height),
+            share(ring.half_width),
+            share(ring.belly),
+            share(ring.back)
+        );
+    }
+    let _ = writeln!(text);
+    let _ = writeln!(
+        text,
+        "  Left limbs: length, then half thickness (across / front to back) at {} cuts along each bone",
+        LIMB_CUTS
+    );
+    for bone in &body.limbs {
+        let cuts: Vec<String> = bone
+            .cuts
+            .iter()
+            .map(|cut| match cut {
+                Some((a, b)) => format!("{:>3}/{:<3}", share(*a), share(*b)),
+                None => format!("{:>3}/{:<3}", "-", "-"),
+            })
+            .collect();
+        let _ = writeln!(
+            text,
+            "  {:<9}  {:>4}  {}",
+            bone.name,
+            share(bone.length),
+            cuts.join("  ")
         );
     }
     text

@@ -61,7 +61,7 @@ fn rigid_pieces_stay_off_the_trunk() {
         for corner in model.parts.iter().flat_map(|(_, t)| t.iter().flatten()) {
             // Below the shoulder and well inside its width, nothing is in the trunk.
             if corner.y < frame.shoulder as f32 - 20.0 && corner.x.abs() < 120.0 {
-                let deep = trunk_depth(&frame, corner.x, corner.y);
+                let deep = trunk_depth(&frame, corner.x, corner.y, corner.z >= 0.0);
                 assert!(corner.z.abs() > deep + 10.0, "{look:?} {corner}");
             }
         }

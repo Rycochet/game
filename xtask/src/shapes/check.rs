@@ -7,17 +7,30 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use shared::body::{
-    HEAD_RINGS, MEASURED, MEASURED_HEADS, Measured, MeasuredHead, MeasuredRing, RINGS,
+    HEAD_RINGS, MEASURED, MEASURED_HEADS, Measured, MeasuredHead, MeasuredRing, MeasuredUpright,
+    PERSON_TRUNK, RINGS,
 };
 
 use super::fourfoot::Fourfoot;
 use super::head::Head;
-use super::{FOURFEET, HEADS, measure, measure_head};
+use super::upright::Upright;
+use super::{FOURFEET, HEADS, measure, measure_head, measure_upright};
 
 /// Fails if any committed figure differs from what is measured now.
 pub fn check(root: &Path) -> ExitCode {
     println!("==> Creature shapes");
     let mut wrong = Vec::new();
+    match measure_upright(root, RINGS) {
+        Ok(person) => {
+            let measured = upright_figures(PERSON_TRUNK.source, &person);
+            if measured != PERSON_TRUNK {
+                wrong.push(format!(
+                    "Person: shared::body has {PERSON_TRUNK:?}, the tool measures {measured:?}"
+                ));
+            }
+        }
+        Err(error) => wrong.push(error),
+    }
     for (name, target) in FOURFEET {
         let Some((_, committed)) = MEASURED.iter().find(|(named, _)| *named == name) else {
             wrong.push(format!("{name}: not in shared::body::MEASURED"));
@@ -62,7 +75,7 @@ pub fn check(root: &Path) -> ExitCode {
         eprintln!("{line}");
     }
     eprintln!(
-        "==> FAILED: copy `cargo xtask shapes` into crates/shared/src/body/measured.rs (heads: measured_heads.rs)"
+        "==> FAILED: copy `cargo xtask shapes` into crates/shared/src/body/measured.rs (heads: measured_heads.rs, the person: measured_person.rs)"
     );
     ExitCode::FAILURE
 }
@@ -89,6 +102,34 @@ fn figures(source: &'static str, beast: &Fourfoot) -> Measured {
         source,
         hips: share(beast.hips),
         shoulders: share(beast.shoulders),
+        rings,
+    }
+}
+
+/// The person's figures as the shared body keeps them, in whole thousandths of its
+/// height, as the table prints them.
+fn upright_figures(source: &'static str, body: &Upright) -> MeasuredUpright {
+    let share = |value: f64| (value / body.height * 1000.0).round() as i32;
+    let mut rings = [MeasuredRing {
+        along: 0,
+        half: 0,
+        belly: 0,
+        back: 0,
+    }; RINGS];
+    for (slot, (height, ring)) in rings.iter_mut().zip(&body.trunk) {
+        *slot = MeasuredRing {
+            along: share(*height),
+            half: share(ring.half_width),
+            belly: share(ring.belly),
+            back: share(ring.back),
+        };
+    }
+    MeasuredUpright {
+        source,
+        crotch: share(body.crotch),
+        hips: share(body.hips),
+        shoulders: share(body.shoulders),
+        neck: share(body.neck),
         rings,
     }
 }

@@ -218,7 +218,7 @@ impl Cloth<'_> {
 
     /// A knot of the ends at the back.
     fn knot(&self, model: &mut Model, height: f32, ease: f32) {
-        let (point, out) = self.hips().at(height, BACK, self.ease(ease, false) + 4.0);
+        let (point, out) = self.hips().at(height, BACK, self.ease(ease, false) + 8.0);
         limb(
             model.of(Stuff::Main),
             &[
@@ -236,12 +236,20 @@ impl Cloth<'_> {
         for side in [1.0, -1.0] {
             let over = side * (self.frame.neck as f32 + 30.0);
             let top = Vec3::new(over, self.neck_base() + 6.0, 0.0);
-            let front = hips.at(from, FRONT - side * 0.45, ease).0;
-            let back = hips.at(from, BACK + side * 0.45, ease).0;
-            limb(
-                model.of(Stuff::Main),
-                &[(front, 6.0), (top, 6.0), (back, 6.0)],
-            );
+            // Up the chest and down the back over the skin, as the chest stands out
+            // in front of the shoulders.
+            let up = |angle: f32| -> Vec<(Vec3, f32)> {
+                (0..4)
+                    .map(|step| {
+                        let height = Self::between(from, self.neck_base(), step as f32 / 5.0);
+                        (hips.at(height, angle, ease + 6.0).0, 6.0)
+                    })
+                    .collect()
+            };
+            let mut path = up(FRONT - side * 0.45);
+            path.push((top, 6.0));
+            path.extend(up(BACK + side * 0.45).into_iter().rev());
+            limb(model.of(Stuff::Main), &path);
         }
     }
 }

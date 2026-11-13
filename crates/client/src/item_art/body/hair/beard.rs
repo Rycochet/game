@@ -85,7 +85,7 @@ fn moustache(triangles: &mut Vec<Triangle>, skull: &Skull) {
 /// Hanging from the chin down the chest, by these widths (shares of the head's), kept
 /// in front of the chest; `side` parts a forked beard's points to either side.
 fn hang(triangles: &mut Vec<Triangle>, skull: &Skull, chin: Vec3, side: f32, widths: &[f32]) {
-    let chest = skull.neck_base.z + skull.chest_deep;
+    let chest = skull.neck_base.z + skull.chest_front;
     let steps = (widths.len() - 1) as f32;
     let path: Vec<(Vec3, f32)> = widths
         .iter()

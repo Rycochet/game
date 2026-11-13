@@ -69,3 +69,6 @@ pub(in crate::item_art) fn worn(look: &Look, frame: &Frame, rim: Option<&[[i32; 
     }
     all
 }
+
+#[cfg(test)]
+mod tests;

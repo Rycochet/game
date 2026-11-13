@@ -18,6 +18,7 @@ mod layout;
 mod limbs;
 mod measured;
 mod measured_heads;
+mod measured_person;
 mod parts;
 mod proportions;
 mod rings;
@@ -36,6 +37,7 @@ pub use layout::{
 pub use limbs::{has_hands, has_legs};
 pub use measured::{COW, DOG, HORSE, MEASURED, Measured, MeasuredRing};
 pub use measured_heads::{COW_HEAD, DOG_HEAD, HORSE_HEAD, MEASURED_HEADS, MeasuredHead, WOLF_HEAD};
+pub use measured_person::{MeasuredUpright, PERSON_TRUNK};
 pub use parts::{Ears, Feet, Horns, NONE, Parts, Snout, Tail, Wings};
 pub use proportions::{PERSON, Proportions};
 pub use rings::{HEAD_RINGS, RINGS, Ring};

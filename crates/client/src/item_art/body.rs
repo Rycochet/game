@@ -32,6 +32,8 @@ pub(super) use head::{HeadAxes, crown};
 #[cfg(test)]
 pub(super) use morph::placed as morph_placed;
 pub(super) use morph::{morph_parts, pieces as bare_pieces};
+#[cfg(test)]
+pub(super) use trunk::Girth;
 pub(super) use trunk::{neck_root, trunk_depth, trunk_half};
 
 /// What an upright body's picture takes up, wide and long: only the proportions

@@ -48,20 +48,29 @@ pub(super) struct Skull {
     pub deep: f32,
     /// Where the neck meets the shoulders.
     pub neck_base: Vec3,
-    /// How far in front of and behind the spine the chest reaches.
-    pub chest_deep: f32,
+    /// How far in front of the spine the chest reaches, and behind it the back, above
+    /// the waist.
+    pub chest_front: f32,
+    pub chest_back: f32,
 }
 
 impl Skull {
     fn of(layout: &Layout) -> Self {
         let f = |value: i32| value as f32;
+        let waist = layout.spine.waist.along;
+        let upper = layout
+            .spine
+            .rings
+            .iter()
+            .filter(move |ring| ring.along >= waist);
         Self {
             middle: features::skull(layout),
             across: f(layout.head.half.0),
             up: f(layout.head.length) / 2.0,
             deep: f(layout.head.half.1),
             neck_base: Axes::of(layout).at(f(layout.spine.neck_base)),
-            chest_deep: f(layout.spine.chest.half.1),
+            chest_front: f(upper.clone().map(|ring| ring.belly).max().unwrap_or(0)),
+            chest_back: f(upper.map(|ring| ring.back).max().unwrap_or(0)),
         }
     }
 

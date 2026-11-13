@@ -9,7 +9,14 @@ use std::f32::consts::{PI, TAU};
 use super::super::surface::{grid, lines, scales, studs};
 use super::super::{Model, Stuff, plate};
 use super::{DRAPE_CLEAR, OPENING, shoulder_top};
-use crate::item_art::body::trunk_depth;
+use crate::item_art::body::{trunk_depth, trunk_half};
+
+/// The furthest the trunk's front (or back) reaches between two heights.
+fn deepest(frame: &Frame, low: f32, high: f32, front: bool) -> f32 {
+    (0..=8)
+        .map(|step| trunk_half(frame, low + (high - low) * step as f32 / 8.0).deep(front))
+        .fold(0.0, f32::max)
+}
 
 /// A cape over both shoulders: rings from the neck out over the shoulders and down.
 pub(super) fn add_cape(model: &mut Model, form: &ShouldersForm, frame: &Frame, length: Length) {
@@ -23,20 +30,23 @@ pub(super) fn add_cape(model: &mut Model, form: &ShouldersForm, frame: &Frame, l
     let bottom = f(frame.shoulder) - down;
     // Over the shoulders' tops, rising a little round the neck as a collar.
     let over = f(frame.shoulder) + f(frame.upper_arm) * 1.15 + DRAPE_CLEAR;
+    // Hanging clear of the trunk's front and back wherever it reaches down to.
+    let hang = |front: bool| deepest(frame, bottom, f(frame.shoulder), front) + DRAPE_CLEAR + 15.0;
+    let top = f(frame.chest_half.1) * 0.75 + DRAPE_CLEAR;
     let rings = [
-        (over + 22.0, (f(frame.neck) * 1.45, f(frame.neck) * 1.3)),
         (
-            over,
+            over + 22.0,
             (
-                f(frame.shoulder_half) + 15.0,
-                f(frame.chest_half.1) * 0.75 + DRAPE_CLEAR,
+                f(frame.neck) * 1.45,
+                (f(frame.neck) * 1.3, f(frame.neck) * 1.3),
             ),
         ),
+        (over, (f(frame.shoulder_half) + 15.0, (top, top))),
         (
             bottom,
             (
                 f(frame.shoulder_half) + down * spread + f(frame.upper_arm) + DRAPE_CLEAR + 10.0,
-                f(frame.chest_half.1) + DRAPE_CLEAR + 15.0,
+                (hang(true), hang(false)),
             ),
         ),
     ];
@@ -57,7 +67,8 @@ pub(super) fn add_cape(model: &mut Model, form: &ShouldersForm, frame: &Frame, l
                 0.0
             };
         let across = from.1.0 + (to.1.0 - from.1.0) * t;
-        let deep = from.1.1 + (to.1.1 - from.1.1) * t;
+        let pick = |(front, back): (f32, f32)| if angle.sin() >= 0.0 { front } else { back };
+        let deep = pick(from.1.1) + (pick(to.1.1) - pick(from.1.1)) * t;
         let point = Vec3::new(across * angle.cos(), y, deep * angle.sin());
         let normal = Vec3::new(
             angle.cos() / across * 100.0,
@@ -116,7 +127,8 @@ pub(super) fn add_yoke(model: &mut Model, form: &ShouldersForm, frame: &Frame, l
             let angle = (v - 0.5) * PI;
             let top = shoulder_top(frame, x) + DRAPE_CLEAR;
             let y = low + (top - low) * angle.cos();
-            let z = angle.sin() * (trunk_depth(frame, x, y) + DRAPE_CLEAR);
+            let deep = trunk_depth(frame, x, y, angle.sin() >= 0.0);
+            let z = angle.sin() * (deep + DRAPE_CLEAR);
             (
                 Vec3::new(sign * x, y, z),
                 Vec3::new(0.0, angle.cos(), angle.sin()).normalize(),

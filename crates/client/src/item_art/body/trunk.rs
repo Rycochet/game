@@ -65,19 +65,26 @@ pub(in crate::item_art) fn neck_root(layout: &Layout) -> Vec3 {
     middle_of(&Axes::of(layout), &layout.spine.rings[RINGS - 1])
 }
 
-/// The trunk's skin: an oval round each ring, from its front to its back and as wide
-/// as it says.
+/// The trunk's skin round each ring, as wide as it says, from its front to its back.
+/// Upright, it is half an oval in front of the spine and half behind, meeting at the
+/// sides, as a person's back is flatter than their chest; level (a beast's), one oval
+/// round the middle of the ring; leaning, between the two.
 pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
     let axes = Axes::of(layout);
+    let level = layout.spine.pitch.clamp(0, 90) as f32 / 90.0;
     let rings: Vec<Vec<Vec3>> = drawn(&layout.spine.rings)
         .iter()
         .map(|ring| {
+            let spine = axes.at(ring.along as f32);
             let middle = middle_of(&axes, ring);
             let (across, deep) = (ring.half as f32, (ring.belly + ring.back) as f32 / 2.0);
             (0..ROUND)
                 .map(|at| {
                     let angle = at as f32 / ROUND as f32 * std::f32::consts::TAU;
-                    middle + Vec3::X * across * angle.cos() + axes.front * deep * angle.sin()
+                    let side = Vec3::X * across * angle.cos();
+                    let oval = middle + side + axes.front * deep * angle.sin();
+                    let halves = spine + side + axes.front * Girth::of(ring).z(angle.sin());
+                    halves.lerp(oval, level)
                 })
                 .collect()
         })
@@ -85,16 +92,63 @@ pub(super) fn build(triangles: &mut Vec<Triangle>, layout: &Layout) {
     loft(triangles, &rings);
 }
 
-/// The trunk's half widths across and front to back at a height, as it is drawn on an
-/// upright frame: what armour on it is offset from.
-pub(in crate::item_art) fn trunk_half(frame: &Frame, y: f32) -> (f32, f32) {
+/// The trunk's size at one height of an upright frame, in millimetres from the spine:
+/// half its width across, and how far its front and its back are from the spine. Round
+/// it, the skin is half an oval in front and half an oval behind, as it is drawn.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(in crate::item_art) struct Girth {
+    pub across: f32,
+    pub front: f32,
+    pub back: f32,
+}
+
+impl Girth {
+    fn of(ring: &Ring) -> Self {
+        Girth {
+            across: ring.half as f32,
+            front: ring.belly as f32,
+            back: ring.back as f32,
+        }
+    }
+
+    /// Its front, or its back.
+    pub fn deep(&self, front: bool) -> f32 {
+        if front { self.front } else { self.back }
+    }
+
+    /// How far forwards the skin is where it is `sin` of the way round towards the
+    /// front (negative: behind).
+    pub fn z(&self, sin: f32) -> f32 {
+        self.deep(sin >= 0.0) * sin
+    }
+
+    /// The same shape `out` millimetres further out all round.
+    pub fn grown(&self, out: f32) -> Self {
+        Girth {
+            across: self.across + out,
+            front: self.front + out,
+            back: self.back + out,
+        }
+    }
+
+    /// A point on the shape at this angle round from the body's left, through its front
+    /// (a quarter turn), at height `y`, and the way out from it there.
+    pub fn at(&self, angle: f32, y: f32) -> (Vec3, Vec3) {
+        let (sin, cos) = angle.sin_cos();
+        let deep = self.deep(sin >= 0.0);
+        let point = Vec3::new(self.across * cos, y, deep * sin);
+        let normal = Vec3::new(cos / self.across, 0.0, sin / deep).normalize_or(Vec3::Z);
+        (point, normal)
+    }
+}
+
+/// The trunk's girth at a height, as it is drawn on an upright frame: what armour on it
+/// is offset from. Below the crotch and above the neck's base it carries straight on.
+pub(in crate::item_art) fn trunk_half(frame: &Frame, y: f32) -> Girth {
     let hip = frame.hip as f32;
-    let levels: Vec<(f32, (f32, f32))> = drawn(&Layout::biped(frame, NONE).spine.rings)
+    let levels: Vec<(f32, Girth)> = drawn(&Layout::biped(frame, NONE).spine.rings)
         .iter()
-        .map(|ring| {
-            let f = |value: i32| value as f32;
-            (hip + f(ring.along), (f(ring.half), f(ring.belly)))
-        })
+        .map(|ring| (hip + ring.along as f32, Girth::of(ring)))
         .collect();
     let (first, last) = (levels[0], levels[levels.len() - 1]);
     if y <= first.0 {
@@ -108,15 +162,18 @@ pub(in crate::item_art) fn trunk_half(frame: &Frame, y: f32) -> (f32, f32) {
         .find(|pair| y <= pair[1].0)
         .expect("between the ends");
     let t = (y - at[0].0) / (at[1].0 - at[0].0);
-    (
-        at[0].1.0 + (at[1].1.0 - at[0].1.0) * t,
-        at[0].1.1 + (at[1].1.1 - at[0].1.1) * t,
-    )
+    let (a, b) = (at[0].1, at[1].1);
+    let mix = |p: f32, q: f32| p + (q - p) * t;
+    Girth {
+        across: mix(a.across, b.across),
+        front: mix(a.front, b.front),
+        back: mix(a.back, b.back),
+    }
 }
 
-/// How far in front of the middle (or behind it) the trunk's skin is at this height and
-/// this far across: 0 past its side.
-pub(in crate::item_art) fn trunk_depth(frame: &Frame, x: f32, y: f32) -> f32 {
-    let (across, deep) = trunk_half(frame, y);
-    deep * (1.0 - (x / across).powi(2)).max(0.0).sqrt()
+/// How far in front of the spine (`front`) or behind it the trunk's skin is at this
+/// height and this far across: 0 past its side.
+pub(in crate::item_art) fn trunk_depth(frame: &Frame, x: f32, y: f32, front: bool) -> f32 {
+    let girth = trunk_half(frame, y);
+    girth.deep(front) * (1.0 - (x / girth.across).powi(2)).max(0.0).sqrt()
 }
