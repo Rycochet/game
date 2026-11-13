@@ -3,7 +3,8 @@
 //! and how tall it usually stands.
 
 use super::Proportions;
-use super::parts::{Feet, Horns, NONE, Parts, Snout, Wings};
+use super::measured_heads::{COW_HEAD, MeasuredHead, REPTILE_HEAD};
+use super::parts::{Ears, Feet, Horns, NONE, Parts, Snout, Wings};
 use crate::creature::CreatureKind;
 
 /// A body that stands on two legs, by name.
@@ -15,6 +16,9 @@ pub struct Biped {
     pub height: i32,
     pub proportions: Proportions,
     pub parts: Parts,
+    /// An animal's head measured on a person, for a people with one (`on_frame`);
+    /// `None` for a person's oval head.
+    pub head: Option<MeasuredHead>,
 }
 
 /// One row: its usual height (the middle of the research's range), heads tall in tenths
@@ -37,6 +41,15 @@ const fn biped(
             legs,
         },
         parts,
+        head: None,
+    }
+}
+
+/// The same, with an animal's head.
+const fn headed(biped: Biped, head: MeasuredHead) -> Biped {
+    Biped {
+        head: Some(head),
+        ..biped
     }
 }
 
@@ -73,46 +86,56 @@ pub const FIRST_BIPEDS: [Biped; 9] = [
         [53, 850, 800, 1100, 902],
         Parts { ears: 90, ..NONE },
     ),
-    biped(
-        "Kobold",
-        950,
-        [43, 850, 800, 950, 941],
-        Parts {
-            snout: Snout::Long,
-            snout_length: 140,
-            horns: Horns::Back,
-            horn_length: 70,
-            tail: 800,
-            feet: Feet::Digitigrade,
-            ..NONE
-        },
+    headed(
+        biped(
+            "Kobold",
+            950,
+            [43, 850, 800, 950, 941],
+            Parts {
+                snout: Snout::Long,
+                snout_length: 140,
+                horns: Horns::Back,
+                horn_length: 70,
+                tail: 800,
+                feet: Feet::Digitigrade,
+                ..NONE
+            },
+        ),
+        REPTILE_HEAD,
     ),
-    biped(
-        "Lizardfolk",
-        1900,
-        [75, 1000, 950, 1000, 980],
-        Parts {
-            snout: Snout::Long,
-            snout_length: 160,
-            tail: 1000,
-            feet: Feet::Digitigrade,
-            ..NONE
-        },
+    headed(
+        biped(
+            "Lizardfolk",
+            1900,
+            [75, 1000, 950, 1000, 980],
+            Parts {
+                snout: Snout::Long,
+                snout_length: 160,
+                tail: 1000,
+                feet: Feet::Digitigrade,
+                ..NONE
+            },
+        ),
+        REPTILE_HEAD,
     ),
-    biped(
-        "Minotaur",
-        2450,
-        [75, 1350, 1350, 1050, 980],
-        Parts {
-            snout: Snout::Muzzle,
-            snout_length: 110,
-            ears: 40,
-            horns: Horns::Bull,
-            horn_length: 300,
-            tail: 600,
-            feet: Feet::Hooves,
-            ..NONE
-        },
+    headed(
+        biped(
+            "Minotaur",
+            2450,
+            [75, 1350, 1350, 1050, 980],
+            Parts {
+                snout: Snout::Muzzle,
+                snout_length: 110,
+                ears: 40,
+                ear_shape: Ears::Sideways,
+                horns: Horns::Bull,
+                horn_length: 300,
+                tail: 600,
+                feet: Feet::Hooves,
+                ..NONE
+            },
+        ),
+        COW_HEAD,
     ),
     biped(
         "Birdfolk",

@@ -188,6 +188,7 @@ const fn ring(along: i32, half: i32, belly: i32, back: i32) -> MeasuredRing {
 /// the neck, and a short beak pointing a little down.
 pub const CHICKEN_HEAD: MeasuredHead = MeasuredHead {
     source: "drawn by hand",
+    length: 0,
     pitch: 0,
     rings: [
         ring(-250, 80, 200, 450),

@@ -61,11 +61,20 @@ fn person(kind: CreatureKind, style: u8, beard: u8) -> Shown {
 
 fn wearing(first: (ItemKind, u128), second: Option<(ItemKind, u128)>) -> Shown {
     // A human with long hair and a long beard.
+    dressed(CreatureKind::Human, (1, 3), [Some(first), second])
+}
+
+/// A kind with this hair style and beard, wearing up to two things.
+pub(super) fn dressed(
+    kind: CreatureKind,
+    (style, beard): (u8, u8),
+    worn: [Option<(ItemKind, u128)>; 2],
+) -> Shown {
     Shown::Hair(HairShown {
-        kind: CreatureKind::Human,
-        style: 1,
-        beard: 3,
-        worn: [Some(first), second],
+        kind,
+        style,
+        beard,
+        worn,
     })
 }
 

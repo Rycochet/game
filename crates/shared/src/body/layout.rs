@@ -146,7 +146,15 @@ impl Layout {
             CreatureKind::Human | CreatureKind::Beggar => Some(Self::biped(&PERSON.frame(), parts)),
             CreatureKind::Giant => Some(Self::biped(&GIANT, parts)),
             _ => Biped::of(kind)
-                .map(|biped| Self::biped(&biped.proportions.frame(), parts))
+                .map(|biped| {
+                    let frame = biped.proportions.frame();
+                    let mut layout = Self::biped(&frame, parts);
+                    layout.head.shape = biped.head.map(|head| {
+                        // The muzzle as long as the people's own, from the face.
+                        head.on_frame(&frame, parts.snout_length)
+                    });
+                    layout
+                })
                 .or_else(|| Beast::of(kind).map(|beast| beast.layout()))
                 .or_else(|| Taur::of(kind).map(|taur| taur.layout())),
         }
