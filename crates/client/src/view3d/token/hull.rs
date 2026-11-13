@@ -25,6 +25,9 @@ use crate::common::{Attitude, ModelMaterial, model_material};
 /// is grown: lines show only where one part stands this far clear of what is behind.
 const PUSH_SHARE: f32 = 1.5;
 
+/// How much wider than the black outline a glow is grown.
+const GLOW_SHARE: f32 = 3.0;
+
 /// How far the x-ray is pulled towards the camera, in millimetres of the model, so its
 /// soles never count as hidden by the base it stands on.
 const PULL_MM: f32 = 40.0;
@@ -57,6 +60,9 @@ pub enum HullKind {
     /// shows round it, then the outline (`xray`'s order).
     XrayFill,
     XrayOutline,
+    /// A glow round the model (`common::TokenGlow`): wider than the black
+    /// outline and behind it, so it shows as a band of colour beyond it.
+    Glow,
 }
 
 /// A model's hull, drawn as its `HullKind`.
@@ -100,6 +106,7 @@ impl HullMaterial {
             HullKind::Black => (outline, outline * PUSH_SHARE),
             HullKind::XrayFill => (0.0, pull),
             HullKind::XrayOutline => (outline, pull),
+            HullKind::Glow => (outline * GLOW_SHARE, outline * GLOW_SHARE * PUSH_SHARE),
         };
     }
 }
@@ -121,7 +128,7 @@ impl Material for HullMaterial {
 
     fn depth_bias(&self) -> f32 {
         match self.kind {
-            HullKind::Black => 0.0,
+            HullKind::Black | HullKind::Glow => 0.0,
             HullKind::XrayFill => FILL_ORDER,
             HullKind::XrayOutline => OUTLINE_ORDER,
         }
@@ -150,10 +157,10 @@ impl Material for HullMaterial {
         // Black, seen from inside: only what stands out round the model shows. The
         // x-ray, seen from outside, as a token's.
         descriptor.primitive.cull_mode = Some(match kind {
-            HullKind::Black => Face::Front,
+            HullKind::Black | HullKind::Glow => Face::Front,
             _ => Face::Back,
         });
-        if kind == HullKind::Black {
+        if matches!(kind, HullKind::Black | HullKind::Glow) {
             // Solid after all, writing its depth, as `common::InFront`.
             if let Some(depth) = descriptor.depth_stencil.as_mut() {
                 depth.depth_write_enabled = Some(true);
@@ -186,7 +193,37 @@ pub struct HullMaterials {
     pub(super) flash: Handle<ModelMaterial>,
     pub(super) fill: Vec<Handle<HullMaterial>>,
     pub(super) outline: Vec<Handle<HullMaterial>>,
+    /// Glows by colour, made as they are first wanted.
+    glows: Vec<([u8; 3], Handle<HullMaterial>)>,
     grown: (f32, f32),
+}
+
+impl HullMaterials {
+    /// The glow in this colour, made the first time it is wanted.
+    pub(super) fn glow(
+        &mut self,
+        rgb: [u8; 3],
+        materials: &mut Assets<HullMaterial>,
+    ) -> Handle<HullMaterial> {
+        if let Some((_, handle)) = self.glows.iter().find(|(colour, _)| *colour == rgb) {
+            return handle.clone();
+        }
+        let colour = Color::srgb_u8(rgb[0], rgb[1], rgb[2]);
+        let mut material = HullMaterial::new(colour, HullKind::Glow);
+        material.follow(outline_now(self.grown));
+        let handle = materials.add(material);
+        self.glows.push((rgb, handle.clone()));
+        handle
+    }
+}
+
+/// The outline's width for what the hulls were last grown for.
+fn outline_now((height, distance): (f32, f32)) -> f32 {
+    if height == 0.0 {
+        0.0
+    } else {
+        outline_width(height, distance)
+    }
 }
 
 impl FromWorld for HullMaterials {
@@ -216,6 +253,7 @@ impl FromWorld for HullMaterials {
             flash,
             fill,
             outline,
+            glows: Vec::new(),
             grown: (0.0, 0.0),
         }
     }
@@ -236,9 +274,11 @@ pub fn grow_hulls(
     }
     hulls.grown = now;
     let outline = outline_width(height, camera.distance);
+    let glows = hulls.glows.iter().map(|(_, handle)| handle);
     let all = std::iter::once(&hulls.black)
         .chain(&hulls.fill)
-        .chain(&hulls.outline);
+        .chain(&hulls.outline)
+        .chain(glows);
     for handle in all {
         if let Some(mut material) = materials.get_mut(handle) {
             material.follow(outline);

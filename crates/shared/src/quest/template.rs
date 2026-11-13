@@ -7,6 +7,7 @@ use super::hook::slain_with_weights;
 use super::plan::Plan;
 use super::world::size;
 use super::{Alternative, Hook, Step, Target, Way};
+use crate::item::Quality;
 use crate::poi::Poi;
 use crate::rng::{Rng, Seed};
 use crate::skill::SkillId;
@@ -145,6 +146,22 @@ pub fn boss_of(poi: &Poi) -> Boss {
     let kinds = slain_with_weights(poi.kind);
     let kind = seed.rng().pick_weighted(&kinds);
     Boss::new(kind, seed.derive("boss"))
+}
+
+/// A poi's quest boss's tier (owner: a better version of its kind, each step
+/// up the qualities stronger, as equipment will be), from the poi's seed:
+/// Claude's first guesses, mostly Uncommon, a few Legendary.
+pub fn boss_tier(poi: &Poi) -> Quality {
+    const TIERS: [(Quality, u64); 4] = [
+        (Quality::Uncommon, 50),
+        (Quality::Rare, 30),
+        (Quality::Epic, 15),
+        (Quality::Legendary, 5),
+    ];
+    poi.seed
+        .derive("quest boss tier")
+        .rng()
+        .pick_weighted(&TIERS)
 }
 
 /// What a poi's unique quest item is: something someone left behind.

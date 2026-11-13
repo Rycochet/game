@@ -99,6 +99,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                     worn: someone.worn.clone(),
                     mark: someone.mark.clone(),
                     heading: someone.heading,
+                    boss: None,
                 };
                 seen.push((look, someone.speed));
             }
@@ -106,6 +107,12 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
         if let (Some(level), Some(visit)) = (here, &mut client.visit)
             && let Some(population) = world.populations.0.get(&level)
         {
+            // Its site's quest boss, as everyone sees it.
+            let has_boss = population.mobs.iter().any(super::Mob::is_boss);
+            let boss = (visit.poi().filter(|_| has_boss)).map(|poi| shared::mob::BossLook {
+                boss: shared::quest::boss_of(poi),
+                tier: shared::quest::boss_tier(poi),
+            });
             for mob in &population.mobs {
                 if detect || (visit.can_see(mob.position.0, mob.position.1) && ahead(mob.spot)) {
                     let (x, y) = (mob.spot.x, mob.spot.y);
@@ -121,6 +128,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                         worn: mob.shown.clone(),
                         mark: None,
                         heading: mob.heading,
+                        boss: boss.clone().filter(|_| mob.is_boss()),
                     };
                     seen.push((look, mob.speed()));
                 }

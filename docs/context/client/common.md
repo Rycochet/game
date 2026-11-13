@@ -88,3 +88,4 @@ Shared building blocks for the client modules. Keep it small.
 - `MapPosition` is the position in the current view's grid; the world map and dungeon grids are unrelated (`site` keeps the world map position while inside a site).
 - Frame rate: `WinitSettings` reactive mode at the chosen Frame Rate Limit (30 by default; Unlimited is continuous) while focused and 1 fps unfocused (except while loading, with `Background::KeepDrawing` chosen, or with `KeepDrawing`, which the debug API and screenshots turn on); input wakes it immediately. Not a twitch game, so the low default saves GPU and power.
 - `Action::FaceLeft` / `FaceRight` ("Turn Left", "Turn Right", ids `turn_left` / `turn_right`, Movement, no keys by default) turn the character; the camera's are `TurnLeft` / `TurnRight` ("Turn Camera Left/Right").
+- `TokenGlow([u8; 3])` (`token_glow.rs`): a glow round an entity's model in a colour (a quest boss's tier: `entities` sets it, `view3d` draws it).

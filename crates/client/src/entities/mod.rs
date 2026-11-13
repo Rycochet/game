@@ -1,6 +1,7 @@
 //! Others on the map: mobs and other players, as tokens, for as long as the server
 //! says they can be seen. See `docs/context/client/entities.md`.
 
+mod boss_look;
 mod dressed;
 mod dressing_wait;
 mod facing;
@@ -64,6 +65,7 @@ impl Plugin for EntitiesPlugin {
                         .after(PlayerSystems::Travel),
                     flash::flash_harmed.after(read_server),
                     facing::read_turns.after(read_server),
+                    boss_look::show_bosses.after(read_server),
                 ),
             );
     }
@@ -128,6 +130,11 @@ fn read_server(
                     commands
                         .entity(spawned)
                         .insert(crate::common::StaffMark(mark.shown().to_owned()));
+                }
+                if let Some(boss) = &look.boss {
+                    commands
+                        .entity(spawned)
+                        .insert(boss_look::SeenBoss(boss.clone()));
                 }
                 let picture = drawing.dressed(look.kind, &look.appearance, &look.worn);
                 // Seen again as another kind: it changes into it.

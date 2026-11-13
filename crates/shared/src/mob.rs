@@ -268,6 +268,16 @@ pub struct EntityLook {
     pub mark: Option<crate::role::RoleBadge>,
     /// The way it faces (`facing`).
     pub heading: crate::facing::Heading,
+    /// A quest boss: who it is (its name, worded as "Grukk the Foul") and its
+    /// tier, a quality, which it glows in (owner). `None` for anyone else.
+    pub boss: Option<BossLook>,
+}
+
+/// What everyone sees of a quest boss (`quest::boss_of`, `quest::boss_tier`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BossLook {
+    pub boss: crate::story::Boss,
+    pub tier: crate::item::Quality,
 }
 
 #[cfg(test)]
