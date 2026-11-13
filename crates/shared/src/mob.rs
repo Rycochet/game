@@ -72,7 +72,7 @@ pub struct Spawn {
 pub const GIVE_REACH: i64 = 2;
 
 /// What can be found in a kind of place, with how many of each in 100.
-fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
+pub fn who_lives_in(site: PoiKind) -> &'static [(CreatureKind, u64)] {
     match site {
         _ if site.is_town() => &[(CreatureKind::Beggar, 100)],
         PoiKind::Farm => &[

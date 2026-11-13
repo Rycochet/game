@@ -37,6 +37,7 @@ pub mod pathfinding;
 pub mod place_name;
 pub mod poi;
 pub mod protocol;
+pub mod quest;
 pub mod relief;
 pub mod river;
 pub mod rng;
