@@ -50,10 +50,15 @@ pub(super) fn slot_quests(
     let dark = size > 0 && rng.range_u64(0, 100) < DARK_PERCENT;
     let mut plans = Vec::new();
     for _ in 0..length {
-        let Some(main) = choose(candidates, claims, &mut rng) else {
-            break;
+        // Sometimes a cellar of the giver's own; otherwise a hook nearby.
+        let plan = if rng.range_u64(0, 100) < super::dungeon::NORMAL_PERCENT {
+            super::dungeon::plan_cellar(town, false, &mut rng)
+        } else {
+            let Some(main) = choose(candidates, claims, &mut rng) else {
+                break;
+            };
+            plan(town, &main, candidates, &mut rng)
         };
-        let plan = plan(town, &main, candidates, &mut rng);
         for &claim in &plan.claims {
             claims.taken.insert(claim);
         }
@@ -111,7 +116,7 @@ fn choose(candidates: &[Candidate], claims: &Claims, rng: &mut Rng) -> Option<Ca
 
 fn hook_of(step: &super::Step) -> Hook {
     match step.target {
-        super::Target::Poi { hook, .. } => hook,
+        super::Target::Poi { hook, .. } | super::Target::Dungeon { hook, .. } => hook,
         _ => Hook::Gather,
     }
 }

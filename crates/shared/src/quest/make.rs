@@ -58,6 +58,7 @@ pub(super) fn make(
         deeds: deeds(plan, making.dark),
         story: telling.story,
         ending: telling.ending,
+        dungeon: plan.dungeon,
     }
 }
 

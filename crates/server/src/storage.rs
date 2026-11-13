@@ -22,6 +22,7 @@ use crate::saves::{LoadError, Save, SaveKey};
 // Split into files (`cargo xtask lint` keeps files small).
 mod characters;
 mod dev_return;
+mod dungeon_stay;
 mod known_poi;
 mod quest_book;
 mod roads;
@@ -30,8 +31,10 @@ mod sites;
 mod spot_compat;
 mod spot_map;
 mod unsaved;
+mod visit_save;
 
 pub use characters::Everywhere;
+pub use dungeon_stay::DungeonStay;
 #[cfg(test)]
 pub use quest_book::RETAKE_AFTER;
 pub use quest_book::{Ended, Progress, QuestBook};

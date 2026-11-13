@@ -67,6 +67,8 @@ fn pressed(talk: &mut OpenTalk, name: &str, at: Option<usize>) -> Vec<QuestAsk> 
             Some(id) => and_again(QuestAsk::TurnIn(id)),
             None => Vec::new(),
         },
+        // Going in closes the panel, as any new level does.
+        "enter" => chosen.map(QuestAsk::Enter).into_iter().collect(),
         "decline" | "back" => {
             talk.chosen = None;
             talk.ended = None;

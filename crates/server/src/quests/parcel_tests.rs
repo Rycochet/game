@@ -44,6 +44,7 @@ fn arrive_in(test: &mut TestClient, town: ChunkPos) {
         poi,
         level: 0,
         deepest: true,
+        dungeon: None,
     };
     advance(
         &mut test.client,

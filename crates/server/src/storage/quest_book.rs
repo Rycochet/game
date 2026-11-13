@@ -45,6 +45,10 @@ pub struct QuestBook {
     /// planet).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<GateCode>,
+    /// Quests' own dungeons the character has a copy of (made on entering,
+    /// gone when it resets or the quest ends).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dungeons: BTreeMap<QuestId, super::DungeonStay>,
 }
 
 /// How far along a quest taken is.

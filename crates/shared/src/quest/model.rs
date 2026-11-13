@@ -1,7 +1,7 @@
 //! A whole quest: who gives it, what it needs, its steps, its reward, how it
 //! moves alignment, and its story.
 
-use super::{QuestId, QuestKind, Requirement, Step};
+use super::{QuestDungeon, QuestId, QuestKind, Requirement, Step};
 use crate::alignment::Deed;
 use crate::story::{Ending, RewardPart, Story};
 
@@ -26,6 +26,9 @@ pub struct Quest {
     pub story: Story,
     /// Kept by the server until turn-in.
     pub ending: Ending,
+    /// Its own dungeon, if it has one (its `Target::Dungeon` steps are done
+    /// there): the server makes a copy per character.
+    pub dungeon: Option<QuestDungeon>,
 }
 
 impl Quest {

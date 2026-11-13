@@ -53,6 +53,15 @@ pub(super) fn tell_plan(world: &QuestWorld, town: &Poi, plan: &Plan, tale: Tale)
             distance: DistanceBand::between(from, (poi.x, poi.y), width),
         }
     });
+    if plan.dungeon.is_some() {
+        // Under the giver's own house.
+        request.place = Some(Place {
+            description: PlaceDescription::new(PlaceKind::Cellar, false),
+            name: None,
+            direction: Direction::between(from, from, width),
+            distance: DistanceBand::Near,
+        });
+    }
     request.creatures = plan.creatures.map(|(kind, count)| Creatures {
         kind,
         count: CountBand::of(count),

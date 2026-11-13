@@ -1,7 +1,7 @@
 //! A quest's plan before its story is told: its steps and the checkable
 //! facts the story needs (place, creatures, boss, item, pet, destination).
 
-use super::{Hook, Step};
+use super::{Hook, QuestDungeon, Step};
 use crate::creature::CreatureKind;
 use crate::poi::{ChunkPos, Poi};
 use crate::story::{Ask, Boss, ItemCategory, Pet, Remains};
@@ -21,6 +21,8 @@ pub(super) struct Plan {
     pub pet: Option<Pet>,
     /// The town something is taken to.
     pub destination: Option<Poi>,
+    /// The quest's own dungeon, whose steps are done in it.
+    pub dungeon: Option<QuestDungeon>,
     /// The exclusive hooks it uses.
     pub claims: Vec<(ChunkPos, Hook)>,
 }

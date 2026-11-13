@@ -3,7 +3,8 @@
 //! step is done), or just handed in (the giver's last words).
 
 use shared::lang::Lang;
-use shared::protocol::{Ahead, OfferState, QuestState};
+use shared::protocol::{Ahead, LogEntry, OfferState, QuestState};
+use shared::quest::{DungeonWay, Target};
 use shared::story::{RewardPart, Story};
 
 use super::OpenTalk;
@@ -20,6 +21,9 @@ pub(super) struct Detail {
     pub(super) accept: bool,
     /// Every step done: Complete.
     pub(super) turn_in: bool,
+    /// Under way with a dungeon of the giver's own: the button's words
+    /// ("Enter Cellar").
+    pub(super) enter: Option<String>,
 }
 
 /// The quest a panel shows in full, if it shows one.
@@ -34,6 +38,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
             reward: reward_line(lang, &entry.reward),
             accept: false,
             turn_in: false,
+            enter: None,
         });
     }
     let offer = talk
@@ -69,6 +74,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
                 // The log moves on as steps are done; the offer only when
                 // the giver is asked again.
                 turn_in: entry.state == QuestState::Ready,
+                enter: enter_words(entry, lang),
                 ..about(&entry.story, step_lines(entry, lang), &entry.reward, lang)
             })
         }
@@ -87,7 +93,21 @@ fn about(story: &Story, mut steps: Vec<String>, pays: &[RewardPart], lang: &Lang
         reward: reward_line(lang, pays),
         accept: false,
         turn_in: false,
+        enter: None,
     }
+}
+
+/// The words of the button going into a quest's own dungeon by its giver's
+/// door, while it is under way.
+fn enter_words(entry: &LogEntry, lang: &Lang) -> Option<String> {
+    let way = entry.steps.iter().find_map(|step| match step.target {
+        Target::Dungeon { way, .. } => Some(way),
+        _ => None,
+    })?;
+    let key = match way {
+        DungeonWay::Cellar => "talk-enter-cellar",
+    };
+    (entry.state == QuestState::Taken).then(|| plain(lang, key))
 }
 
 fn or_partly_all(written: Result<Vec<String>, shared::lang::RenderError>) -> Vec<String> {

@@ -5,6 +5,7 @@
 use shared::creature::CreatureKind;
 use shared::hall::GateCode;
 use shared::poi::ChunkPos;
+use shared::quest::QuestId;
 use shared::world::WorldId;
 
 use super::clock::unix_now;
@@ -23,7 +24,7 @@ pub(crate) struct Seen {
     /// The world whose log it was sent.
     world: Option<WorldId>,
     /// The poi and level the player was last at.
-    place: Option<(ChunkPos, u32)>,
+    place: Option<(ChunkPos, u32, Option<QuestId>)>,
     /// The town they are in, if any: markers follow.
     town: Option<ChunkPos>,
     /// They are in the Hall, and have been told their planets.
@@ -84,18 +85,19 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
     }
     client.quest_seen.hall = in_hall;
     let place: Option<QuestPlace> = client.visit.as_ref().and_then(|visit| visit.quest_place());
-    let key = place.map(|place| (place.poi.chunk, place.level));
+    let key = place.map(|place| (place.poi.chunk, place.level, place.dungeon));
     if key != client.quest_seen.place {
         arrive(client, world, place, now);
     }
     tell_dots(client, world);
     super::boss_signs::tell_bosses(client, world);
     super::finds::tell_finds(client, world);
+    super::dungeon::reset_due(client, world, now);
 }
 
 /// On coming to another place: steps moving on, and the town's markers.
 fn arrive(client: &mut Client, world: &mut ServerWorld, place: Option<QuestPlace>, now: i64) {
-    client.quest_seen.place = place.map(|place| (place.poi.chunk, place.level));
+    client.quest_seen.place = place.map(|place| (place.poi.chunk, place.level, place.dungeon));
     client.quest_seen.town = place
         .filter(|place| place.poi.kind.is_town())
         .map(|place| place.poi.chunk);
@@ -118,6 +120,10 @@ pub(crate) fn killed(
     site: SiteId,
     boss: bool,
 ) {
+    let dungeon = match site {
+        SiteId::Quest { quest, .. } => Some(quest),
+        _ => None,
+    };
     let site = match site {
         SiteId::Poi(chunk) => Some(chunk),
         _ => None,
@@ -133,5 +139,14 @@ pub(crate) fn killed(
     if let Some(chunk) = site {
         super::drops::drop_remains(client, world, kind, chunk);
     }
-    advance(client, world, Event::Killed { kind, site }, now);
+    advance(
+        client,
+        world,
+        Event::Killed {
+            kind,
+            site,
+            dungeon,
+        },
+        now,
+    );
 }

@@ -62,3 +62,7 @@ talk-steps = What to do:
 talk-dealt-with = "I've already dealt with it," you tell them. "Then the worst of it is done."
 talk-found = "I've already found it," you tell them. "Then you've saved me a long walk."
 talk-step-done = { $step } (done)
+
+## The button going into a quest's own dungeon by the giver's door.
+
+talk-enter-cellar = Enter Cellar

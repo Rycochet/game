@@ -42,6 +42,11 @@ impl ServerWorld {
         };
         let mut plan = match id {
             SiteId::DevArea(area) => area.spawns(level),
+            // A quest's own dungeon: its own creatures, enough for its count.
+            SiteId::Quest { quest, .. } => match crate::quests::dungeon_of(self, quest) {
+                Some(dungeon) => dungeon.spawns(index, &level.level, &stairs),
+                None => Vec::new(),
+            },
             _ => spawns(poi.seed, index, poi.kind, &level.level, &stairs),
         };
         if let SiteId::Poi(_) = id {

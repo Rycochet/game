@@ -58,12 +58,13 @@ fn places_from_pois_and_ruins() {
     assert_eq!(PlaceKind::of_poi(PoiKind::IceCave), PlaceKind::Cave);
     assert_eq!(PlaceKind::of_poi(PoiKind::Mausoleum), PlaceKind::Crypt);
     assert_eq!(PlaceKind::of_poi(PoiKind::City), PlaceKind::Settlement);
-    // Every place kind but the wilds has a poi kind.
+    // Every place kind but the wilds and a quest's cellar has a poi kind.
     for kind in PlaceKind::ALL {
         let found = PoiKind::ALL
             .iter()
             .any(|&poi| PlaceKind::of_poi(poi) == kind);
-        assert_eq!(found, kind != PlaceKind::Wilds, "{kind:?}");
+        let made_up = matches!(kind, PlaceKind::Wilds | PlaceKind::Cellar);
+        assert_eq!(found, !made_up, "{kind:?}");
     }
     assert_eq!(
         PlaceDescription::new(PlaceKind::Tower, true).condition,

@@ -48,6 +48,10 @@ pub enum QuestAsk {
     /// newest taken then): kept on the character, per planet. Answered with
     /// `QuestNews::Tracked`.
     Track(Option<QuestId>),
+    /// Go into a quest's own dungeon ("Enter Cellar"), from beside its
+    /// giver's door, while the quest is taken: answered by entering it
+    /// (`EnterLevel`), or nothing.
+    Enter(QuestId),
 }
 
 /// What the server tells a client about quests.

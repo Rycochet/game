@@ -37,7 +37,10 @@ pub(super) fn marks_of(book: &QuestBook) -> BTreeMap<ChunkPos, MarkLook> {
                     .filter(|(i, step)| !done[*i] && step.is_open(&done));
                 for (_, step) in open {
                     let chunk = match step.target {
-                        Target::Poi { chunk, .. } | Target::Town { chunk } => chunk,
+                        // A quest's own dungeon: its giver's town.
+                        Target::Poi { chunk, .. }
+                        | Target::Town { chunk }
+                        | Target::Dungeon { chunk, .. } => chunk,
                         // The wilds round a town have no poi to mark.
                         Target::Wilds { .. } => continue,
                     };

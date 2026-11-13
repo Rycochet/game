@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::Hook;
+use super::{DungeonWay, Hook};
 use crate::poi::ChunkPos;
 use crate::skill::SkillId;
 use crate::story::Goal;
@@ -18,13 +18,24 @@ pub enum Target {
     Wilds { chunk: ChunkPos },
     /// In another town: something taken there.
     Town { chunk: ChunkPos },
+    /// In the quest's own dungeon (`QuestDungeon`), by one of its hooks
+    /// (kills, exploring), entered from the giver's town in `chunk`.
+    Dungeon {
+        chunk: ChunkPos,
+        hook: Hook,
+        way: DungeonWay,
+    },
+    // New targets go at the end: messages carry one by its place.
 }
 
 impl Target {
     /// The chunk the step sends the player to.
     pub const fn chunk(self) -> ChunkPos {
         match self {
-            Self::Poi { chunk, .. } | Self::Wilds { chunk } | Self::Town { chunk } => chunk,
+            Self::Poi { chunk, .. }
+            | Self::Wilds { chunk }
+            | Self::Town { chunk }
+            | Self::Dungeon { chunk, .. } => chunk,
         }
     }
 }

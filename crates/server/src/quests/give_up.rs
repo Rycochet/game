@@ -35,7 +35,8 @@ pub(crate) fn end(
     if vanished {
         client.update_speed(world.action_clock.ticks());
     }
-    (!vanished || client.send_inventory())
+    super::dungeon::quest_ended(client, world, id)
+        && (!vanished || client.send_inventory())
         && log::tell_changed(client, world, id)
         && tell_markers(client, world, id.town, now)
 }

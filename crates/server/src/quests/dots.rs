@@ -70,7 +70,7 @@ pub(crate) fn dots_here(client: &Client, world: &mut ServerWorld) -> Vec<QuestDo
             return_cells(visit, world, &quest)
         } else {
             let open = quest.open_steps(&done).into_iter();
-            open.flat_map(|i| step_cells(client, visit, world, &quest.steps[i]))
+            open.flat_map(|i| step_cells(client, visit, world, &quest, &quest.steps[i]))
                 .collect()
         };
         cells.sort_unstable();
@@ -84,7 +84,11 @@ pub(crate) fn dots_here(client: &Client, world: &mut ServerWorld) -> Vec<QuestDo
 
 /// Handing in: the giver's door in their town, else the town in the
 /// wilderness.
-fn return_cells(visit: &Visit, world: &mut ServerWorld, quest: &Quest) -> Vec<(i64, i64)> {
+pub(super) fn return_cells(
+    visit: &Visit,
+    world: &mut ServerWorld,
+    quest: &Quest,
+) -> Vec<(i64, i64)> {
     let town = quest.id.town;
     if let Some(door) = visit.giver_door(world, town, quest.building) {
         return vec![door];
@@ -100,6 +104,7 @@ fn step_cells(
     client: &Client,
     visit: &Visit,
     world: &mut ServerWorld,
+    quest: &Quest,
     step: &Step,
 ) -> Vec<(i64, i64)> {
     let (chunk, hook) = match step.target {
@@ -107,6 +112,9 @@ fn step_cells(
         Target::Town { chunk } => (chunk, None),
         // Anywhere round the town: nowhere to point.
         Target::Wilds { .. } => return Vec::new(),
+        Target::Dungeon { hook, .. } => {
+            return super::dungeon_dots::dungeon_cells(client, visit, world, quest, hook);
+        }
     };
     if visit.is_wilderness() {
         let poi = world.pois.in_chunk(chunk);
@@ -147,7 +155,7 @@ fn step_cells(
 /// The level of its site a hook's step is done on, when it is one level:
 /// reaching the deepest, or the boss or quest item there
 /// (`entities::quest_mobs`, `finds`); counted kills may be on any.
-fn goal_level(visit: &Visit, hook: Hook) -> Option<u32> {
+pub(super) fn goal_level(visit: &Visit, hook: Hook) -> Option<u32> {
     let levels = visit.site()?.levels();
     match hook {
         Hook::Explore | Hook::Boss | Hook::Item => Some(levels.saturating_sub(1)),

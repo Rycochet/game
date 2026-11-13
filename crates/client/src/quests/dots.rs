@@ -70,7 +70,10 @@ pub(super) fn world_chunks(entry: &LogEntry) -> Vec<ChunkPos> {
             let mut chunks: Vec<ChunkPos> = (entry.steps.iter().enumerate())
                 .filter(|(i, step)| !done[*i] && step.is_open(&done))
                 .filter_map(|(_, step)| match step.target {
-                    Target::Poi { chunk, .. } | Target::Town { chunk } => Some(chunk),
+                    // A quest's own dungeon is entered in its giver's town.
+                    Target::Poi { chunk, .. }
+                    | Target::Town { chunk }
+                    | Target::Dungeon { chunk, .. } => Some(chunk),
                     Target::Wilds { .. } => None,
                 })
                 .collect();

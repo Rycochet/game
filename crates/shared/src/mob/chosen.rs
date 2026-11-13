@@ -47,22 +47,29 @@ pub fn chosen_spawns(
         let Some(position) = spot else {
             continue;
         };
-        let gender = Gender::rolled(roll(GENDER_ROLL));
-        mobs.push(Spawn {
-            number,
-            kind,
-            position,
-            appearance: looks(&roll, kind).fitted(gender),
-            gender,
-            alignment: Alignment::rolled(kind, roll(ALIGNMENT_ROLL)),
-            attributes: Attributes::for_kind(
-                kind,
-                gender,
-                &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
-            ),
-            gear: roll_gear(&roll, kind),
-            coins: roll_coins(&roll, kind),
-        });
+        mobs.push(spawn_at(seed, kind, number, position));
     }
     mobs
+}
+
+/// Mob `number` of `kind` at `position`, rolled from `seed` as `chosen_spawns`
+/// rolls each (looks, build and gear), for callers choosing places of their own.
+pub fn spawn_at(seed: Seed, kind: CreatureKind, number: u32, position: (i64, i64)) -> Spawn {
+    let roll = |what: i64| seed.at(&[PURPOSE, CHOSEN, number as i64, what]);
+    let gender = Gender::rolled(roll(GENDER_ROLL));
+    Spawn {
+        number,
+        kind,
+        position,
+        appearance: looks(&roll, kind).fitted(gender),
+        gender,
+        alignment: Alignment::rolled(kind, roll(ALIGNMENT_ROLL)),
+        attributes: Attributes::for_kind(
+            kind,
+            gender,
+            &Build::rolled(&mut Seed::new(roll(ATTRIBUTE_ROLL)).rng()),
+        ),
+        gear: roll_gear(&roll, kind),
+        coins: roll_coins(&roll, kind),
+    }
 }
