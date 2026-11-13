@@ -24,6 +24,6 @@ These keep their own licences. The [attribution file](https://github.com/Rycoche
 ## Creatures
 
 - **Some creatures (the drider):** from the System Reference Document 5.1 ("SRD 5.1") by Wizards of the Coast LLC, available at <https://dnd.wizards.com/resources/systems-reference-document>. The SRD 5.1 is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/legalcode).
-- **The shapes of animals' bodies:** measured from animal models by JALdMIC (CC BY), made for [MakeHuman](http://www.makehumancommunity.org), whose own model of a person (CC0) they reshape. The game holds only the measurements, not the models.
+- **The shapes of animals' bodies and heads:** measured from animal models by JALdMIC (CC BY), made for [MakeHuman](http://www.makehumancommunity.org), whose own model of a person (CC0) they reshape. The game holds only the measurements, not the models.
 
 The game is built with [Bevy](https://bevy.org/) and other open source libraries, which keep their own licences.

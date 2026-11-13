@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use shared::body::Layout;
 
 use super::trunk;
-use super::{Triangle, features, limb, point};
+use super::{HeadAxes, Triangle, crown, features, limb, point};
 
 /// Steps along the neck for the mane.
 const STEPS: usize = 8;
@@ -27,7 +27,14 @@ pub(in crate::item_art) fn coat_hair(layout: &Layout) -> Vec<Triangle> {
 /// little way down each side; both faces drawn, as feathers are.
 fn mane(triangles: &mut Vec<Triangle>, layout: &Layout, hang: f32) {
     let base = trunk::neck_root(layout);
-    let top = point(layout.chin()) + Vec3::Y * layout.head.length as f32 * 0.35;
+    // To behind the ears: the top of a measured skull, or above the chin.
+    let top = match layout.head.shape {
+        Some(shape) => {
+            let skull = crown(&shape);
+            HeadAxes::of(layout, &shape).at(skull.along as f32 * 0.5, skull.back as f32 * 0.5, 0.0)
+        }
+        None => point(layout.chin()) + Vec3::Y * layout.head.length as f32 * 0.35,
+    };
     let along = (top - base).normalize_or(Vec3::Y);
     // Out of the top of the neck: up, and back where the neck leans forwards.
     let up = (Vec3::Y - along * Vec3::Y.dot(along)).normalize_or(Vec3::NEG_Z);

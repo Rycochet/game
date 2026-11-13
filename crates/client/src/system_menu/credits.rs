@@ -52,7 +52,7 @@ pub(super) const CREDITS: &[(&str, &str)] = &[
         "Wizards of the Coast LLC",
     ),
     (
-        "The shapes of animals' bodies: measured from MakeHuman animal models, CC BY",
+        "The shapes of animals' bodies and heads: measured from MakeHuman animal models, CC BY",
         "JALdMIC",
     ),
     (

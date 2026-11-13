@@ -2,7 +2,7 @@
 //! horns, tusks, a tail, and feathers along arms that are wings.
 
 use bevy::prelude::*;
-use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Wings};
+use shared::body::{Horns, Layout, Parts, Role, Side, Snout, Tail, Wings};
 
 use super::trunk::{self, Axes};
 use super::{Triangle, blob, limb, point};
@@ -164,7 +164,12 @@ pub(super) fn head(triangles: &mut Vec<Triangle>, layout: &Layout, parts: &Parts
 
 /// A tail from the base of the back, out behind and curving down, kept off the ground.
 fn tail(triangles: &mut Vec<Triangle>, layout: &Layout, length: f32) {
-    limb(triangles, &tail_path(layout, length));
+    let path = tail_path(layout, length);
+    limb(triangles, &path);
+    if layout.parts.tail_shape == Tail::Tufted {
+        let (end, _) = path[3];
+        blob(triangles, end, Vec3::new(1.0, 2.2, 1.0) * length * 0.06);
+    }
 }
 
 /// Where a tail this long runs, from its root to its tip, and how thick it is there.
@@ -189,8 +194,12 @@ pub(super) fn tail_path(layout: &Layout, length: f32) -> [(Vec3, f32); 4] {
             }
     };
     // Down is negative for a sting curling up over the back, ending forwards.
+    let tail_shape = layout.parts.tail_shape;
     let shape = if layout.parts.sting {
         [(-0.3, 0.25), (-0.7, 0.2), (-0.8, -0.1)]
+    } else if level && tail_shape == Tail::Bushy {
+        // Hanging, a little out from the hocks.
+        [(0.25, 0.2), (0.6, 0.28), (0.92, 0.32)]
     } else if level {
         [(0.15, 0.25), (0.55, 0.35), (0.95, 0.4)]
     } else {
@@ -206,11 +215,17 @@ pub(super) fn tail_path(layout: &Layout, length: f32) -> [(Vec3, f32); 4] {
         let p = base + Vec3::new(0.0, -length * down, -length * back);
         Vec3::new(p.x, p.y.max(30.0), p.z)
     };
+    // Its thickness at the root and down it, by its shape.
+    let [root, first, second, tip] = match tail_shape {
+        Tail::Plain => [thick, thick * 0.7, thick * 0.4, 8.0],
+        Tail::Bushy => [thick * 0.9, thick * 1.35, thick * 1.2, thick * 0.45],
+        Tail::Thin | Tail::Tufted => [thick * 0.5, thick * 0.35, thick * 0.28, 6.0],
+    };
     [
-        (base, thick),
-        (along(shape[0].0, shape[0].1), thick * 0.7),
-        (along(shape[1].0, shape[1].1), thick * 0.4),
-        (along(shape[2].0, shape[2].1), 8.0),
+        (base, root),
+        (along(shape[0].0, shape[0].1), first),
+        (along(shape[1].0, shape[1].1), second),
+        (along(shape[2].0, shape[2].1), tip),
     ]
 }
 

@@ -13,9 +13,11 @@ mod biped_view;
 mod bipeds;
 mod blend;
 mod hair;
+mod head_shape;
 mod layout;
 mod limbs;
 mod measured;
+mod measured_heads;
 mod parts;
 mod proportions;
 mod rings;
@@ -27,14 +29,16 @@ pub use beasts::{BEASTS, Beast, Bird, Fourfoot, Plan};
 pub use bipeds::{Biped, FIRST_BIPEDS};
 pub use blend::WHOLE as BLEND_WHOLE;
 pub use hair::{Beard, Hair, HairStyle};
+pub use head_shape::HeadShape;
 pub use layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station, Upper,
 };
 pub use limbs::{has_hands, has_legs};
 pub use measured::{COW, DOG, HORSE, MEASURED, Measured, MeasuredRing};
-pub use parts::{Feet, Horns, NONE, Parts, Snout, Wings};
+pub use measured_heads::{COW_HEAD, DOG_HEAD, HORSE_HEAD, MEASURED_HEADS, MeasuredHead, WOLF_HEAD};
+pub use parts::{Ears, Feet, Horns, NONE, Parts, Snout, Tail, Wings};
 pub use proportions::{PERSON, Proportions};
-pub use rings::{RINGS, Ring};
+pub use rings::{HEAD_RINGS, RINGS, Ring};
 pub use taurs::{TAURS, Taur};
 
 /// Which side of the body, as its owner sees it: left is towards the picture's right.

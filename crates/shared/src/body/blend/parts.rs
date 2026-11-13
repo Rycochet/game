@@ -1,6 +1,7 @@
 //! Blending what two bodies have beyond a person's: sizes move from one to the other;
 //! a snout or horns of another kind shrink to nothing by halfway and the new kind
-//! grows from there; feet, wings and a sting change at halfway.
+//! grows from there; feet, wings, a sting and the shapes of ears and tail change at
+//! halfway.
 
 use super::super::Parts;
 use super::{HALF, WHOLE, mix};
@@ -13,16 +14,21 @@ pub(super) fn blend(a: &Parts, b: &Parts, t: i32) -> Parts {
         snout,
         snout_length,
         ears: mix(a.ears, b.ears, t),
+        ear_shape: either(late, a.ear_shape, b.ear_shape),
         horns,
         horn_length,
         tusks: mix(a.tusks, b.tusks, t),
         tail: mix(a.tail, b.tail, t),
+        tail_shape: either(late, a.tail_shape, b.tail_shape),
         sting: either(late, a.sting, b.sting),
         abdomen: mix(a.abdomen, b.abdomen, t),
         feet: either(late, a.feet, b.feet),
         wings: either(late, a.wings, b.wings),
         mane: mix(a.mane, b.mane, t),
         tail_hair: mix(a.tail_hair, b.tail_hair, t),
+        dewlap: mix(a.dewlap, b.dewlap, t),
+        udder: mix(a.udder, b.udder, t),
+        comb: mix(a.comb, b.comb, t),
     }
 }
 
@@ -52,6 +58,9 @@ pub(in crate::body) fn scaled(parts: &Parts, share: i32) -> Parts {
         abdomen: size(parts.abdomen),
         mane: size(parts.mane),
         tail_hair: size(parts.tail_hair),
+        dewlap: size(parts.dewlap),
+        udder: size(parts.udder),
+        comb: size(parts.comb),
         ..*parts
     }
 }

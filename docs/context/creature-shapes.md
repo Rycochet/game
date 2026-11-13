@@ -1,6 +1,6 @@
 # Plan: more accurate creature models
 
-Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`) and PR 2 (animal trunks) are built. Each PR keeps this file up to date.
+Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks) and PR 3 (animal heads, ears, necks, tails) are built. Each PR keeps this file up to date.
 
 ## Goal
 
@@ -48,7 +48,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 | --- | --- | --- | --- |
 | 1 | Measuring tool and source files (built) | | blocking |
 | 2 | Trunk outlines for the four-legged animals (built) | 1 | blocking |
-| 3 | Animal heads, ears, necks, tails | 2 | independent |
+| 3 | Animal heads, ears, necks, tails (built) | 2 | independent |
 | 4 | Humanoid trunk and limbs from the base human | 2 | independent |
 | 5 | Beast peoples' heads | 3 | waits for 3 |
 | 6 | Markings | 2 | independent |
@@ -77,14 +77,14 @@ How it measures, and what to know when using the figures:
 - `blend.rs` mixes rings one by one; the existing test that each end of a blend is its own body covers them. `scaled.rs` scales them.
 - Legs: `Fourfoot::fore` and `hind` (radius where each hangs from and at each joint) and `foot`, from the leg tables at our joints' heights, in place of one `leg` radius.
 - `cargo xtask test` checks `MEASURED` still matches what the tool measures (`xtask/src/shapes/check.rs`); `ATTRIBUTION.md` credits JALdMIC for the figures.
-- Left for PR 3: our necks start low on the spine while the measured trunks climb into theirs, so the wolf keeps a small rise where its neck meets its back; PR 3's necks should follow the last rings.
+- Left for PR 3: our necks start low on the spine while the measured trunks climb into theirs, so the wolf keeps a small rise where its neck meets its back; PR 3's necks should follow the last rings (done in PR 3).
 
-### PR 3: animal heads and details
-- A head outline for animals in place of oval plus cone: rings from the back of the skull to the nose.
-- Ear shapes (pointed, sideways, dropped) and tail shapes (bushy, thin, tufted) as new kinds in `Parts` (`crates/shared/src/body/parts.rs`).
-- Wolf: the dog body with the wolf head, plus a thicker neck and coat from our own numbers.
-- Cattle: dewlap and udder as small extras.
-- Chicken: no source, tuned by hand.
+### PR 3: animal heads and details (built)
+- Shared: `Head::shape`, an optional `HeadShape` (`body/head_shape.rs`): `pitch` (nose down) and `HEAD_RINGS` (8) `Ring`s along the head's own line, from the neck's top (`Layout::chin`) forwards, `belly` below the line and `back` above; the snout is in the rings. The tool measures heads from the `head` joint to the nose tip (`xtask/src/shapes/head.rs`), each ring cut off at the jaw's underside (the head targets go on down a person's neck), its half width below the top quarter (leaving out the ears). Figures in `body/measured_heads.rs` (`WOLF_HEAD`, `COW_HEAD`, `DOG_HEAD`, `HORSE_HEAD`, in thousandths of the head's length; checked by `xtask test`), scaled by `MeasuredHead::shape(length, pitch)` to our own head length and carriage (`Fourfoot::head`). The hen's is drawn by hand in the same terms (`beasts.rs`, `CHICKEN_HEAD`).
+- Heads without a shape (all bipeds) are drawn as before, so helmets are untouched; blends use `HeadShape::plain` (an oval and its snout as rings) for them, each end exactly its own head.
+- `Layout::chin` starts from `Spine::neck_root` (the middle of the last ring; unchanged for bodies from stations), and the client lofts a shaped head's neck from the trunk's last ring to the head (`item_art/body/head.rs`), which also took away the wolf's rise at the neck join. Carriage and thickness by animal: a cow's head low (neck 75°, head 40° nose down), a wolf's level with its back, a horse's 45° nose down on an arched neck.
+- `Parts`: `Ears::{Swept, Upright, Sideways, Dropped}` (`ear_shape`), `Tail::{Plain, Bushy, Thin, Tufted}` (`tail_shape`), `dewlap`, `udder`, `comb`. Wolf: upright ears, a bushy hanging tail, a thicker neck and a 25 mm coat on its trunk (`Fourfoot::coat`). Cattle: sideways ears under the horns, a thin tail with its switch, dewlap and udder (`item_art/body/extras.rs`). Horse: upright ears. Hen: comb and wattles.
+- For PR 5: a beast people's head is a `HeadShape` too (`DOG_HEAD` is measured for it), placed on its frame's chin; helmets (`armour/head/face.rs`) then need checking against it, as the bipeds' oval is what they fit now.
 
 ### PR 4: humanoids
 - The base human measured into rings; each people's rings follow from its `Proportions`, as its frame does.

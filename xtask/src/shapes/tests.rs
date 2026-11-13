@@ -1,5 +1,6 @@
 use super::cut::{Plane, cut};
 use super::fourfoot::Fourfoot;
+use super::head::Head;
 use super::leg::legs;
 use super::mesh::Mesh;
 use super::ring::ring;
@@ -172,5 +173,44 @@ fn a_beast_standing_on_a_slope_is_measured_level() {
     for (a, b) in tilted.trunk.iter().zip(&level.trunk).skip(1) {
         assert!((a.1.belly - b.1.belly).abs() < 1e-9);
         assert!((a.1.back - b.1.back).abs() < 1e-9);
+    }
+}
+
+/// A person-shaped stand with a head on it: a trunk, a neck, a skull 2 across
+/// and long, and a snout reaching 2 in front of it with a nose at the end, level
+/// with the `head` joint (the `neck` joint is where the neck starts).
+fn headed() -> Mesh {
+    mesh(
+        &[
+            ([-2.0, 0.0, -1.0], [2.0, 8.0, 1.0]),
+            ([-0.5, 8.0, -0.5], [0.5, 10.0, 0.5]),
+            ([-1.0, 9.5, -1.0], [1.0, 11.5, 1.0]),
+            ([-0.5, 9.5, 1.0], [0.5, 10.5, 3.0]),
+            ([-0.1, 9.95, 3.0], [0.1, 10.05, 3.1]),
+        ],
+        &[("neck", [0.0, 8.0, 0.0]), ("head", [0.0, 10.0, 0.0])],
+    )
+}
+
+#[test]
+fn a_head_is_measured_from_the_back_of_the_skull_to_the_nose() {
+    let head = Head::measure(&headed(), 8).unwrap();
+    // The nose is a corner of a small box, so the head's line leans a little.
+    assert!(head.pitch.abs() < 2.0, "{}", head.pitch);
+    assert!((head.length - 4.1).abs() < 0.1, "{}", head.length);
+    assert_eq!(head.rings.len(), 8);
+    let (first, _) = head.rings[0];
+    assert!((first + 1.0).abs() < 0.1, "the back of the skull: {first}");
+    // The first ring is the back of the skull's tip.
+    for &(along, ring) in &head.rings[1..] {
+        // The skull is 2 across, the snout 1; nothing of the trunk below.
+        // (The last is in the nose, in front of the snout.)
+        if along >= 3.0 {
+            continue;
+        }
+        let wide = if along < 0.95 { 1.0 } else { 0.5 };
+        assert!((ring.half_width - wide).abs() < 0.1, "{along}: {ring:?}");
+        // Down to the jaw's underside, half a unit below the head's line.
+        assert!((ring.belly + 0.5).abs() < 0.1, "{along}: {ring:?}");
     }
 }
