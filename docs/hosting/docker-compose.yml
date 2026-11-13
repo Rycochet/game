@@ -10,6 +10,9 @@ services:
       # Other names or addresses this server is reached by, so the certificate
       # covers them. Change this, or remove it if you only use localhost.
       HOW_TLS_NAMES: game.example.com,192.168.0.10
+      # The user and group the server runs as, and owns its saves as.
+      # PUID: "1000"
+      # PGID: "1000"
     volumes:
       - saves:/data # Saves and the certificate.
     # Time to save everyone before stopping.
