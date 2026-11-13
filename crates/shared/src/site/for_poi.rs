@@ -1,7 +1,7 @@
 //! The generator each kind of poi uses.
 
 use super::Generator;
-use super::building::{BuildingOptions, Outline};
+use super::building::{BuildingOptions, CastleOptions, Outline};
 use super::cave::{CaveEntrance, CaveOptions};
 use super::farm::FarmOptions;
 use super::herbalist::HerbalistOptions;
@@ -25,6 +25,22 @@ const FORT_WALL: WallOptions = WallOptions {
         (WallMaterial::Stone, 40),
         (WallMaterial::Log, 20),
     ],
+};
+
+/// Castles (owner, 2026-11-13): an outer wall of stone or dressed blocks
+/// round 40–70 × 36–60 cells, 5 to 8 cells of courtyard to the keep, a pond of
+/// 3 × 3 to 4 × 4, a moat of 2 to 3 (4 round the biggest) more often than not,
+/// and towers of 2 to 3 floors.
+const CASTLE: CastleOptions = CastleOptions {
+    width: (40, 70),
+    height: (36, 60),
+    gap: (5, 8),
+    pond: (3, 4),
+    moat_percent: 60,
+    moat: (2, 3),
+    wide_moat_from: 110,
+    tower_floors: (2, 3),
+    materials: &[(WallMaterial::Stone, 50), (WallMaterial::Block, 50)],
 };
 
 impl Generator {
@@ -54,6 +70,7 @@ impl Generator {
                 ground_windows,
                 stilts: false,
                 wall: None,
+                castle: None,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -97,6 +114,7 @@ impl Generator {
                     ground_windows,
                     stilts: false,
                     wall: None,
+                    castle: None,
                 },
                 fields: (1, 8),
             }),
@@ -118,6 +136,7 @@ impl Generator {
                     ground_windows,
                     stilts: false,
                     wall: None,
+                    castle: None,
                 },
                 strips: (3, 5),
                 length: (7, 12),
@@ -171,14 +190,20 @@ impl Generator {
                 }),
                 other => other,
             },
-            // Always a keep above the walls.
-            Castle => at_least_three_floors(building(
-                (40, 70),
-                (36, 60),
+            // A keep of at least 3 floors inside the castle's wall.
+            Castle => match at_least_three_floors(building(
+                CASTLE.width,
+                CASTLE.height,
                 &[Rectangle, CutCorners, RoundCorners],
                 4,
                 12,
-            )),
+            )) {
+                Self::Building(options) => Self::Building(BuildingOptions {
+                    castle: Some(CASTLE),
+                    ..options
+                }),
+                other => other,
+            },
             // Always a basement (owner); half have a wall round them.
             Fort => match at_least_three_floors(building(
                 (30, 50),
@@ -212,6 +237,7 @@ impl Generator {
                 ground_windows,
                 stilts: false,
                 wall: None,
+                castle: None,
             }),
         }
     }

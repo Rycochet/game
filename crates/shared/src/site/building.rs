@@ -18,6 +18,7 @@
 //! they are all made together at the start and kept.
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod castle;
 mod doors;
 mod entrances;
 mod fill;
@@ -28,6 +29,8 @@ mod shape;
 mod splitter;
 mod walled;
 
+use castle::{Castle, CastleSize};
+pub use castle::{CastleOptions, GATE_TOWER_SIZE, PoiCastle, TOWER_SIZE, TowerSpot, tower_spots};
 use doors::{add_doors, add_extra_doors, join_corridors};
 use entrances::{add_entrances, between};
 use fill::{add_windows, pillars};

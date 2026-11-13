@@ -44,6 +44,8 @@ mod notice;
 mod on_ground;
 mod population;
 mod quest_mobs;
+#[cfg(test)]
+mod remake_for_tests;
 mod run;
 mod scent;
 mod shove;

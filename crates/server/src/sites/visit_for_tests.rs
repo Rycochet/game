@@ -10,6 +10,11 @@ impl Visit {
         self.position = Spot::middle_of(at);
     }
 
+    /// Whether a cell of the level can be walked on, for tests.
+    pub(crate) fn walkable_for_test(&self, (x, y): (i64, i64)) -> bool {
+        self.level.level.is_walkable(x, y)
+    }
+
     /// The level's first stairs, for tests.
     pub(crate) fn first_stairs(&self) -> (i64, i64) {
         let stairs = self.level.stairs[0];

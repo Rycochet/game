@@ -1,6 +1,7 @@
 //! A planned building's floors: the levels above ground, the basement and stilts.
 
 use super::super::{Exit, PoiWall, SiteLevel, Stairs, StairsDirection};
+use super::PoiCastle;
 use super::{Outline, Plan, Shape, add_windows, pillars};
 use crate::dungeon::{Cell, Level};
 use crate::rng::Seed;
@@ -37,7 +38,15 @@ impl Plan {
             width: ground.width,
             height: ground.height,
         };
-        (self.wall.as_ref()).map(|wall| PoiWall::of(&wall.look, inside))
+        let look = (self.wall.as_ref())
+            .map(|wall| &wall.look)
+            .or(self.castle.as_ref().map(|castle| &castle.look));
+        look.map(|look| PoiWall::of(look, inside))
+    }
+
+    /// The castle round it as the world map shows it, if it is a keep.
+    pub fn poi_castle(&self) -> Option<PoiCastle> {
+        self.castle.as_ref().map(PoiCastle::of)
     }
 
     /// The shape of the ground floor.
@@ -51,7 +60,7 @@ impl Plan {
     }
 
     /// How many floors it has above the ground, and on it.
-    fn storeys(&self) -> u32 {
+    pub(super) fn storeys(&self) -> u32 {
         if self.ruined.is_empty() {
             self.floors.len() as u32
         } else {
@@ -81,8 +90,9 @@ impl Plan {
                 floor
             }
         };
-        match &self.wall {
-            Some(wall) if index == 0 => wall.surround(self.seed, floor),
+        match (&self.wall, &self.castle) {
+            (Some(wall), _) if index == 0 => wall.surround(self.seed, floor),
+            (_, Some(castle)) => castle.level(self.seed, index, floor),
             _ => floor,
         }
     }

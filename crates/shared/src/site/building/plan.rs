@@ -8,6 +8,7 @@ use super::{
     MIN_STAIRS_GAP, MIN_TAPERED_FLOOR, MOST_EXTRA_STAIRS, Outline, SAME_SIZE_PERCENT,
     SMALL_TOP_PERCENT, Shape, Walled, add_windows,
 };
+use super::{Castle, CastleSize};
 use crate::rng::Seed;
 
 /// A building's plan: its floors' outlines and the stairs between them.
@@ -35,17 +36,27 @@ pub struct Plan {
     pub(super) ruined: Vec<SiteLevel>,
     /// A wall round the ground floor, if it has one.
     pub(super) wall: Option<Walled>,
+    /// The castle round it, if it is a keep.
+    pub(super) castle: Option<Castle>,
 }
 
 impl Plan {
     pub fn new(options: &BuildingOptions, seed: Seed) -> Self {
         let mut rng = seed.derive("building").rng();
         let outline = options.outlines[rng.range_u64(0, options.outlines.len() as u64) as usize];
-        let width = roll(&mut rng, options.width.0, options.width.1);
+        // A keep is what fits inside its castle.
+        let castle_size = (options.castle.as_ref()).map(|castle| CastleSize::roll(castle, seed));
+        let width = match &castle_size {
+            Some(size) => size.keep().0,
+            None => roll(&mut rng, options.width.0, options.width.1),
+        };
         let height = if options.square || outline == Outline::Circle {
             width
         } else {
-            roll(&mut rng, options.height.0, options.height.1)
+            match &castle_size {
+                Some(size) => size.keep().1,
+                None => roll(&mut rng, options.height.0, options.height.1),
+            }
         };
         let corner = roll(&mut rng, 2, (width.min(height) / 4).max(2));
         let ground = Shape {
@@ -196,7 +207,8 @@ impl Plan {
             None => floors[0],
         };
 
-        let wall = (options.wall.as_ref()).and_then(|wall| Walled::plan(wall, seed, &floors[0]));
+        let wall = (options.wall.as_ref())
+            .and_then(|wall| Walled::plan(wall, seed, &floors[0], options.ruin));
         let mut plan = Self {
             seed,
             width: width + 2 * BORDER,
@@ -210,6 +222,7 @@ impl Plan {
             stilts: options.stilts,
             ruined: Vec::new(),
             wall,
+            castle: None,
         };
         if options.ruin > 0 {
             let storeys = plan.floors.len() as u32;
@@ -240,6 +253,17 @@ impl Plan {
                     );
                 }
             }
+        }
+        if let (Some(castle), Some(size)) = (&options.castle, &castle_size) {
+            let storeys = plan.storeys();
+            let keep = plan.floors[0];
+            plan.castle = Some(Castle::plan(
+                castle,
+                size,
+                seed,
+                &keep,
+                (options.ruin, storeys),
+            ));
         }
         plan
     }

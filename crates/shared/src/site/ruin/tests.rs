@@ -15,7 +15,11 @@ fn options(kind: PoiKind, ruin: u8) -> BuildingOptions {
     let Generator::Building(options) = Generator::for_poi(kind).with_ruin(ruin) else {
         panic!("{kind:?} isn't a building");
     };
-    options
+    // The building's own ruin: a castle's keep, without the castle round it.
+    BuildingOptions {
+        castle: None,
+        ..options
+    }
 }
 
 /// Every kind of plan tested, at every level of ruin, with its intact one.

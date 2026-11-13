@@ -103,11 +103,9 @@ fn walking_shows_what_comes_into_sight_and_says_when_it_goes() {
     test.send(&[CASTLE]);
     let everyone = mob_ids(&mut test);
     let mob = test.world.populations.0.values().next().unwrap().mobs[0].clone();
-    let answers = test.send(&[ClientMessage::DevTeleport {
-        x: mob.position.0,
-        y: mob.position.1,
-    }]);
-    // Standing on it, it is in sight: a teleport starts afresh.
+    let beside = next_to(&mut test, mob.position);
+    let answers = test.send(&[beside]);
+    // Beside it, facing it, it is in sight: a teleport starts afresh.
     assert!(seen_ids(&answers).contains(&mob.id));
     assert!(seen_ids(&answers).is_subset(&everyone));
     // Nothing has changed: nothing more is said.
@@ -221,10 +219,7 @@ pub(super) fn beside_a_mob(kind: CreatureKind, apart: i64) -> TestClient {
     let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(apart);
     test.send(&[ClientMessage::DevTeleport { x, y }]);
     let population = test.world.populations.0.values_mut().next().unwrap();
-    let mob = &mut population.mobs[0];
-    mob.kind = kind;
-    mob.put((x + apart, y));
-    mob.home = (x + apart, y);
+    let mob = population.remake_for_test(0, kind, (x + apart, y));
     // Facing each other: each in the other's cone.
     mob.heading = shared::facing::Heading::WEST;
     test.client.heading = shared::facing::Heading::EAST;
@@ -236,6 +231,29 @@ pub(super) fn run(test: &mut TestClient, ticks: u64) {
     for _ in 0..ticks {
         test.world.action_clock.advance(1);
         run_mobs(std::slice::from_mut(&mut test.client), &mut test.world);
+    }
+}
+
+/// A teleport to a cell beside `at`, with the player turned to face it, so
+/// whatever stands there is in sight and needn't step aside.
+pub(super) fn next_to(test: &mut TestClient, (x, y): (i64, i64)) -> ClientMessage {
+    use shared::facing::Heading;
+    let sides = [
+        ((-1, 0), Heading::EAST),
+        ((1, 0), Heading::WEST),
+        ((0, -1), Heading::SOUTH),
+        ((0, 1), Heading::NORTH),
+    ];
+    let ((dx, dy), heading) = (sides.into_iter())
+        .find(|&((dx, dy), _)| {
+            let visit = test.client.visit.as_ref().unwrap();
+            visit.walkable_for_test((x + dx, y + dy))
+        })
+        .expect("room beside it");
+    test.client.heading = heading;
+    ClientMessage::DevTeleport {
+        x: x + dx,
+        y: y + dy,
     }
 }
 

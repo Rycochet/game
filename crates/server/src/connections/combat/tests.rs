@@ -21,11 +21,7 @@ pub(super) fn beside(kind: CreatureKind) -> (TestClient, Id) {
     let (x, y) = test.client.visit.as_ref().unwrap().room_to_walk_east(1);
     test.send(&[ClientMessage::DevTeleport { x, y }]);
     let population = test.world.populations.0.values_mut().next().unwrap();
-    let mob = &mut population.mobs[0];
-    mob.kind = kind;
-    mob.put((x + 1, y));
-    mob.home = (x + 1, y);
-    let id = mob.id;
+    let id = population.remake_for_test(0, kind, (x + 1, y)).id;
     (test, id)
 }
 

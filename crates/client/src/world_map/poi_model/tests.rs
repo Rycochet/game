@@ -43,6 +43,7 @@ fn more_floors_stand_taller() {
             floors,
             ruin: 0,
             wall: None,
+            castle: None,
         };
         let model = build(PoiKind::StoneTower, look, 0);
         let top = model.corners.iter().flatten().map(|c| c.y);
@@ -73,8 +74,49 @@ fn the_more_ruined_the_less_is_left() {
             floors: 2,
             ruin,
             wall: None,
+            castle: None,
         };
         build(PoiKind::Castle, look, 1).corners.len()
     };
     assert!(triangles(5) < triangles(1));
+}
+
+/// A castle's towers and moat are drawn round its keep.
+#[test]
+fn castles_have_towers_and_moats() {
+    let look = |castle| PoiLook::Building {
+        outline: Outline::Rectangle,
+        width: 40,
+        height: 30,
+        floors: 3,
+        ruin: 0,
+        wall: Some(shared::site::PoiWall {
+            west: 6,
+            north: 6,
+            east: 6,
+            south: 6,
+            material: shared::site::WallMaterial::Stone,
+            gates: [false, false, true, false],
+        }),
+        castle,
+    };
+    let triangles = |castle| build(PoiKind::Castle, look(castle), 0).corners.len();
+    let castle = |moat| {
+        Some(shared::site::PoiCastle {
+            tower_floors: 3,
+            moat,
+        })
+    };
+    assert!(triangles(castle(0)) > triangles(None));
+    // (Water's colour, as `castle::WATER`.)
+    let water = |castle| {
+        let model = build(PoiKind::Castle, look(castle), 0);
+        model
+            .colours
+            .iter()
+            .filter(|&&c| c == [58, 112, 176])
+            .count()
+    };
+    assert_eq!(water(castle(0)), 0);
+    assert!(water(castle(3)) > 0);
 }

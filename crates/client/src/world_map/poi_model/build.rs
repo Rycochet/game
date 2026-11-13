@@ -22,16 +22,24 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
             floors,
             ruin,
             wall,
+            castle,
         } => {
             let mut half = Vec2::new(half_size(width), half_size(height));
             // A wall round it takes room: the building inside it is smaller.
             if let Some(wall) = &wall {
-                let per_cell = super::wall::scale(width, height, wall);
+                let beyond = castle.as_ref().map_or(0.0, super::castle::beyond);
+                let per_cell = super::wall::scale(width, height, wall, beyond);
                 half = Vec2::new(f32::from(width), f32::from(height)) * per_cell / 2.0;
                 super::wall::wall(&mut model, half, wall, per_cell);
+                if let Some(castle) = &castle {
+                    let size = (width, height);
+                    super::castle::castle(&mut model, size, half, (wall, castle), per_cell);
+                }
             }
             if ruin > 0 {
                 ruined(&mut model, kind, outline, half, floors, ruin, variety);
+            } else if castle.is_some() {
+                super::castle::keep(&mut model, outline, half, floors);
             } else {
                 building(&mut model, kind, outline, half, floors);
             }

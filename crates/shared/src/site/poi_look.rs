@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::building::Outline;
 use super::cave::CaveEntrance;
-use super::{Generator, PoiWall};
+use super::{Generator, PoiCastle, PoiWall};
 use crate::poi::PoiKind;
 use crate::rng::Seed;
 
@@ -21,8 +21,10 @@ pub enum PoiLook {
         floors: u8,
         /// How ruined it is (`BuildingOptions::ruin`).
         ruin: u8,
-        /// A wall round it (forts).
+        /// A wall round it (forts, castles).
         wall: Option<PoiWall>,
+        /// The towers and moat of a castle round it.
+        castle: Option<PoiCastle>,
     },
     Cave {
         entrance: CaveEntrance,
@@ -62,6 +64,7 @@ impl PoiLook {
                     floors: plan.floors() as u8,
                     ruin: options.ruin,
                     wall: plan.poi_wall(),
+                    castle: plan.poi_castle(),
                 }
             }
             Generator::Cave(options) => Self::Cave {
@@ -80,6 +83,7 @@ impl PoiLook {
                     floors: 1,
                     ruin: options.house.ruin,
                     wall: None,
+                    castle: None,
                 }
             }
             Generator::Farm(options) => {

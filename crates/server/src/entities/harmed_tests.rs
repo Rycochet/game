@@ -7,7 +7,7 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use crate::combat::Harm;
 use crate::connections::tests::TestClient;
 
-/// A mob the player sees, in a castle: they stand on it.
+/// A mob the player sees, in a castle: they stand beside it, facing it.
 fn a_mob_in_sight(test: &mut TestClient) -> Id {
     test.send(&[ClientMessage::DevEnterSite {
         kind: PoiKind::Castle,
@@ -16,10 +16,8 @@ fn a_mob_in_sight(test: &mut TestClient) -> Id {
         ruin: 0,
     }]);
     let mob = test.world.populations.0.values().next().unwrap().mobs[0].clone();
-    test.send(&[ClientMessage::DevTeleport {
-        x: mob.position.0,
-        y: mob.position.1,
-    }]);
+    let beside = super::tests::next_to(test, mob.position);
+    test.send(&[beside]);
     assert!(test.client.seen_entities.contains_key(&mob.id));
     mob.id
 }
