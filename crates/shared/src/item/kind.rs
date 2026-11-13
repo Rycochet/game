@@ -48,6 +48,9 @@ pub enum ItemKind {
     HalfArmour,
     Hat,
     Helmet,
+    /// Something someone lost, found for a quest: a letter, a book, a toy
+    /// (owner: one picture for all, named for what it is).
+    Keepsake,
     Key,
     Knife,
     Lantern,
@@ -91,7 +94,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 76] = [
+    pub const ALL: [Self; 77] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -133,6 +136,7 @@ impl ItemKind {
         Self::Hat,
         Self::Helmet,
         Self::Hose,
+        Self::Keepsake,
         Self::Key,
         Self::Knife,
         Self::Lantern,

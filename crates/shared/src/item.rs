@@ -22,6 +22,7 @@ mod made;
 mod neck_def;
 mod placed;
 mod quality;
+mod quest_def;
 mod quest_items;
 mod refused;
 mod saved;

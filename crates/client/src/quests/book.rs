@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use shared::poi::ChunkPos;
 use shared::protocol::{
-    BossSign, DailyDone, LogEntry, Marker, PlanetQuests, QuestState, SlainBoss,
+    BossSign, DailyDone, DoneAhead, FindMark, LogEntry, Marker, PlanetQuests, QuestState,
 };
 use shared::quest::QuestId;
 use shared::world::WorldId;
@@ -18,14 +18,19 @@ pub struct QuestBook {
     pub dailies: Vec<DailyDone>,
     /// The quest they chose to follow (none: the newest taken).
     pub tracked: Option<QuestId>,
-    /// Quests whose boss they killed before taking them: each giver's town
-    /// is marked.
-    pub slain: Vec<SlainBoss>,
+    /// Quests whose boss they killed, or whose item they found, before
+    /// taking them: each giver's town is marked.
+    pub ahead: Vec<DoneAhead>,
 }
 
 /// The signs over the quest bosses in sight, by mob (`QuestNews::Bosses`).
 #[derive(Resource, Default)]
 pub struct BossMarks(pub BTreeMap<shared::id::Id, BossSign>);
+
+/// The sign over the player's own quest item lying in sight, if one is
+/// (`QuestNews::Finds`).
+#[derive(Resource, Default)]
+pub struct FindMarks(pub Vec<FindMark>);
 
 /// Every planet the character has quest history on, as last told (asked for
 /// by the Quest Log, and told on coming into the Hall).

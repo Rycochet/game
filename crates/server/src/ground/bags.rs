@@ -113,9 +113,24 @@ pub(super) fn lying(
     world: &mut ServerWorld,
     item: Id,
 ) -> Result<Item, &'static str> {
-    let (id, index, _) = standing_at(client).ok_or("not in a site")?;
+    let (id, index, at) = standing_at(client).ok_or("not in a site")?;
+    if let Some(find) = own_find(client, world, item, at) {
+        return Ok(find.item);
+    }
     let level = world.site(id).levels.get(&index).ok_or("nothing here")?;
     let bag = holding(client, &level.ground, item).ok_or("that isn't in reach")?;
     let found = level.ground[&bag].iter().find(|one| one.id == item);
     found.cloned().ok_or("that isn't in reach")
+}
+
+/// The player's own quest item lying in reach, if `item` is it: it lies for
+/// them alone (`quests::find_here`), so taking it takes nothing from a bag.
+pub(super) fn own_find(
+    client: &Client,
+    world: &mut ServerWorld,
+    item: Id,
+    at: Spot,
+) -> Option<crate::quests::Find> {
+    let find = crate::quests::find_here(client, world)?;
+    (find.item.id == item && in_reach(client.size(), at, find.at)).then_some(find)
 }

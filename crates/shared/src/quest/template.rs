@@ -141,7 +141,7 @@ pub fn boss_of(poi: &Poi) -> Boss {
 }
 
 /// What a poi's unique quest item is: something someone left behind.
-pub(super) fn item_of(poi: &Poi) -> ItemCategory {
+pub fn item_of(poi: &Poi) -> ItemCategory {
     let keepsakes: Vec<(ItemCategory, u64)> = (ItemCategory::ALL.iter())
         .filter(|c| c.is_keepsake())
         .map(|&c| (c, 1))

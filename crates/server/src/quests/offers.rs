@@ -94,20 +94,18 @@ fn offered(client: &Client, world: &ServerWorld, quest: &Quest, now: i64) -> Opt
         if !book.may_retake(&quest.id, now) {
             return None;
         }
-        let dealt_with = book.slain.contains(&quest.id);
+        let ahead = super::ahead::ahead_of(book, quest.id);
         match judge(quest, client, world) {
             Verdict::Hidden => return None,
             Verdict::Missing(mut hints) => {
                 // The giver knows, whether or not they can give it yet.
-                if dealt_with {
-                    hints.push(Hint::DealtWith);
-                }
+                hints.extend(ahead.map(Hint::Ahead));
                 OfferState::Locked(hints)
             }
             Verdict::Met => OfferState::Available {
                 story: Box::new(quest.story.clone()),
                 reward: quest.reward.clone(),
-                dealt_with,
+                ahead,
             },
         }
     };

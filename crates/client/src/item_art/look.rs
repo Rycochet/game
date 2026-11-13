@@ -87,6 +87,8 @@ pub enum Look {
     },
     /// A quest's parcel: brown paper and string.
     Parcel,
+    /// A quest's keepsake, whatever it is: a bundle in cloth, tied.
+    Keepsake,
     /// An armour set: its pieces as worn together.
     Set {
         set: SetLook,
@@ -123,6 +125,7 @@ impl Look {
         match self {
             Self::Gem { .. } | Self::Ring { .. } => (1, 1),
             Self::Parcel => (2, 2),
+            Self::Keepsake => (1, 1),
             Self::Blade { blade, .. } => blade.cells,
             Self::Hands { hands, .. } => hands.cells,
             Self::Shoulders { shoulders, .. } => shoulders.cells,
@@ -191,8 +194,10 @@ pub(super) fn sizes_above(size: Size, than: Size) -> i8 {
 
 /// How this item looks, if it has a form to go by.
 pub fn look_of(item: &Item) -> Option<Look> {
-    if item.kind == shared::item::ItemKind::Parcel {
-        return Some(Look::Parcel);
+    match item.kind {
+        shared::item::ItemKind::Parcel => return Some(Look::Parcel),
+        shared::item::ItemKind::Keepsake => return Some(Look::Keepsake),
+        _ => {}
     }
     let quality = item.quality;
     match item.form.as_ref()? {

@@ -32,6 +32,10 @@ pub struct QuestBook {
     /// the giver offers them with that step done. Kept until taken.
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub slain: BTreeSet<QuestId>,
+    /// Quests whose unique item the character picked up before taking them
+    /// (owner): offered with that step done. Kept until taken.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub found: BTreeSet<QuestId>,
     /// The quest followed under the minimap, chosen in the Quest Log (none:
     /// the newest taken).
     #[serde(default, skip_serializing_if = "Option::is_none")]

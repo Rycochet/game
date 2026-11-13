@@ -119,6 +119,16 @@ pub(crate) fn act(
     world: &mut ServerWorld,
     action: GroundAction,
 ) -> (bool, u32) {
+    // The player's own quest item: taking it in any way finds it.
+    let taking = match action {
+        GroundAction::Drop { .. } => None,
+        GroundAction::Take { item, .. }
+        | GroundAction::Stack { item, .. }
+        | GroundAction::Wear { item }
+        | GroundAction::Bin { item } => Some(item),
+    };
+    let find = (taking.zip(bags::standing_at(client)))
+        .and_then(|(item, (.., at))| bags::own_find(client, world, item, at));
     let done = match action {
         GroundAction::Drop { item, ref part } => dropped(client, world, item, part.clone()),
         GroundAction::Take {
@@ -168,6 +178,9 @@ pub(crate) fn act(
     let cost = match done {
         Ok(cost) => {
             client.unsaved = true;
+            if let Some(find) = find {
+                crate::quests::picked_up(client, world, find.quest);
+            }
             cost
         }
         Err(why) => {

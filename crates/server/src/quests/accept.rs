@@ -66,8 +66,8 @@ pub(crate) fn accept(
             return false;
         }
     }
-    let dealt = super::boss_kill::already_dealt(client, &quest);
-    (!dealt || super::boss_kill::tell_slain(client, world))
+    let ahead = super::ahead::already_done(client, &quest);
+    (!ahead || super::ahead::tell_ahead(client, world))
         && learn_targets(client, world, &quest)
         && log::tell_changed(client, world, id)
         && tell_markers(client, world, id.town, now)

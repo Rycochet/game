@@ -16,7 +16,9 @@ mod poi_marks;
 mod read;
 mod words;
 
-pub use book::{BossMarks, DoorMarkers, GateQuests, QuestBook, QuestPlanets, done_steps};
+pub use book::{
+    BossMarks, DoorMarkers, FindMarks, GateQuests, QuestBook, QuestPlanets, done_steps,
+};
 pub use dots::{LevelDots, OpenQuestLog, TrackedDots};
 pub use look::MarkLook;
 pub use poi_marks::QuestPois;
@@ -32,6 +34,7 @@ impl Plugin for QuestsPlugin {
             .init_resource::<QuestPlanets>()
             .init_resource::<QuestPois>()
             .init_resource::<BossMarks>()
+            .init_resource::<FindMarks>()
             .init_resource::<LevelDots>()
             .init_resource::<TrackedDots>()
             .add_message::<OpenQuestLog>()

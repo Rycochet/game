@@ -3,7 +3,7 @@
 //! step is done), or just handed in (the giver's last words).
 
 use shared::lang::Lang;
-use shared::protocol::{OfferState, QuestState};
+use shared::protocol::{Ahead, OfferState, QuestState};
 use shared::story::{RewardPart, Story};
 
 use super::OpenTalk;
@@ -44,7 +44,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
         OfferState::Available {
             story,
             reward: pays,
-            dealt_with,
+            ahead,
         } => {
             let steps =
                 (0..story.facts.asks.len()).map(|ask| or_partly(story.step_text(lang, ask, 0)));
@@ -53,9 +53,12 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
                 turn_in: false,
                 ..about(story, steps.collect(), pays, lang)
             };
-            // Its boss is already dead: the player says so (owner).
-            if *dealt_with {
-                detail.paragraphs.push(plain(lang, "talk-dealt-with"));
+            // Its boss is already dead, or its item found: the player says so
+            // (owner).
+            match ahead {
+                Some(Ahead::Slain) => detail.paragraphs.push(plain(lang, "talk-dealt-with")),
+                Some(Ahead::Found) => detail.paragraphs.push(plain(lang, "talk-found")),
+                None => {}
             }
             Some(detail)
         }

@@ -5,8 +5,10 @@
 use bevy::prelude::*;
 use bevy::text::FontWeight;
 
-use super::anchors::{Anchor, MarkOver, boss_anchors, door_anchors, gate_anchors, poi_anchors};
-use super::{BossMarks, DoorMarkers, GateQuests, MarkLook, QuestPois};
+use super::anchors::{
+    Anchor, MarkOver, boss_anchors, door_anchors, find_anchors, gate_anchors, poi_anchors,
+};
+use super::{BossMarks, DoorMarkers, FindMarks, GateQuests, MarkLook, QuestPois};
 use crate::common::{CurrentDungeon, DrawnGround, GameView, Other, Portal};
 use crate::view3d::{TokenView, ViewCamera};
 
@@ -24,12 +26,8 @@ pub(super) struct OverMark(MarkOver, MarkLook);
 pub(super) fn show_marks(
     view: Res<State<GameView>>,
     (dungeon, ground): (Res<CurrentDungeon>, Res<DrawnGround>),
-    (doors, gates, pois, bosses): (
-        Res<DoorMarkers>,
-        Res<GateQuests>,
-        Res<QuestPois>,
-        Res<BossMarks>,
-    ),
+    (doors, gates, pois): (Res<DoorMarkers>, Res<GateQuests>, Res<QuestPois>),
+    (bosses, finds): (Res<BossMarks>, Res<FindMarks>),
     ui_scale: Res<UiScale>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     tokens: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
@@ -42,6 +40,7 @@ pub(super) fn show_marks(
             let mut all = door_anchors(&dungeon, &ground, &doors);
             all.extend(gate_anchors(&dungeon, &gates));
             all.extend(boss_anchors(&bosses, &tokens, &others));
+            all.extend(find_anchors(&finds, &ground));
             all
         }
         GameView::WorldMap => poi_anchors(&pois, &tokens, &portals),

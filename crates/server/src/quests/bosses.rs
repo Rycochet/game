@@ -1,7 +1,8 @@
-//! Lone quest bosses (owner): a poi's boss is part of its site from the start
-//! when a town's quest asks for it (`shared::quest::owner` names the town),
-//! seen by everyone. What it is to a character: their own quest's step, a
-//! stranger's quest (a red "!"), or dealt with.
+//! A poi's boss and its unique item (owner): each part of its site from the
+//! start when a town's quest asks for it (`shared::quest::owner` names the
+//! town); the boss seen by everyone, the item by each character still wanting
+//! it, their own copy (`finds`). What either is to a character: their own
+//! quest's step, a stranger's quest (a red "!"), or dealt with.
 
 use std::collections::HashMap;
 
@@ -13,34 +14,48 @@ use super::{cache, done_flags};
 use crate::ServerWorld;
 use crate::storage::QuestBook;
 
-/// The quest a poi's boss belongs to, and which of its steps slays it.
+/// The quest a poi's boss (or item) belongs to, and which of its steps slays
+/// (or finds) it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct BossQuest {
+pub(crate) struct HookQuest {
     pub(crate) id: QuestId,
     pub(crate) kind: QuestKind,
     pub(crate) step: usize,
 }
 
-/// Each poi's boss quest, or none, once worked out (`TownQuests::bosses`).
-pub(crate) type Bosses = HashMap<ChunkPos, Option<BossQuest>>;
+pub(crate) type BossQuest = HookQuest;
+
+/// Each poi's boss and item quests, or none, once worked out
+/// (`TownQuests::bosses`).
+pub(crate) type Bosses = HashMap<(ChunkPos, Hook), Option<HookQuest>>;
 
 /// The quest whose step slays the boss of the poi in `chunk`, if any town's
 /// quest asks for it.
 pub(crate) fn boss_quest(world: &mut ServerWorld, chunk: ChunkPos) -> Option<BossQuest> {
-    if let Some(found) = world.quests.bosses.get(&chunk) {
+    hook_quest(world, chunk, Hook::Boss)
+}
+
+/// The quest using an exclusive hook (a boss, an item) of the poi in
+/// `chunk`, if any town's quest asks for it.
+pub(crate) fn hook_quest(
+    world: &mut ServerWorld,
+    chunk: ChunkPos,
+    hook: Hook,
+) -> Option<HookQuest> {
+    if let Some(found) = world.quests.bosses.get(&(chunk, hook)) {
         return *found;
     }
-    let found = find(world, chunk);
+    let found = find(world, chunk, hook);
     if world.quests.bosses.len() >= cache::MOST_TOWNS {
         world.quests.bosses.clear();
     }
-    world.quests.bosses.insert(chunk, found);
+    world.quests.bosses.insert((chunk, hook), found);
     found
 }
 
-fn find(world: &mut ServerWorld, chunk: ChunkPos) -> Option<BossQuest> {
+fn find(world: &mut ServerWorld, chunk: ChunkPos, hook: Hook) -> Option<HookQuest> {
     let poi: Poi = world.pois.in_chunk(chunk)?;
-    if !Hook::of_poi(&poi).contains(&Hook::Boss) {
+    if !Hook::of_poi(&poi).contains(&hook) {
         return None;
     }
     let town = {
@@ -58,16 +73,13 @@ fn find(world: &mut ServerWorld, chunk: ChunkPos) -> Option<BossQuest> {
             roads: quests.roads(),
             name_of: &name_of,
         };
-        owner(&quest_world, &poi, Hook::Boss)?
+        owner(&quest_world, &poi, hook)?
     };
-    let wanted = Target::Poi {
-        chunk,
-        hook: Hook::Boss,
-    };
+    let wanted = Target::Poi { chunk, hook };
     let town = cache::town(world, town)?;
     town.quests.iter().find_map(|quest| {
         let step = quest.steps.iter().position(|step| step.target == wanted)?;
-        Some(BossQuest {
+        Some(HookQuest {
             id: quest.id,
             kind: quest.kind,
             step,
@@ -80,15 +92,17 @@ fn find(world: &mut ServerWorld, chunk: ChunkPos) -> Option<BossQuest> {
 pub(crate) enum Regard {
     /// Their quest is taken and its step not done: the quest's colour.
     OnStep,
-    /// They don't have the quest and haven't dealt with it: a red "!".
+    /// They don't have the quest and haven't dealt with it (killed it, or
+    /// found it): a red "!".
     Stranger,
     /// Dealt with: killed and remembered, its step done, or handed in.
     Dealt,
 }
 
 /// What the boss of `boss` is to the character whose book this is.
-pub(crate) fn regard(world: &mut ServerWorld, book: &QuestBook, boss: BossQuest) -> Regard {
-    if book.done.contains_key(&boss.id) || book.slain.contains(&boss.id) {
+pub(crate) fn regard(world: &mut ServerWorld, book: &QuestBook, boss: HookQuest) -> Regard {
+    let ahead = book.slain.contains(&boss.id) || book.found.contains(&boss.id);
+    if book.done.contains_key(&boss.id) || ahead {
         return Regard::Dealt;
     }
     let Some(progress) = book.taken.get(&boss.id) else {

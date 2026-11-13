@@ -53,6 +53,7 @@ pub(super) fn parts_of(
             super::footwear::footwear_parts(&footwear, quality, meshes, materials)
         }
         Look::Parcel => super::parcel::parcel_parts(meshes, materials),
+        Look::Keepsake => super::parcel::keepsake_parts(meshes, materials),
         Look::Under { under, quality } => {
             super::under::under_parts(&under, quality, meshes, materials)
         }

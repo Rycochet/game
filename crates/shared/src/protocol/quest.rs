@@ -12,6 +12,7 @@ use crate::id::Id;
 use crate::poi::ChunkPos;
 use crate::quest::{QuestId, QuestKind, Standing, Step};
 use crate::skill::SkillId;
+use crate::spot::Spot;
 use crate::story::{Ending, Person, RewardPart, Story};
 use crate::world::WorldId;
 
@@ -99,10 +100,21 @@ pub enum QuestNews {
     /// The quest bosses on the level the player is on that they can see, and
     /// the sign over each: sent whenever it changes, none for no sign.
     Bosses(Vec<BossMark>),
-    /// Quests whose boss the character killed before taking them: each giver's
-    /// town has a marker on the maps until the quest is taken. Sent with the
-    /// log and whenever it changes.
-    Slain(Vec<SlainBoss>),
+    /// The quest item lying on the level the player is on for them alone (their
+    /// own copy: owner), while in sight, with the sign over it. Sent whenever
+    /// it changes.
+    Finds(Vec<FindMark>),
+    /// Quests whose boss the character killed, or whose item they found,
+    /// before taking them: each giver's town has a marker on the maps until
+    /// the quest is taken. Sent with the log and whenever it changes.
+    Ahead(Vec<DoneAhead>),
+}
+
+/// The sign over a quest item lying where it was left, for one player.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FindMark {
+    pub at: Spot,
+    pub sign: BossSign,
 }
 
 /// The sign over a quest boss for one player.
@@ -113,7 +125,7 @@ pub struct BossMark {
     pub sign: BossSign,
 }
 
-/// Which sign a quest boss has over it.
+/// Which sign a quest boss (or a quest item lying in a site) has over it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BossSign {
     /// A red "!": someone's quest, which the player doesn't have and hasn't
@@ -123,11 +135,22 @@ pub enum BossSign {
     Quest(QuestKind),
 }
 
-/// A quest whose boss the character has already dealt with, not taken yet.
+/// A quest a step of which the character has already done, not taken yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SlainBoss {
+pub struct DoneAhead {
     pub id: QuestId,
     pub kind: QuestKind,
+    pub ahead: Ahead,
+}
+
+/// What a character did before taking a quest, so that step is done on
+/// taking it (owner).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Ahead {
+    /// Killed its boss: "I've already dealt with it".
+    Slain,
+    /// Picked up its item: "I've already found it".
+    Found,
 }
 
 /// The cells of the level the player is on that one quest's dots go on.
@@ -169,9 +192,9 @@ pub enum OfferState {
     Available {
         story: Box<Story>,
         reward: Vec<RewardPart>,
-        /// The character has already dealt with its boss: "I've already
-        /// dealt with it", and that step is done on taking it.
-        dealt_with: bool,
+        /// The character has already killed its boss or found its item: they
+        /// say so, and that step is done on taking it.
+        ahead: Option<Ahead>,
     },
     /// Not yet: what the giver says of why ("!" in grey).
     Locked(Vec<Hint>),
@@ -197,8 +220,9 @@ pub enum Hint {
     },
     /// The giver wants someone good at this.
     Skill(SkillId),
-    /// The giver has heard the character dealt with the quest's boss.
-    DealtWith,
+    /// The giver has heard the character killed the quest's boss, or found
+    /// its item.
+    Ahead(Ahead),
 }
 
 /// A door's marker. A giver with quests in several states shows the first of
