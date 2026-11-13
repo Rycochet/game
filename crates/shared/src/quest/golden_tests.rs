@@ -30,8 +30,10 @@ fn golden_quests() {
     assert_eq!(found, GOLDEN, "{town:?}");
 }
 
+/// Changed 2026-11-13 (quests PR 7b3, owner): the Collect hook joins every
+/// poi with counted kills, so towns' quests move.
 const GOLDEN: &[&str] = &[
     "Giver { building: 0, slot: 0, chain: 0 } 0 [\"Slay Poi { chunk: ChunkPos { x: 11, y: -1 }, hook: Kills(Goblin) } Some(3) []\"] [Coins(35)] Rumour",
-    "Giver { building: 0, slot: 0, chain: 1 } 0 [\"Slay Poi { chunk: ChunkPos { x: 8, y: 1 }, hook: Boss } None []\"] [Coins(70)] Rumour",
-    "Giver { building: 1, slot: 0, chain: 0 } 0 [\"Visit Poi { chunk: ChunkPos { x: 10, y: 1 }, hook: Visit } None []\"] [Coins(20)] Threat",
+    "Giver { building: 0, slot: 0, chain: 1 } 0 [\"Find Poi { chunk: ChunkPos { x: 8, y: 1 }, hook: Item } None []\"] [Coins(70)] Rumour",
+    "Giver { building: 1, slot: 0, chain: 0 } 0 [\"Slay Poi { chunk: ChunkPos { x: 10, y: 2 }, hook: Kills(Goblin) } Some(4) []\"] [Coins(45)] Threat",
 ];

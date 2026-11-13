@@ -16,6 +16,7 @@ mod clock;
 #[cfg(feature = "debug-api")]
 pub(crate) mod debug_api;
 mod dots;
+mod drops;
 mod finds;
 mod follow;
 mod give_up;
@@ -80,6 +81,8 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
 mod boss_tests;
 #[cfg(test)]
 mod dots_tests;
+#[cfg(test)]
+mod drops_tests;
 #[cfg(test)]
 mod extras_tests;
 #[cfg(test)]

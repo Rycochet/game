@@ -236,4 +236,32 @@ fn an_area_has_every_kind_of_quest() {
         "in parallel"
     );
     assert!(any(&|q| q.reward.len() > 1), "a higher reward");
+    let collects = |q: &Quest| {
+        (q.steps.iter()).any(|s| {
+            matches!(
+                s.target,
+                Target::Poi {
+                    hook: Hook::Collect(_),
+                    ..
+                }
+            )
+        })
+    };
+    assert!(any(&collects), "something to collect");
+    for quest in quests.iter().filter(|q| collects(q)) {
+        let remains = quest.story.facts.remains.expect("what to bring back");
+        let natural = super::remains::natural_parts(remains.kind);
+        assert!(natural.iter().any(|(part, _)| *part == remains.part));
+    }
+}
+
+#[test]
+fn parts_to_collect_are_natural_to_the_creature() {
+    use crate::creature::CreatureKind::{Chicken, Human, Minotaur, Wolf};
+    use crate::story::BodyPart::{Feather, Fingernail, Hoof, Horn, Tail, Toenail};
+    let has = |kind, part| (super::remains::natural_parts(kind).iter()).any(|(p, _)| *p == part);
+    assert!(has(Human, Fingernail) && has(Human, Toenail));
+    assert!(!has(Wolf, Fingernail) && !has(Wolf, Toenail) && has(Wolf, Tail));
+    assert!(has(Minotaur, Horn) && has(Minotaur, Hoof));
+    assert!(has(Chicken, Feather) && !has(Human, Feather));
 }

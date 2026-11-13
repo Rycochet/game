@@ -3,7 +3,7 @@
 //! over from earlier steps. The story explains these; it never changes them.
 
 use super::cast::Carried;
-use super::facts::{CountBand, Goal, ItemCategory, Reason, RewardPart, Season, Weather};
+use super::facts::{CountBand, Goal, ItemCategory, Reason, Remains, RewardPart, Season, Weather};
 use super::{Boss, Direction, DistanceBand, Household, Pet, PlaceDescription};
 use crate::creature::CreatureKind;
 use crate::rng::Seed;
@@ -71,6 +71,8 @@ pub struct Request {
     pub creatures: Option<Creatures>,
     pub boss: Option<Boss>,
     pub item: Option<ItemCategory>,
+    /// What a "Collect" step brings back, worded as the step's items.
+    pub remains: Option<Remains>,
     pub destination: Option<Destination>,
     /// The pet the quest is about, if it is one in the world (an escort).
     /// A story about a lost pet makes one up otherwise.
@@ -113,6 +115,7 @@ impl Request {
             creatures: None,
             boss: None,
             item: None,
+            remains: None,
             destination: None,
             pet: None,
             reward: Vec::new(),

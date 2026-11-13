@@ -48,6 +48,35 @@ impl ItemCategory {
 }
 
 fact! {
+    /// A part of a creature a quest asks to have brought back (owner: one
+    /// natural to it, which only quests drop): what the story calls it.
+    BodyPart as "body-part" {
+        Heart = "heart",
+        Liver = "liver",
+        Tooth = "tooth",
+        Fang = "fang",
+        Claw = "claw",
+        Fingernail = "fingernail",
+        Toenail = "toenail",
+        Tail = "tail",
+        Horn = "horn",
+        Tusk = "tusk",
+        Ear = "ear",
+        Feather = "feather",
+        Hoof = "hoof",
+        Scale = "scale",
+    }
+}
+
+/// What a "Collect" step asks to have brought back: a part of creatures of a
+/// kind ("kobold teeth").
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Remains {
+    pub kind: crate::creature::CreatureKind,
+    pub part: BodyPart,
+}
+
+fact! {
     /// Roughly how many creatures: what a giver would say, not a number.
     CountBand as "count" {
         One = "one",

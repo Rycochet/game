@@ -59,7 +59,7 @@ pub(super) fn candidates(pois: &PoiMap, town: &Poi, towns: &[Poi], daily: bool) 
 fn hook_weight(hook: Hook) -> u64 {
     match hook {
         Hook::Boss | Hook::Item | Hook::Kills(_) => 3,
-        Hook::Escortee | Hook::Explore | Hook::Gather => 2,
+        Hook::Escortee | Hook::Explore | Hook::Gather | Hook::Collect(_) => 2,
         Hook::Visit => 1,
     }
 }

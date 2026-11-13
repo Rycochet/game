@@ -4,7 +4,7 @@
 use super::{Hook, Step};
 use crate::creature::CreatureKind;
 use crate::poi::{ChunkPos, Poi};
-use crate::story::{Ask, Boss, ItemCategory, Pet};
+use crate::story::{Ask, Boss, ItemCategory, Pet, Remains};
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct Plan {
@@ -15,6 +15,8 @@ pub(super) struct Plan {
     pub creatures: Option<(CreatureKind, u32)>,
     pub boss: Option<Boss>,
     pub item: Option<ItemCategory>,
+    /// What a "Collect" step brings back.
+    pub remains: Option<Remains>,
     /// The pet led home, for an escort of one.
     pub pet: Option<Pet>,
     /// The town something is taken to.

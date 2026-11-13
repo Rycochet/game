@@ -40,8 +40,8 @@ pub use direction::Direction;
 pub use distance::{DAY_WITHIN, DistanceBand, NEAR_WITHIN, SHORT_WITHIN};
 pub use epithet::Epithet;
 pub use facts::{
-    CountBand, Errand, Goal, ItemCategory, Occasion, Passerby, Reason, Relation, RewardPart,
-    Season, Stake, State, TimeAgo, Trait, Weather,
+    BodyPart, CountBand, Errand, Goal, ItemCategory, Occasion, Passerby, Reason, Relation, Remains,
+    RewardPart, Season, Stake, State, TimeAgo, Trait, Weather,
 };
 pub use household::{Household, Person};
 pub use pet::{Pet, PetKind};

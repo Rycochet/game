@@ -24,7 +24,7 @@ impl ItemKind {
                 Self::Aventail | Self::Bevor | Self::Collar | Self::Gorget | Self::Mantle => {
                     self.neck_def()
                 }
-                Self::Keepsake | Self::Parcel => self.quest_def(), // `quest_def.rs`
+                Self::Keepsake | Self::Parcel | Self::Remains => self.quest_def(), // `quest_def.rs`
                 // Armour sets: in `set_def.rs`.
                 Self::ArmourCoat | Self::Corslet | Self::FullArmour | Self::HalfArmour => {
                     self.set_def()

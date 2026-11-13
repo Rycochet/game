@@ -59,6 +59,7 @@ pub(super) fn tell_plan(world: &QuestWorld, town: &Poi, plan: &Plan, tale: Tale)
     });
     request.boss = plan.boss.clone();
     request.item = plan.item;
+    request.remains = plan.remains;
     request.pet = plan.pet.clone();
     request.destination = plan.destination.map(|poi| Destination {
         name: (world.name_of)(&poi).unwrap_or_default(),

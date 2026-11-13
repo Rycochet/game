@@ -119,7 +119,7 @@ impl ItemKind {
             Self::Apple => Food,
             Self::CopperCoin | Self::SilverCoin | Self::GoldCoin | Self::Gem => Valuables,
             Self::Stone => Materials,
-            Self::Lantern | Self::Key | Self::Keepsake | Self::Parcel => Other,
+            Self::Lantern | Self::Key | Self::Keepsake | Self::Parcel | Self::Remains => Other,
         }
     }
 }

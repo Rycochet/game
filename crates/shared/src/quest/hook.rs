@@ -26,6 +26,9 @@ pub enum Hook {
     Visit,
     /// Gathering herbs there.
     Gather,
+    /// Bringing back a part of the site's creatures of this kind, dropped only
+    /// for the quester (owner).
+    Collect(CreatureKind),
     // New hooks go at the end: messages carry one by its place.
 }
 
@@ -58,7 +61,10 @@ impl Hook {
         ) {
             hooks.push(Self::Escortee);
         }
-        hooks.extend(slain_kind(poi).map(Self::Kills));
+        if let Some(kind) = slain_kind(poi) {
+            hooks.push(Self::Kills(kind));
+            hooks.push(Self::Collect(kind));
+        }
         if has_boss(place) && place != PlaceKind::Camp {
             hooks.push(Self::Explore);
         }

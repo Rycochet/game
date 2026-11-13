@@ -142,6 +142,7 @@ impl<'a> Draft<'a> {
             place: request.place.clone(),
             creatures: request.creatures,
             item: request.item,
+            remains: request.remains,
             destination: request.destination.clone(),
             reward: request.reward.clone(),
             errand: self.errand.filter(|_| used.errand),

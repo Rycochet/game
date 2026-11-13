@@ -109,6 +109,13 @@ fn add(plan: &mut Plan, town: &Poi, candidate: Candidate, after: Vec<u8>, rng: &
         }
         Hook::Explore => step.goal = Goal::Explore,
         Hook::Visit => step.goal = Goal::Visit,
+        Hook::Collect(kind) => {
+            step.goal = Goal::Gather;
+            let count = rng.range_u64(3 + bigger / 2, 6 + bigger) as u32;
+            step.count = Some(count);
+            plan.creatures.get_or_insert((kind, count));
+            plan.remains = Some(super::remains::remains_of(&poi, kind));
+        }
         Hook::Gather => {
             step.goal = Goal::Gather;
             step.count = Some(rng.range_u64(5, 11) as u32);
