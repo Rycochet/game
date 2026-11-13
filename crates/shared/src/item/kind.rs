@@ -63,6 +63,9 @@ pub enum ItemKind {
     /// A quest's delivery: wrapped in brown paper and tied with string (owner).
     Parcel,
     Polearm,
+    /// A part of a creature brought back for a quest ("kobold scales"),
+    /// dropped only for the quester (owner).
+    Remains,
     Pouch,
     Ring,
     Sandals,
@@ -94,7 +97,7 @@ pub enum ItemKind {
 
 impl ItemKind {
     /// Every kind, alphabetically by name.
-    pub const ALL: [Self; 77] = [
+    pub const ALL: [Self; 78] = [
         Self::Apple,
         Self::ArmArmour,
         Self::ArmingCap,
@@ -152,6 +155,7 @@ impl ItemKind {
         Self::Petticoat,
         Self::Polearm,
         Self::Pouch,
+        Self::Remains,
         Self::Ring,
         Self::Sandals,
         Self::Shirt,

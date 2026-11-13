@@ -136,6 +136,39 @@ item-category-goods = goods
 item-category-coin = coin
     .plural = coins
 
+## Parts of creatures a "Collect" step brings back, with their plural, and how
+## they are put together with the creature ("kobold teeth").
+
+remains = { $creature } { $parts }
+body-part-heart = heart
+    .plural = hearts
+body-part-liver = liver
+    .plural = livers
+body-part-tooth = tooth
+    .plural = teeth
+body-part-fang = fang
+    .plural = fangs
+body-part-claw = claw
+    .plural = claws
+body-part-fingernail = fingernail
+    .plural = fingernail clippings
+body-part-toenail = toenail
+    .plural = toenail clippings
+body-part-tail = tail
+    .plural = tails
+body-part-horn = horn
+    .plural = horns
+body-part-tusk = tusk
+    .plural = tusks
+body-part-ear = ear
+    .plural = ears
+body-part-feather = feather
+    .plural = feathers
+body-part-hoof = hoof
+    .plural = hooves
+body-part-scale = scale
+    .plural = scales
+
 count-one = one
 count-few = a few
 count-many = many

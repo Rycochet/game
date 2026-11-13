@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::Beat;
 use super::cast::{Carried, Cast, Role};
 use super::facts::{
-    Errand, ItemCategory, Occasion, Reason, RewardPart, Season, Stake, TimeAgo, Weather,
+    Errand, ItemCategory, Occasion, Reason, Remains, RewardPart, Season, Stake, TimeAgo, Weather,
 };
 use super::request::{Ask, Creatures, Destination, Place};
 use crate::rng::Seed;
@@ -23,6 +23,8 @@ pub struct Facts {
     pub place: Option<Place>,
     pub creatures: Option<Creatures>,
     pub item: Option<ItemCategory>,
+    /// What a "Collect" step brings back ("kobold teeth"): the items' words.
+    pub remains: Option<Remains>,
     pub destination: Option<Destination>,
     pub reward: Vec<RewardPart>,
     pub errand: Option<Errand>,

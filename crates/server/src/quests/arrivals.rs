@@ -36,8 +36,8 @@ pub(super) fn quest_mobs(client: &Client, world: &mut ServerWorld) {
     }
 }
 
-/// How many more of each kind the character's open "Slay" steps at the poi in
-/// `chunk` still need.
+/// How many more of each kind the character's open "Slay" and "Collect"
+/// steps at the poi in `chunk` still need.
 pub(super) fn kills_wanted(
     client: &Client,
     world: &mut ServerWorld,
@@ -51,12 +51,13 @@ pub(super) fn kills_wanted(
         let done = done_flags(&quest, &progress.counts);
         for i in quest.open_steps(&done) {
             let step = &quest.steps[i];
-            let Target::Poi {
-                chunk: at,
-                hook: Hook::Kills(kind),
-            } = step.target
-            else {
-                continue;
+            // Kills to count, or creatures to collect from.
+            let (at, kind) = match step.target {
+                Target::Poi {
+                    chunk,
+                    hook: Hook::Kills(kind) | Hook::Collect(kind),
+                } => (chunk, kind),
+                _ => continue,
             };
             let have = progress.counts.get(i).copied().unwrap_or(0);
             let still = step.count.unwrap_or(1).saturating_sub(have);

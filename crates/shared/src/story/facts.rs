@@ -9,4 +9,4 @@ mod things;
 pub use events::{Errand, Occasion, Stake, TimeAgo};
 pub use people::{Passerby, Relation, State, Trait};
 pub use reason::{Goal, Reason};
-pub use things::{CountBand, ItemCategory, RewardPart, Season, Weather};
+pub use things::{BodyPart, CountBand, ItemCategory, Remains, RewardPart, Season, Weather};

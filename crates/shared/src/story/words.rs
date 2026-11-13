@@ -117,6 +117,19 @@ impl Story {
             let plural = format!("{}-{}.plural", item.fact(), item.key());
             args = args.text("items", lang.render(&plural, &Args::new())?);
         }
+        if let Some(remains) = &facts.remains {
+            let part = remains.part;
+            let plural = format!("{}-{}.plural", part.fact(), part.key());
+            let creature = creatures(lang, &remains.kind, CountBand::One)?;
+            let words = |parts: String| {
+                let words = Args::new().text("creature", creature.clone());
+                lang.render("remains", &words.text("parts", parts))
+            };
+            // The plural for most beats, one ("kobold tooth") for the rest.
+            args = args
+                .text("items", words(lang.render(&plural, &Args::new())?)?)
+                .text("item", words(lang.phrase(&part)?)?);
+        }
         if !facts.reward.is_empty() {
             args = args.text("reward", reward(lang, &facts.reward)?);
         }

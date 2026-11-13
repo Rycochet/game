@@ -130,5 +130,8 @@ pub(crate) fn killed(
     if boss && let Some(chunk) = site {
         super::boss_kill::slew_boss(client, world, chunk, now);
     }
+    if let Some(chunk) = site {
+        super::drops::drop_remains(client, world, kind, chunk);
+    }
     advance(client, world, Event::Killed { kind, site }, now);
 }
