@@ -43,8 +43,12 @@ pub fn daily_quest(
     let weights: Vec<(usize, u64)> = (candidates.iter().enumerate())
         .map(|(i, c)| (i, c.weight))
         .collect();
-    let main = candidates[rng.pick_weighted(&weights)];
-    let plan = plan(town, &main, &candidates, &mut rng);
+    let plan = if rng.range_u64(0, 100) < super::dungeon::DAILY_PERCENT {
+        super::dungeon::plan_cellar(town, true, &mut rng)
+    } else {
+        let main = candidates[rng.pick_weighted(&weights)];
+        plan(town, &main, &candidates, &mut rng)
+    };
     let making = Making {
         id: QuestId {
             town: town.chunk,

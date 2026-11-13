@@ -262,6 +262,7 @@ impl ServerWorld {
         let kind = match id {
             SiteId::Poi(chunk) => self.pois.in_chunk(chunk).map(|poi| poi.kind),
             SiteId::Dev { kind, .. } => Some(kind),
+            SiteId::Quest { .. } => Some(shared::quest::DUNGEON_KIND),
             SiteId::Wilderness => return shared::wilderness::WILDERNESS_VERSION,
             SiteId::DevArea(_) => return shared::site::DEV_AREA_VERSION,
         };

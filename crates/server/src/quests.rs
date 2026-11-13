@@ -17,6 +17,8 @@ mod clock;
 pub(crate) mod debug_api;
 mod dots;
 mod drops;
+mod dungeon;
+mod dungeon_dots;
 mod finds;
 mod follow;
 mod give_up;
@@ -33,6 +35,8 @@ mod turn_in;
 pub(crate) use ask::answer_quest;
 pub(crate) use bosses::boss_quest;
 pub(crate) use cache::TownQuests;
+pub(crate) use clock::unix_now;
+pub(crate) use dungeon::{came_out, dungeon_of, dungeon_poi};
 pub(crate) use finds::{Find, find_here, picked_up};
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
@@ -83,6 +87,8 @@ mod boss_tests;
 mod dots_tests;
 #[cfg(test)]
 mod drops_tests;
+#[cfg(test)]
+mod dungeon_tests;
 #[cfg(test)]
 mod extras_tests;
 #[cfg(test)]

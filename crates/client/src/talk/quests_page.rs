@@ -131,4 +131,8 @@ fn show_detail(ids: &Ids, detail: &Detail, dom: &mut Dom) {
     ] {
         dom.set_flag(&ids.of(name), "hidden", !shown);
     }
+    dom.set_flag(&ids.of("enter"), "hidden", detail.enter.is_none());
+    if let Some(words) = &detail.enter {
+        dom.set_text(&ids.of("enter"), words.clone());
+    }
 }

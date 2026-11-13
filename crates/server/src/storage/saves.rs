@@ -9,6 +9,8 @@ use shared::id::Id;
 use shared::item::{Inventory, Item};
 use shared::mob::Memory;
 use shared::poi::{ChunkPos, PoiKind};
+use shared::protocol::CharacterId;
+use shared::quest::QuestId;
 use shared::sheet::Sheet;
 use shared::site::DevArea;
 use shared::spot::Spot;
@@ -31,6 +33,12 @@ pub enum SiteId {
     /// The world's wilderness (`shared::wilderness`): what players have
     /// changed of it, and what they have left there.
     Wilderness,
+    /// A quest's own dungeon (`shared::quest::QuestDungeon`): this
+    /// character's copy, made on first entering, forgotten when it resets.
+    Quest {
+        character: CharacterId,
+        quest: QuestId,
+    },
 }
 
 /// `world.ron`.
@@ -275,19 +283,6 @@ pub type RememberedBags = SpotMap<Load>;
 /// The doors a character remembers on a level, by cell, as they last saw them.
 pub type RememberedDoors = BTreeMap<(i64, i64), shared::door::Swing>;
 
-/// Where in a site a character is.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VisitSave {
-    pub site: SiteId,
-    pub level: u32,
-    /// Where on it, in units (older saves' cells read as their middles).
-    #[serde(deserialize_with = "super::spot_compat::spot")]
-    pub position: Spot,
-    /// They walked into the site from the wilderness, where leaving it takes
-    /// them back.
-    #[serde(default)]
-    pub from_wilderness: bool,
-}
-
 pub use super::dev_return::DevReturn;
 pub use super::known_poi::KnownPoi;
+pub use super::visit_save::VisitSave;

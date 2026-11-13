@@ -26,12 +26,12 @@ impl Errand {
     pub fn allowed_at(self, place: PlaceKind) -> bool {
         use PlaceKind::*;
         let places: &[PlaceKind] = match self {
-            Self::Treasure => &[Ruin, Pyramid, Crypt, Cave, Tower],
+            Self::Treasure => &[Ruin, Pyramid, Crypt, Cave, Tower, Cellar],
             Self::Herbs => &[Wilds, Cave, Oasis, HerbalistHut],
             Self::Hunting => &[Wilds, Camp, Cave],
             Self::Graveside => &[Grave, Crypt],
             Self::Trade => &[Settlement, Store, Camp, Farm],
-            Self::Shelter => &[Cave, Tower, Ruin, Dwelling],
+            Self::Shelter => &[Cave, Tower, Ruin, Dwelling, Cellar],
             Self::Work => &[Farm, Stronghold, Tower, Store],
             Self::Pilgrimage => &[Pyramid, Tower, Grave, Oasis],
             Self::Eloping => &[Settlement, Dwelling],

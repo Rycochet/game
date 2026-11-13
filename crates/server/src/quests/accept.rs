@@ -71,6 +71,8 @@ pub(crate) fn accept(
         && learn_targets(client, world, &quest)
         && log::tell_changed(client, world, id)
         && tell_markers(client, world, id.town, now)
+        // A cellar of the giver's own: straight down into it (owner).
+        && (quest.dungeon.is_none() || super::dungeon::enter(client, world, id, reach))
 }
 
 /// The building of a quest's giver.

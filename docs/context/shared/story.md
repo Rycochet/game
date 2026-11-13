@@ -5,7 +5,7 @@ Quests' stories: who is in them (households, pets, named bosses), where they wen
 ## Files
 
 - `crates/shared/src/story.rs`: `mod` lines, re-exports; `is_people` (every kind listed: animals have no families), `offset` (the near way round a planet, north −y).
-- Names and places (PR 2): `story/household.rs` (`Household`, `Person`), `family_names.rs`, `pet.rs` (`PetKind`, `Pet`), `boss.rs`, `epithet.rs`, `place.rs` (`PlaceKind`, `Condition`, `PlaceDescription`), `direction.rs`, `distance.rs`.
+- Names and places (PR 2): `story/household.rs` (`Household`, `Person`), `family_names.rs`, `pet.rs` (`PetKind`, `Pet`), `boss.rs`, `epithet.rs`, `place.rs` (`PlaceKind`, `Condition`, `PlaceDescription`; `PlaceKind::Cellar` is a quest's own dungeon, under the giver's house, with no poi kind and never ruined), `direction.rs`, `distance.rs`.
 - `story/fact.rs`: the `fact!` macro: an enum of values, `ALL`, and its `Selector`. `story/facts.rs` and `facts/`: `people.rs` (`Relation`, `Trait`, `State`, `Passerby`), `events.rs` (`Errand`, `TimeAgo`, `Occasion`, `Stake`), `things.rs` (`ItemCategory`, `BodyPart`, `Remains`, `CountBand`, `Season`, `Weather`, `RewardPart`), `reason.rs` (`Goal`, `Reason` and their weights). `creature_words.rs`: `CreatureKind` as a selector.
 - `story/beat.rs`: `Beat` (the catalogue's H, C, D, T, Q, A, S beats and the ending's), `Slot`, which reasons each suits.
 - `story/cast.rs`: `Role`, `Member`, `CastPet`, `Cast`, `Carried`. `story/request.rs`: `Request`, `Ask`, `Place`, `Creatures`, `Destination`, `Length`. `story/told.rs`: `Story`, `Facts`, `Telling`, `Ending`, `Lie`, `Truth`.

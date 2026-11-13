@@ -55,6 +55,7 @@ pub(crate) fn quests(
                     "kind": format!("{:?}", offer.quest.kind),
                     "state": serde_json::to_value(&offer.state).unwrap_or_default(),
                     "steps": offer.quest.steps,
+                    "dungeon": offer.quest.dungeon.map(|d| json!({"levels": d.levels, "creatures": format!("{:?}", d.creatures)})),
                     "requirements": format!("{:?}", offer.quest.requirements),
                 }));
             }
@@ -75,7 +76,9 @@ pub(crate) struct QuestParams {
     #[serde(default)]
     player: usize,
     /// `accept`, `turn_in`, `abandon`, `fail`, `step` (finish `step`, or every
-    /// step if missing), or `standing` (add `points` in `town`).
+    /// step if missing), `standing` (add `points` in `town`), `enter` (its own
+    /// dungeon, from anywhere) or `age` (its dungeon as if left an hour ago,
+    /// so it resets).
     act: String,
     id: Option<QuestId>,
     step: Option<usize>,
@@ -120,6 +123,14 @@ pub(crate) fn quest(
             }
             log::tell_changed(client, world, id) && tell_markers(client, world, id.town, now)
         }
+        "enter" => super::dungeon::enter(client, world, need_id()?, false),
+        "age" => {
+            let id = need_id()?;
+            let stay = client.character.quests.dungeons.get_mut(&id);
+            let stay = stay.ok_or_else(|| refused("no copy of its dungeon"))?;
+            stay.left = Some(now - super::dungeon::RESET_AFTER);
+            true
+        }
         "standing" => {
             let town = town.ok_or_else(|| refused("give the `town`"))?;
             standing::add(&mut client.character.quests, town, points);
@@ -128,7 +139,7 @@ pub(crate) fn quest(
         }
         _ => {
             return Err(refused(
-                "act: accept, turn_in, abandon, fail, step or standing",
+                "act: accept, turn_in, abandon, fail, step, standing, enter or age",
             ));
         }
     };
@@ -151,5 +162,8 @@ fn book_json(book: &crate::storage::QuestBook) -> Value {
             json!({"town": town, "building": building, "count": daily.count, "last": daily.last})
         })
         .collect();
-    json!({"taken": taken, "done": done, "ended": ended, "dailies": dailies})
+    let dungeons: Vec<Value> = (book.dungeons.iter())
+        .map(|(id, stay)| json!({"id": id, "left": stay.left, "back": stay.back.is_some()}))
+        .collect();
+    json!({"taken": taken, "done": done, "ended": ended, "dailies": dailies, "dungeons": dungeons})
 }

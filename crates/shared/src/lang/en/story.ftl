@@ -49,6 +49,7 @@ place-kind-farm = farm
 place-kind-herbalist-hut = herbalist's hut
 place-kind-oasis = oasis
 place-kind-wilds = stretch of wild land
+place-kind-cellar = cellar
 
 condition-whole = whole
 condition-ruined = ruined

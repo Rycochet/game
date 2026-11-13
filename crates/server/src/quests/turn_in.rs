@@ -50,6 +50,9 @@ pub(crate) fn turn_in(
     client.inventory = inventory;
     finish(client, &quest, now);
     info!("{} handed in quest {id:?}", client.in_log());
+    if !super::dungeon::quest_ended(client, world, id) {
+        return false;
+    }
     client.update_speed(world.action_clock.ticks());
     client.send_inventory()
         && client.link.send(&ServerMessage::Quest(QuestNews::TurnedIn {

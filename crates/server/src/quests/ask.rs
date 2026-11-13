@@ -49,6 +49,7 @@ pub(crate) fn answer_quest(client: &mut Client, world: &mut ServerWorld, ask: Qu
         QuestAsk::Accept(id) => accept::accept(client, world, id, now, true),
         QuestAsk::Abandon(id) => give_up::end(client, world, id, false, now),
         QuestAsk::TurnIn(id) => turn_in::turn_in(client, world, id, now, true),
+        QuestAsk::Enter(id) => super::dungeon::enter(client, world, id, true),
         QuestAsk::Log => {
             let whole = log::whole_log(client, world);
             client.link.send(&ServerMessage::Quest(whole))

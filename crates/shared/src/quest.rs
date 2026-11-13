@@ -10,6 +10,7 @@
 
 mod area;
 mod daily;
+mod dungeon;
 mod feeder;
 mod feeder_quest;
 mod givers;
@@ -31,6 +32,7 @@ mod town;
 mod world;
 
 pub use daily::{SECONDS_PER_DAY, daily_givers, daily_quest, utc_day};
+pub use dungeon::{DUNGEON_KIND, DungeonWay, QuestDungeon};
 pub use feeder::{feeder_destination, feeds_into};
 pub use givers::{Giver, givers};
 pub use hook::Hook;
@@ -44,6 +46,8 @@ pub use template::{boss_of, boss_tier, item_of};
 pub use town::town_quests;
 pub use world::{QuestWorld, is_larger, radius};
 
+#[cfg(test)]
+mod dungeon_tests;
 #[cfg(test)]
 mod golden_tests;
 #[cfg(test)]

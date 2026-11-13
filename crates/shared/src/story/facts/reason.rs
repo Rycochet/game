@@ -66,11 +66,11 @@ impl Reason {
         use PlaceKind::*;
         let good: &[PlaceKind] = match self {
             Self::Rumour => &[Ruin, Pyramid, Tower, Cave, Crypt, Oasis],
-            Self::Family => &[Dwelling, Farm, Settlement, Cave, Ruin],
-            Self::NeighbourFeud => &[Farm, Dwelling, Store, Settlement, Wilds],
+            Self::Family => &[Dwelling, Farm, Settlement, Cave, Ruin, Cellar],
+            Self::NeighbourFeud => &[Farm, Dwelling, Store, Settlement, Wilds, Cellar],
             Self::LostPet => &[Wilds, Cave, Farm, Ruin, Dwelling],
             Self::DebtOrTrade => &[Settlement, Store, Farm, Camp, HerbalistHut],
-            Self::Threat => &[Cave, Camp, Ruin, Stronghold, Wilds, Farm],
+            Self::Threat => &[Cave, Camp, Ruin, Stronghold, Wilds, Farm, Cellar],
             Self::Grief => &[Grave, Crypt, Ruin, Cave, Stronghold, Wilds],
             Self::Learning => &[Tower, Pyramid, Ruin, Crypt, HerbalistHut],
         };

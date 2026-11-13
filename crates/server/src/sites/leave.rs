@@ -121,6 +121,11 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
     if let SiteId::DevArea(_) = visit.id {
         return super::dev_area::back_from_area(client, world);
     }
+    if let SiteId::Quest { .. } = visit.id
+        && exit == Exit::WorldMap
+    {
+        return leave_dungeon(client, world);
+    }
     if visit.came_from_wilderness()
         && let Some(at) = back_to_wilderness(world, visit, exit, (x, y))
     {
@@ -180,6 +185,21 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
     }
 }
 
+/// Out of a quest's dungeon by its way up: back where they went in (beside
+/// the giver's door), or onto the world map at its town if that is unknown.
+pub(crate) fn leave_dungeon(client: &mut Client, world: &mut ServerWorld) -> bool {
+    leave(client, world);
+    let Some(visit) = client.visit.take() else {
+        return true;
+    };
+    let back = crate::quests::came_out(client, visit.id, crate::quests::unix_now());
+    match (back, visit.poi()) {
+        (Some(back), _) => super::resume(client, world, back),
+        (None, Some(&poi)) => leave_for_poi(client, world, poi, visit.id),
+        (None, None) => true,
+    }
+}
+
 /// The player is leaving their level (or the server): it was last visited
 /// now. The visit itself is left alone (saved with the character).
 pub(crate) fn leave(client: &Client, world: &mut ServerWorld) {
@@ -205,6 +225,8 @@ pub(crate) fn killed(client: &mut Client, world: &mut ServerWorld) -> bool {
     let Some(visit) = client.visit.take() else {
         return true;
     };
+    // Out of a quest's dungeon: its hour starts.
+    crate::quests::came_out(client, visit.id, crate::quests::unix_now());
     let (x, y) = visit.poi().map_or(here, |poi| (poi.x, poi.y));
     client.character.world_position = (x, y);
     client.unsaved = true;

@@ -28,6 +28,7 @@ pub(super) static TALK: Template = html!(
         <span>
           <button id="accept" class="main">Accept</button>
           <button id="turn_in" class="main">Complete</button>
+          <button id="enter" class="main" hidden/>
           <button id="decline">Decline</button>
           <button id="back">Back</button>
         </span>

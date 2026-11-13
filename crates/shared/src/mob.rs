@@ -21,7 +21,7 @@ mod purse;
 mod scent;
 mod trail;
 mod wild;
-pub use chosen::chosen_spawns;
+pub use chosen::{chosen_spawns, spawn_at};
 pub use memory::{
     Event, FIRST_HARM_OPINION, GIFT_OPINION, Memory, Regard, TRESPASS_FORGOTTEN_AFTER,
 };

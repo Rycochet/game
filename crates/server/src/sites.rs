@@ -47,12 +47,12 @@ use doors::{DoorSite, VisitDoors, door_looks, ensure_locks, remember_doors, set_
 use enter::enter_site;
 #[cfg(test)]
 pub(crate) use enter::test_enter_poi;
-pub(super) use enter::{dev_enter, enter_poi, generate, resume};
+pub(super) use enter::{dev_enter, enter_dungeon, enter_poi, generate, resume};
 pub(crate) use generator::{seen_poi, site_generator};
 use keepers::{NewKeepers, keepers_in_window, keepers_of};
 pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_from_keeper};
 use leave::leave_for_poi;
-pub(super) use leave::{forget_site, killed, leave, put_out, use_exit};
+pub(super) use leave::{forget_site, killed, leave, leave_dungeon, put_out, use_exit};
 use levels::{NewVisit, arrive_again, enter_level};
 pub(super) use moves::{moved, refused, set_cell, teleport};
 use place::{Mirror, Place, SetIn};

@@ -20,17 +20,32 @@ pub(crate) enum Event {
     Killed {
         kind: CreatureKind,
         site: Option<ChunkPos>,
+        /// In a quest's own dungeon: that quest's (`site` is then `None`).
+        dungeon: Option<QuestId>,
     },
     /// The character has come to a level of a poi.
     Arrived(QuestPlace),
 }
 
 impl Event {
-    /// Whether it counts for a step.
-    fn counts_for(self, step: &Step) -> bool {
+    /// Whether it counts for a step of quest `id`.
+    fn counts_for(self, id: QuestId, step: &Step) -> bool {
         match (self, step.target) {
-            (Self::Killed { kind, site }, Target::Poi { chunk, hook }) => {
+            (Self::Killed { kind, site, .. }, Target::Poi { chunk, hook }) => {
                 hook == Hook::Kills(kind) && site == Some(chunk)
+            }
+            (Self::Killed { kind, dungeon, .. }, Target::Dungeon { hook, .. }) => {
+                hook == Hook::Kills(kind) && dungeon == Some(id)
+            }
+            (Self::Arrived(place), _) if place.dungeon.is_some() => {
+                let deepest = place.deepest && place.dungeon == Some(id);
+                matches!(
+                    step.target,
+                    Target::Dungeon {
+                        hook: Hook::Explore,
+                        ..
+                    }
+                ) && deepest
             }
             (Self::Arrived(place), Target::Poi { chunk, hook }) => {
                 place.poi.chunk == chunk
@@ -80,7 +95,7 @@ pub(crate) fn moved_on(
     let mut delivered = false;
     for i in quest.open_steps(&done_flags(&quest, &progress.counts)) {
         let step = &quest.steps[i];
-        if event.counts_for(step) {
+        if event.counts_for(id, step) {
             // A delivery needs its parcel, which is handed over on arriving.
             if matches!(step.target, Target::Town { .. })
                 && !parcels::deliver(&mut client.inventory, id)

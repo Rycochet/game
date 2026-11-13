@@ -2,6 +2,7 @@
 //! town or other poi set into the wilderness), and a giver's door.
 
 use shared::poi::{ChunkPos, Poi};
+use shared::quest::QuestId;
 use shared::shop::beside_door;
 use shared::site::BuildingLook;
 
@@ -19,6 +20,9 @@ pub(crate) struct QuestPlace {
     pub(crate) level: u32,
     /// Whether it is the site's deepest level.
     pub(crate) deepest: bool,
+    /// In a quest's own dungeon (whose made-up poi is at the giver's town):
+    /// that quest's. Only its own steps count there.
+    pub(crate) dungeon: Option<QuestId>,
 }
 
 impl Visit {
@@ -30,11 +34,16 @@ impl Visit {
                 poi: *poi,
                 level: self.index,
                 deepest: self.index + 1 >= site.levels(),
+                dungeon: match self.id {
+                    SiteId::Quest { quest, .. } => Some(quest),
+                    _ => None,
+                },
             }),
             Place::Wilderness { in_poi, .. } => in_poi.map(|poi| QuestPlace {
                 poi,
                 level: 0,
                 deepest: false,
+                dungeon: None,
             }),
         }
     }

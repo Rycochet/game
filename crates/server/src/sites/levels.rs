@@ -162,7 +162,7 @@ pub(super) fn enter_level(
     };
     world.move_mob_aside((new.id, index), position.cell());
     let ground = match new.id {
-        SiteId::Poi(_) | SiteId::Dev { .. } => LevelGround::of_site(
+        SiteId::Poi(_) | SiteId::Dev { .. } | SiteId::Quest { .. } => LevelGround::of_site(
             &world.wilderness.wild,
             &world.ground,
             (new.poi, site),

@@ -25,6 +25,8 @@ pub enum PlaceKind {
     HerbalistHut,
     Oasis,
     Wilds,
+    /// Under someone's house in town: a quest's own dungeon (`quest::dungeon`).
+    Cellar,
     // New kinds go at the end: messages carry one by its place.
 }
 
@@ -44,7 +46,7 @@ pub struct PlaceDescription {
 }
 
 impl PlaceKind {
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 16] = [
         Self::Cave,
         Self::Crypt,
         Self::Grave,
@@ -60,6 +62,7 @@ impl PlaceKind {
         Self::HerbalistHut,
         Self::Oasis,
         Self::Wilds,
+        Self::Cellar,
     ];
 
     /// The kind of place a poi is. Every poi kind is listed, so a new one has to
@@ -85,10 +88,10 @@ impl PlaceKind {
         }
     }
 
-    /// Whether it can be said to lie in ruins: a ruin already does, and the
-    /// wilds and an oasis are never built.
+    /// Whether it can be said to lie in ruins: a ruin already does, the
+    /// wilds and an oasis are never built, and a cellar is under a whole house.
     pub const fn can_be_ruined(self) -> bool {
-        !matches!(self, Self::Ruin | Self::Wilds | Self::Oasis)
+        !matches!(self, Self::Ruin | Self::Wilds | Self::Oasis | Self::Cellar)
     }
 }
 
@@ -138,6 +141,7 @@ impl Selector for PlaceKind {
             Self::HerbalistHut => "herbalist-hut",
             Self::Oasis => "oasis",
             Self::Wilds => "wilds",
+            Self::Cellar => "cellar",
         }
     }
 }

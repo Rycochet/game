@@ -17,7 +17,8 @@ pub(super) fn quest_mobs(client: &Client, world: &mut ServerWorld) {
     let Some(visit) = &client.visit else {
         return;
     };
-    if visit.is_wilderness() {
+    // A quest's own dungeon has its creatures from the start, and no boss.
+    if visit.is_wilderness() || matches!(visit.id(), crate::storage::SiteId::Quest { .. }) {
         return;
     }
     let (Some(poi), Some(site)) = (visit.poi().copied(), visit.site()) else {

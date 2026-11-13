@@ -214,13 +214,18 @@ fn kills_and_arrivals_move_steps_on() {
         Event::Killed {
             kind: other,
             site: Some(chunk),
+            dungeon: None,
         },
         NOW,
     );
     advance(
         &mut test.client,
         &mut test.world,
-        Event::Killed { kind, site: None },
+        Event::Killed {
+            kind,
+            site: None,
+            dungeon: None,
+        },
         NOW,
     );
     assert_eq!(
@@ -233,6 +238,7 @@ fn kills_and_arrivals_move_steps_on() {
         Event::Killed {
             kind,
             site: Some(chunk),
+            dungeon: None,
         },
         NOW,
     );
@@ -248,6 +254,7 @@ fn kills_and_arrivals_move_steps_on() {
             Event::Killed {
                 kind,
                 site: Some(chunk),
+                dungeon: None,
             },
             NOW,
         );
