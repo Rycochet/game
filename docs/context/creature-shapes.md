@@ -1,6 +1,6 @@
 # Plan: more accurate creature models
 
-Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks), PR 3 (animal heads, ears, necks, tails), PR 4 (humanoid trunks) and PR 5 (beast peoples' heads) are built. Each PR keeps this file up to date.
+Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks), PR 3 (animal heads, ears, necks, tails), PR 4 (humanoid trunks), PR 5 (beast peoples' heads) and PR 6 (markings) are built: the plan is done. Each PR keeps this file up to date.
 
 ## Goal
 
@@ -51,7 +51,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 | 3 | Animal heads, ears, necks, tails (built) | 2 | independent |
 | 4 | Humanoid trunk and limbs from the base human (built) | 2 | independent |
 | 5 | Beast peoples' heads (built) | 3 | waits for 3 |
-| 6 | Markings | 2 | independent |
+| 6 | Markings (built) | 2 | independent |
 
 ### PR 1: measuring tool (built)
 - `cargo xtask shapes [rings=10]` (`xtask/src/shapes.rs`, `shapes/`): applies each beast's target to the base mesh, stands it level, cuts the skin with planes and prints tables. Our own readers, no new dependencies. `spare_assets/makehuman/` with the files and README (decision 1), `docs/credits.md`.
@@ -101,9 +101,11 @@ How it measures, and what to know when using the figures:
 - Closed helmets already don't go over a snout, beak or horns (`shared::wear`, owner 2026-11-04), so only open ones were checked: Item Pictures' Bodies page now ends with each beast people bare, in a coif, a helmet and aventail and 29 open helmets (`debug_menu/panels/beast_heads.rs`). All fit; horns pass out through bowls and brims, as before.
 - No other people changed: human, elf, dwarf, halfling, orc and goblin keep their oval heads (no target fits better), and birdfolk keep their beak (no bird head in the packs). `DOG_HEAD` is still unused.
 
-### PR 6: markings
-- New `Pattern` options (`crates/shared/src/sheet.rs`: pale belly, face mask, patches), chosen when a creature is made, as other looks are.
-- Touches saved looks and what the server sends of a creature.
+### PR 6: markings (built)
+- Shared: a new look, `Trait::Markings` (last in `Trait`, protocol 91), whose choices (`sheet/markings.rs`) are `Pattern::Marked(Marks { colour, belly, face, patches })`: a second colour, a paler belly (`belly`), a `Face` (`Mask`, a wolf's lower face and muzzle; `Blaze`, a horse's stripe; `Whole`, a Hereford's) and patches laid out by a number (`patches: Option<u8>`). Rolled for mobs as every look is, so all clients see the same animal, and saved by place, so an older save's creature has the first choice: a wolf's pale belly and mask, Plain for the rest. Wolves: pale belly and mask, or pale belly. Cattle: plain, white face, six layouts of white patches, two of dark. Horses: plain, blaze, two pinto layouts. Minotaurs (to pick when making one, a dropdown as for any look without colours): plain, white face, patched. `Appearance::marks`.
+- Client: `item_art/body/marks.rs` splits the skin's triangles (each halved along its sides first, for smoother edges) into the coat's colour and the markings', by the point's place: the bone it is on (`model::Bones`, now shared within `item_art`), how far under the trunk's ring middle it is (`trunk::underside`, with `ring_at`), where it is on a measured head (`HeadAxes::local`; ears and horns, outside the head's rings, stay the coat's), and smooth noise over the trunk, neck, head and top two bones of each limb for patches, from the layout number. `Colours::marks` carries them, so pictures and models are kept by them; the skin pieces are now skin, markings, coat, ... in pictures, morphs (markings change at halfway), bare models and dressed characters.
+- Item Pictures' Bodies page shows each kind with markings in every one, over two coats (`debug_menu/panels/markings.rs`).
+- More detail (stripes, socks, spots, tabby, markings on taurs' coats) is a later task, as the owner said.
 
 ## Checking each PR
 - Before and after screenshots of every affected kind at token size and large (Item Pictures, and the 3D models on a map).

@@ -3,10 +3,11 @@
 
 use bevy::prelude::*;
 use shared::body::{Hair, Layout, NONE, PERSON};
+use shared::sheet::Marks;
 
 use super::{
     Cover, MARGIN_PIXELS, PIXELS_PER_CELL, TILT, TURN, Triangle, VIEW_WIDTH, build, build_coated,
-    cells, coat_hair, features, hair,
+    cells, coat_hair, features, hair, marks,
 };
 
 /// How far an animal or a taur is turned to its right: nearly side on.
@@ -39,16 +40,22 @@ fn bounds(triangles: &[Triangle], view: Quat) -> (Vec3, Vec3) {
 /// The body turned and tipped as it is seen, then placed in its picture with room for
 /// its black edge: a person of the usual height fills it, anything shorter (`height`, in
 /// millimetres) is drawn that much smaller on the same ground, and anything that would
-/// still overflow it (wide horns, say) is fitted to it. The skin, a taur's coat, any
-/// feathers, any hair (on the upper body's head, for a taur), then any mane and tail
-/// hair.
-pub(super) fn fitted(layout: &Layout, height: i32, styled: Hair) -> [Vec<Triangle>; 5] {
+/// still overflow it (wide horns, say) is fitted to it. The skin, its markings, a
+/// taur's coat, any feathers, any hair (on the upper body's head, for a taur), then any
+/// mane and tail hair.
+pub(super) fn fitted(
+    layout: &Layout,
+    height: i32,
+    styled: Hair,
+    marked: Option<Marks>,
+) -> [Vec<Triangle>; 6] {
     let ((skin, coat), feathers) = (build_coated(layout), features::wings(layout));
+    let (skin, marked) = marks::split(layout, skin, marked);
     let head = layout.upper_body().unwrap_or(*layout);
     let hair = hair(&head, styled, Cover::default());
     let mane = coat_hair(layout);
     let view = Quat::from_rotation_x(TILT) * Quat::from_rotation_y(turn_of(layout));
-    let all: Vec<Triangle> = [&skin, &coat, &feathers, &hair, &mane]
+    let all: Vec<Triangle> = [&skin, &marked, &coat, &feathers, &hair, &mane]
         .into_iter()
         .flatten()
         .copied()
@@ -86,5 +93,5 @@ pub(super) fn fitted(layout: &Layout, height: i32, styled: Hair) -> [Vec<Triangl
             })
             .collect()
     };
-    [skin, coat, feathers, hair, mane].map(placed)
+    [skin, marked, coat, feathers, hair, mane].map(placed)
 }

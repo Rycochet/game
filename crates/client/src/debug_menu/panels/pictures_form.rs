@@ -80,6 +80,8 @@ pub(super) enum Shown {
     Footwear(super::footwear::FootwearShown),
     /// A piece of underclothing.
     Under(super::under::UnderShown),
+    /// A kind in one of its markings.
+    Marked(super::markings::MarkedShown),
 }
 
 impl Shown {
@@ -121,6 +123,7 @@ impl Shown {
             Self::Armour(shown) => shown.look(quality),
             Self::Footwear(shown) => shown.look(quality),
             Self::Under(shown) => shown.look(quality),
+            Self::Marked(shown) => shown.look(),
         }
     }
 }

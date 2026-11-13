@@ -2,6 +2,8 @@
 //! millimetres at their real sizes, kept by look so a look is built once.
 
 mod bones;
+
+pub(super) use bones::{BodyPart, Bones};
 mod mesh;
 mod pieces;
 

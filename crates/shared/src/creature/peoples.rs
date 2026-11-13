@@ -13,7 +13,7 @@ use crate::skill::level_practice;
 use Attribute::{Agility, Intellect, Strength, Toughness};
 
 use Ability::{Flutter, NightVision, Trample};
-use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
+use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, Markings, SkinShade};
 
 /// A body with these layers at one of its locations instead.
 const fn with(
@@ -147,7 +147,7 @@ pub(super) const MINOTAUR: CreatureDef = CreatureDef {
     body: &HOOVES,
     skills: &[("athletics/running", level_practice(2))],
     abilities: &[Trample],
-    looks: &[CoatColour, Height],
+    looks: &[CoatColour, Height, Markings],
     ..people(
         "Minotaur",
         380_000,

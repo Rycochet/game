@@ -70,6 +70,12 @@ pub(super) fn blend_colours(a: &Colours, b: &Colours, t: i32) -> Colours {
         feathers: mix(a.feathers, b.feathers),
         hair: mix(a.hair, b.hair),
         mane: mix(a.mane, b.mane),
+        // Markings change at halfway, as hair does.
+        marks: if t < BLEND_WHOLE / 2 {
+            a.marks
+        } else {
+            b.marks
+        },
     }
 }
 

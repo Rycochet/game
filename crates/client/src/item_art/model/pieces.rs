@@ -37,7 +37,7 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
                 .into_iter()
                 .map(|(triangles, material)| (scaled(triangles, share), material))
                 .collect();
-            let skin = pieces[..2].iter().flat_map(|(t, _)| t).copied().collect();
+            let skin = pieces[..3].iter().flat_map(|(t, _)| t).copied().collect();
             pieces.retain(|(triangles, _)| !triangles.is_empty());
             Some(Pieces {
                 pieces,
@@ -75,12 +75,16 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
 /// Thousandths, as `Layout::scaled` takes.
 const WHOLE: i32 = 1000;
 
-/// A bare body: skin, a taur's coat, feathers, hair and an animal's long hair.
+/// A bare body: skin, its markings, a taur's coat, feathers, hair and an animal's long hair.
 fn bare(layout: &Layout, colours: Colours, hair: Hair) -> Pieces {
-    let [skin, coat, feathers, hair, mane] = bare_pieces(layout, hair);
-    let surface = skin.iter().chain(&coat).copied().collect();
+    let [skin, marked, coat, feathers, hair, mane] = bare_pieces(layout, hair, colours.marks);
+    let surface = skin.iter().chain(&marked).chain(&coat).copied().collect();
     let pieces = [
         (skin, colours.skin),
+        (
+            marked,
+            colours.marks.map_or(colours.skin, |marks| marks.colour),
+        ),
         (coat, colours.coat),
         (feathers, colours.feathers),
         (hair, colours.hair),

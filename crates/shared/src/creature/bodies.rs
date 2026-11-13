@@ -104,7 +104,9 @@ impl CreatureKind {
     pub const fn def(self) -> CreatureDef {
         use crate::sheet::Attribute::Agility;
         use Ability::{Flutter, Kick, NightVision, Trample};
-        use Trait::{Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, SkinShade};
+        use Trait::{
+            Beard, CoatColour, FeatherColour, HairColour, HairStyle, Height, Markings, SkinShade,
+        };
         match self {
             Self::Birdfolk => BIRDFOLK,
             Self::Cattle => CATTLE,
@@ -196,7 +198,7 @@ impl CreatureKind {
                     ("athletics/swimming", 1_000),
                 ],
                 abilities: &[Kick, Trample],
-                looks: &[CoatColour, Height],
+                looks: &[CoatColour, Height, Markings],
             },
             Self::Human => CreatureDef {
                 name: "Human",

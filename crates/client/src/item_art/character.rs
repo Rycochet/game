@@ -154,8 +154,11 @@ pub(super) fn dressed(
     let (frame, offset) = layout.worn_frame()?;
     let offset = Vec3::new(offset[0] as f32, offset[1] as f32, offset[2] as f32);
     let (skin, coat) = body::build_coated(&layout);
+    let (skin, marked) = body::split_marks(&layout, skin, colours.marks);
+    let marks = colours.marks.map_or(colours.skin, |marks| marks.colour);
     let mut pieces: set::Coloured = vec![
         (skin, material(colours.skin)),
+        (marked, material(marks)),
         (coat, material(colours.coat)),
         (body::wings(&layout), material(colours.feathers)),
     ];
