@@ -27,10 +27,10 @@ const RIVER_MOST_HALF: f64 = 8.5;
 /// A stretch of a river or road between two of its points, in cells.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Segment {
-    from: (f64, f64),
-    to: (f64, f64),
+    pub(super) from: (f64, f64),
+    pub(super) to: (f64, f64),
     /// Half its width at each end.
-    half: (f64, f64),
+    pub(super) half: (f64, f64),
 }
 
 impl Segment {

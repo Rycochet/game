@@ -5,6 +5,7 @@
 //! site's first level. A block nobody has changed can always be made again, so
 //! only changes need keeping.
 
+mod approach;
 mod block;
 mod border;
 mod course;
@@ -36,8 +37,8 @@ use crate::world::WorldParams;
 
 /// The wilderness generator's version (see "Generator versions" in
 /// `architecture.md`): bump it when what a block holds changes in a way that
-/// matters (not for looks).
-pub const WILDERNESS_VERSION: u32 = 1 + crate::site::FORGET_BEFORE;
+/// matters (not for looks). 2: roads bent to the ways into towns.
+pub const WILDERNESS_VERSION: u32 = 2 + crate::site::FORGET_BEFORE;
 
 /// How far from land water stays shallow enough to wade, in cells (owner): a
 /// river up to twice this wide can be crossed.
