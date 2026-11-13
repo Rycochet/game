@@ -1,6 +1,7 @@
 //! What a chunk of the wilderness holds besides its terrain: its poi, and the
 //! rivers and roads passing through.
 
+use super::approach;
 use super::course::Segment;
 use super::{CLEARED_TO, Cutout, GateSpot, Wilderness};
 use crate::poi::{CHUNK_SIZE, ChunkPos, Poi, PoiMap};
@@ -65,10 +66,19 @@ impl ChunkPlan {
                 }
             }
         }
+        // A road ending at the chunk's town is bent to a way into it.
+        let town = cutout.as_ref().filter(|cutout| cutout.offset().is_some());
+        let here =
+            |other: ChunkPos| other.x.rem_euclid(wild.columns()) == chunk.x && other.y == chunk.y;
         let mut found = Vec::new();
         for road in roads {
+            let (at_start, at_end) = (here(road.link.a), here(road.link.b));
             for shift in shifts {
-                let segments = wild.road_segments(road, shift).into_iter().filter(near);
+                let mut segments = wild.road_segments(road, shift);
+                if let Some(town) = town.filter(|_| at_start || at_end) {
+                    segments = approach::meet_town(segments, at_start, town, bounds);
+                }
+                let segments = segments.into_iter().filter(near);
                 found.extend(segments.map(|segment| (segment, road.kind)));
             }
         }
