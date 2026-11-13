@@ -5,6 +5,7 @@
 use super::super::layout::{
     Bone, Girdle, Head, Layout, Limb, MAX_BONES, MAX_LIMBS, Neck, Role, Spine, Station,
 };
+use super::super::measured_heads::MeasuredHead;
 use super::super::rings::{RINGS, Ring, from_stations};
 use super::super::{Feet, Parts, Side};
 use super::{Bird, Fourfoot};
@@ -126,7 +127,10 @@ pub(super) fn fourfoot(four: &Fourfoot, parts: Parts) -> Layout {
             chest: station(share(four.body, 80), 100),
             shoulders: four.body,
             neck_base: four.body + deep / 3,
-            rings: four.measured.rings(four.withers, four.body, height),
+            rings: coated(
+                four.measured.rings(four.withers, four.body, height),
+                four.coat,
+            ),
         },
         neck: neck(four.neck),
         head: head(four.head),
@@ -193,6 +197,24 @@ fn neck((length, pitch, radius): (i32, i32, i32)) -> Neck {
     }
 }
 
-fn head((length, half): (i32, (i32, i32))) -> Head {
-    Head { length, half }
+/// A head of this outline, as long as it says and leaning nose down, its sizes from
+/// its outline.
+fn head((length, pitch, measured): (i32, i32, &'static MeasuredHead)) -> Head {
+    let shape = measured.shape(length, pitch);
+    let (length, half) = shape.bounds();
+    Head {
+        length,
+        half,
+        shape: Some(shape),
+    }
+}
+
+/// Rings with a coat this thick all round them.
+fn coated(rings: [Ring; RINGS], coat: i32) -> [Ring; RINGS] {
+    rings.map(|ring| Ring {
+        half: ring.half + coat,
+        belly: ring.belly + coat,
+        back: ring.back + coat,
+        ..ring
+    })
 }

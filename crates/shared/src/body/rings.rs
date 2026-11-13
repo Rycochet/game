@@ -9,6 +9,9 @@ use super::layout::{Layout, Role};
 /// How many rings every trunk has.
 pub const RINGS: usize = 10;
 
+/// How many rings every measured head has, from the back of the skull to the nose.
+pub const HEAD_RINGS: usize = 8;
+
 /// One ring round the trunk, in millimetres.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Ring {

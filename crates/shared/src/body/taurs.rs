@@ -113,6 +113,7 @@ impl Taur {
                 layout.head = Head {
                     length: 0,
                     half: (0, 0),
+                    shape: None,
                 };
                 (layout, four.barrel.1)
             }

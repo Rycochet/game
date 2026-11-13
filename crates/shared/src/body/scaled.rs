@@ -43,6 +43,14 @@ impl Layout {
         layout.neck.radius = size(layout.neck.radius);
         layout.head.length = size(layout.head.length);
         layout.head.half = (size(layout.head.half.0), size(layout.head.half.1));
+        if let Some(shape) = &mut layout.head.shape {
+            shape.rings = shape.rings.map(|ring| Ring {
+                along: size(ring.along),
+                half: size(ring.half),
+                belly: size(ring.belly),
+                back: size(ring.back),
+            });
+        }
         for limb in layout.limbs.iter_mut().flatten() {
             limb.apart = size(limb.apart);
             limb.foot = size(limb.foot);

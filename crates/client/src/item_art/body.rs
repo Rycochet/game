@@ -14,9 +14,11 @@ use super::{CAMERA_AT, CAMERA_UP, OUTLINE_PIXELS, Part, VIEW_WIDTH};
 
 mod arms;
 mod coat_hair;
+mod extras;
 mod features;
 mod fit;
 mod hair;
+mod head;
 mod legs;
 mod morph;
 mod trunk;
@@ -26,6 +28,7 @@ pub(super) use features::wings;
 use fit::fitted;
 pub(super) use fit::turn_of;
 pub(super) use hair::{Cover, hair};
+pub(super) use head::{HeadAxes, crown};
 #[cfg(test)]
 pub(super) use morph::placed as morph_placed;
 pub(super) use morph::{morph_parts, pieces as bare_pieces};
@@ -163,6 +166,12 @@ fn limbs(triangles: &mut Vec<Triangle>, layout: &Layout) {
 /// The neck from the top of the spine, and the head on it with its snout, ears, horns
 /// and tusks.
 fn neck_and_head(triangles: &mut Vec<Triangle>, layout: &Layout) {
+    // An animal's measured head, on a neck carrying on from its trunk.
+    if let Some(shape) = layout.head.shape {
+        head::build(triangles, layout, &shape);
+        extras::build(triangles, layout);
+        return;
+    }
     // The neck, a little into the trunk and the head.
     let axes = trunk::Axes::of(layout);
     let neck_base = trunk::neck_root(layout);

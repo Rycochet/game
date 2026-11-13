@@ -97,6 +97,7 @@ impl Layout {
             head: Head {
                 length: f.height - f.chin,
                 half: f.head,
+                shape: None,
             },
             limbs,
             parts,

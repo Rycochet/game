@@ -4,8 +4,9 @@
 //! usual size, in millimetres: it fills its picture whatever its size.
 
 use super::Layout;
-use super::measured::{COW, DOG, HORSE, Measured};
-use super::parts::{Feet, Horns, NONE, Parts, Snout, Wings};
+use super::measured::{COW, DOG, HORSE, Measured, MeasuredRing};
+use super::measured_heads::{COW_HEAD, HORSE_HEAD, MeasuredHead, WOLF_HEAD};
+use super::parts::{Ears, Feet, Horns, NONE, Parts, Snout, Tail, Wings};
 use crate::creature::CreatureKind;
 
 mod build;
@@ -25,10 +26,14 @@ pub struct Fourfoot {
     pub hind: [i32; 4],
     /// How long a foot is along the ground.
     pub foot: i32,
-    /// The neck's length, its lean forwards from upright in degrees, and its radius.
+    /// The neck's length, its lean forwards from upright in degrees, and its radius
+    /// where it meets the head (it widens to the trunk's last ring).
     pub neck: (i32, i32, i32),
-    /// The head's length from chin to crown, and its half width and depth.
-    pub head: (i32, (i32, i32)),
+    /// The head: its outline (`HeadShape`) scaled to this long from the back of the
+    /// skull to the nose, leaning this many degrees nose down.
+    pub head: (i32, i32, &'static MeasuredHead),
+    /// How much thicker the coat makes the trunk all round than the measured shape.
+    pub coat: i32,
     /// The trunk's shape, as measured, scaled to this size.
     pub measured: &'static Measured,
 }
@@ -44,7 +49,8 @@ pub struct Bird {
     pub barrel: (i32, i32),
     pub leg: i32,
     pub neck: (i32, i32, i32),
-    pub head: (i32, (i32, i32)),
+    /// As a beast's: its outline's length, its lean and its outline.
+    pub head: (i32, i32, &'static MeasuredHead),
 }
 
 /// How a beast's body is put together.
@@ -75,14 +81,16 @@ pub const BEASTS: [Beast; 4] = [
             fore: [100, 79, 50, 45],
             hind: [145, 125, 70, 50],
             foot: 100,
-            neck: (800, 50, 125),
-            head: (380, (140, 180)),
+            neck: (650, 45, 130),
+            head: (860, 45, &HORSE_HEAD),
+            coat: 0,
             measured: &HORSE,
         }),
         parts: Parts {
             snout: Snout::Muzzle,
             snout_length: 420,
-            ears: 90,
+            ears: 120,
+            ear_shape: Ears::Upright,
             tail: 900,
             feet: Feet::Hooves,
             mane: 140,
@@ -99,15 +107,18 @@ pub const BEASTS: [Beast; 4] = [
             fore: [55, 42, 28, 30],
             hind: [70, 51, 38, 36],
             foot: 110,
-            neck: (260, 60, 65),
-            head: (170, (75, 85)),
+            neck: (230, 65, 90),
+            head: (290, 8, &WOLF_HEAD),
+            coat: 25,
             measured: &DOG,
         }),
         parts: Parts {
             snout: Snout::Long,
             snout_length: 170,
-            ears: 70,
+            ears: 90,
+            ear_shape: Ears::Upright,
             tail: 450,
+            tail_shape: Tail::Bushy,
             feet: Feet::Digitigrade,
             ..NONE
         },
@@ -121,19 +132,24 @@ pub const BEASTS: [Beast; 4] = [
             fore: [105, 78, 46, 42],
             hind: [130, 103, 58, 51],
             foot: 104,
-            neck: (480, 70, 160),
-            head: (360, (150, 170)),
+            neck: (420, 75, 170),
+            head: (520, 40, &COW_HEAD),
+            coat: 0,
             measured: &COW,
         }),
         parts: Parts {
             snout: Snout::Muzzle,
             snout_length: 330,
-            ears: 60,
+            ears: 130,
+            ear_shape: Ears::Sideways,
             horns: Horns::Bull,
             horn_length: 350,
             tail: 800,
+            tail_shape: Tail::Thin,
             feet: Feet::Hooves,
             tail_hair: 220,
+            dewlap: 130,
+            udder: 160,
             ..NONE
         },
     },
@@ -145,17 +161,45 @@ pub const BEASTS: [Beast; 4] = [
             barrel: (75, 90),
             leg: 14,
             neck: (70, 20, 28),
-            head: (55, (27, 35)),
+            head: (80, 0, &CHICKEN_HEAD),
         }),
         parts: Parts {
             snout: Snout::Beak,
             snout_length: 30,
+            comb: 28,
             feet: Feet::Talons,
             wings: Wings::Folded,
             ..NONE
         },
     },
 ];
+
+const fn ring(along: i32, half: i32, belly: i32, back: i32) -> MeasuredRing {
+    MeasuredRing {
+        along,
+        half,
+        belly,
+        back,
+    }
+}
+
+/// A hen's head, which no mesh has: drawn by hand in the measured heads' terms (in
+/// thousandths of its length, belly and back up from its line): a round skull high on
+/// the neck, and a short beak pointing a little down.
+pub const CHICKEN_HEAD: MeasuredHead = MeasuredHead {
+    source: "drawn by hand",
+    pitch: 0,
+    rings: [
+        ring(-250, 80, 200, 450),
+        ring(-100, 330, 60, 650),
+        ring(50, 380, 20, 700),
+        ring(200, 360, 40, 650),
+        ring(350, 260, 120, 520),
+        ring(500, 120, 200, 380),
+        ring(650, 80, 220, 320),
+        ring(780, 20, 230, 265),
+    ],
+};
 
 impl Beast {
     /// The animal of this kind, by its name.

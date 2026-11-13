@@ -26,6 +26,32 @@ pub enum Horns {
     Bull,
 }
 
+/// The shape of the ears, however long they are (`Parts::ears`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Ears {
+    /// Pointed, swept out and up beside the head, as an elf's.
+    Swept,
+    /// Pointed and upright on top of the head, as a wolf's or a horse's.
+    Upright,
+    /// Broad, out to the sides and a little down, under any horns, as a cow's.
+    Sideways,
+    /// Hanging down beside the head, as a hound's.
+    Dropped,
+}
+
+/// The shape of a tail, however long it is (`Parts::tail`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Tail {
+    /// Tapering evenly, as a horse's dock or a lizard's.
+    Plain,
+    /// Thick with fur its whole length and hanging, as a wolf's.
+    Bushy,
+    /// Thin its whole length, as a cow's (its switch is tail hair).
+    Thin,
+    /// Thin, with a tuft at its end, as a lion's.
+    Tufted,
+}
+
 /// What a body stands on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Feet {
@@ -54,14 +80,16 @@ pub enum Wings {
 pub struct Parts {
     pub snout: Snout,
     pub snout_length: i32,
-    /// Pointed ears reaching this far beyond a person's.
+    /// Ears reaching this far beyond a person's, in this shape.
     pub ears: i32,
+    pub ear_shape: Ears,
     pub horns: Horns,
     pub horn_length: i32,
     /// Tusks up from the lower jaw.
     pub tusks: i32,
     /// A tail this long, from the base of the back (or the end of the abdomen).
     pub tail: i32,
+    pub tail_shape: Tail,
     /// Whether the tail curls up over the back to a sting, as a scorpion's.
     pub sting: bool,
     /// A separate rear body this long behind the hips, as a spider's or a scorpion's.
@@ -73,6 +101,12 @@ pub struct Parts {
     pub mane: i32,
     /// Long hair hanging this far from the tail: a horse's whole tail, a cow's switch.
     pub tail_hair: i32,
+    /// A fold of skin hanging this far below the throat, as a cow's.
+    pub dewlap: i32,
+    /// An udder this big under the belly, between the hind legs.
+    pub udder: i32,
+    /// A comb this tall on top of the head and wattles under the beak, as a hen's.
+    pub comb: i32,
 }
 
 /// A person: nothing more.
@@ -80,14 +114,19 @@ pub const NONE: Parts = Parts {
     snout: Snout::Flat,
     snout_length: 0,
     ears: 0,
+    ear_shape: Ears::Swept,
     horns: Horns::None,
     horn_length: 0,
     tusks: 0,
     tail: 0,
+    tail_shape: Tail::Plain,
     sting: false,
     abdomen: 0,
     feet: Feet::Plantigrade,
     wings: Wings::None,
     mane: 0,
     tail_hair: 0,
+    dewlap: 0,
+    udder: 0,
+    comb: 0,
 };

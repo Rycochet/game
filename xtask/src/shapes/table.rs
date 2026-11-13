@@ -5,6 +5,7 @@
 use std::fmt::Write;
 
 use super::fourfoot::Fourfoot;
+use super::head::Head;
 use super::leg::LegCut;
 
 /// The tables for one beast, under its name and where it was measured from.
@@ -71,6 +72,36 @@ pub fn fourfoot(name: &str, source: &str, beast: &Fourfoot) -> String {
             share(*height),
             leg(fore),
             leg(hind)
+        );
+    }
+    text
+}
+
+/// The table for one head, in thousandths of its length from the back of the
+/// skull to the nose.
+pub fn head(name: &str, source: &str, head: &Head) -> String {
+    let share = |value: f64| (value / head.length * 1000.0).round() as i64;
+    let mut text = String::new();
+    let _ = writeln!(text, "{name}'s head ({source})");
+    let _ = writeln!(
+        text,
+        "  In thousandths of its length from the back of the skull to the nose; nose down {} degrees.",
+        head.pitch.round() as i64
+    );
+    let _ = writeln!(
+        text,
+        "  Rings: along from the `head` joint, belly and back up from the head's line"
+    );
+    let _ = writeln!(text, "  ring  along  half width  belly   back");
+    for (at, (along, ring)) in head.rings.iter().enumerate() {
+        let _ = writeln!(
+            text,
+            "  {:>4}  {:>5}  {:>10}  {:>5}  {:>5}",
+            at + 1,
+            share(*along),
+            share(ring.half_width),
+            share(ring.belly),
+            share(ring.back)
         );
     }
     text

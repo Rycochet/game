@@ -15,6 +15,7 @@
 mod check;
 mod cut;
 mod fourfoot;
+mod head;
 mod leg;
 mod level;
 mod mesh;
@@ -30,6 +31,7 @@ use std::process::ExitCode;
 
 pub use check::check;
 use fourfoot::Fourfoot;
+use head::Head;
 use mesh::Mesh;
 
 pub const USAGE: &str = "\
@@ -44,6 +46,18 @@ const BASE: &str = "base.obj";
 /// How many rings along a trunk, unless `rings=` says otherwise: as many as the
 /// shared body has.
 const RINGS: usize = shared::body::RINGS;
+
+/// How many rings along a head: as many as the shared body has.
+const HEAD_RINGS: usize = shared::body::HEAD_RINGS;
+
+/// The heads measured: a name and its target, under `SOURCE`. The wolf's,
+/// cow's and dog's are on a person; the horse's is its whole body's.
+const HEADS: [(&str, &str); 4] = [
+    ("Wolf", "animal03/jaldmic_wolf_headv3.target"),
+    ("Cow", "animal03/jaldmic_vaca_cow_head.target"),
+    ("Dog", "animal03/jaldmic_perro_dog_head.target"),
+    ("Horse", "animal04/jaldmic_horse.target"),
+];
 
 /// The four-legged beasts measured: a name and its target, under `SOURCE`.
 const FOURFEET: [(&str, &str); 3] = [
@@ -84,12 +98,15 @@ fn measure_all(root: &Path, rings: usize) -> Result<Vec<String>, String> {
         let beast = measure(root, target, rings)?;
         tables.push(table::fourfoot(name, target, &beast));
     }
+    for (name, target) in HEADS {
+        let head = measure_head(root, target)?;
+        tables.push(table::head(name, target, &head));
+    }
     Ok(tables)
 }
 
-/// One beast measured: its target applied to the base mesh, read afresh, as a
-/// target moves its points.
-fn measure(root: &Path, target: &str, rings: usize) -> Result<Fourfoot, String> {
+/// A mesh with a target applied to it.
+fn reshaped(root: &Path, target: &str) -> Result<Mesh, String> {
     let folder = root.join(SOURCE);
     let read = |file: &str| {
         let path = folder.join(file);
@@ -97,5 +114,17 @@ fn measure(root: &Path, target: &str, rings: usize) -> Result<Fourfoot, String> 
     };
     let mut mesh = Mesh::read(&read(BASE)?).map_err(|error| format!("{BASE}: {error}"))?;
     target::apply(&mut mesh, &read(target)?).map_err(|error| format!("{target}: {error}"))?;
-    Fourfoot::measure(mesh, rings).map_err(|error| format!("{target}: {error}"))
+    Ok(mesh)
+}
+
+/// One head measured, `HEAD_RINGS` rings along it.
+fn measure_head(root: &Path, target: &str) -> Result<Head, String> {
+    Head::measure(&reshaped(root, target)?, HEAD_RINGS)
+        .map_err(|error| format!("{target}: {error}"))
+}
+
+/// One beast measured: its target applied to the base mesh, read afresh, as a
+/// target moves its points.
+fn measure(root: &Path, target: &str, rings: usize) -> Result<Fourfoot, String> {
+    Fourfoot::measure(reshaped(root, target)?, rings).map_err(|error| format!("{target}: {error}"))
 }

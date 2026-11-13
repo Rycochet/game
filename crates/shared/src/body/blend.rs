@@ -4,10 +4,11 @@
 //! to a point. Both ends are exactly the two layouts, so a change starts and finishes
 //! on the forms themselves. Blend layouts at their real sizes (`Layout::at_size`).
 
-use super::layout::{Head, Layout, Neck, Spine, Station, Upper};
+use super::layout::{Layout, Neck, Spine, Station, Upper};
 use super::rings::Ring;
 
 mod frame;
+mod head;
 mod limbs;
 mod parts;
 
@@ -46,10 +47,7 @@ impl Layout {
                 radius: mix(a.neck.radius, b.neck.radius, t),
                 pitch: mix(a.neck.pitch, b.neck.pitch, t),
             },
-            head: Head {
-                length: mix(a.head.length, b.head.length, t),
-                half: mix2(a.head.half, b.head.half, t),
-            },
+            head: head::blend(a, b, t),
             limbs: limbs::blend(a, b, t),
             parts: parts::blend(&a.parts, &b.parts, t),
             upper: None,

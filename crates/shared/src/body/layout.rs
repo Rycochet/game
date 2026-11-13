@@ -5,6 +5,7 @@
 //! be blended into another by changing numbers. A `Frame` is the view of a layout that
 //! stands upright on two legs with two arms (`biped_view.rs`).
 
+use super::head_shape::HeadShape;
 use super::rings::{RINGS, Ring};
 use super::trig::{ONE, cos, sin};
 use super::{Beast, Biped, Frame, GIANT, PERSON, Parts, Side, Taur};
@@ -60,6 +61,9 @@ pub struct Head {
     pub length: i32,
     /// Half widths across and front to back.
     pub half: (i32, i32),
+    /// Its own outline, for an animal whose head is measured; a person's is an oval
+    /// with its snout (`head_shape.rs`).
+    pub shape: Option<HeadShape>,
 }
 
 /// What a limb is for: what may be worn on it, and what it becomes when one form turns
@@ -148,9 +152,10 @@ impl Layout {
         }
     }
 
-    /// Where the neck's top is: the chin, under the head.
+    /// Where the neck's top is: the chin, under the head. The neck starts at the middle
+    /// of the trunk's last ring (`Spine::neck_root`).
     pub fn chin(&self) -> [i32; 3] {
-        let [x, y, z] = self.spine.at(self.spine.neck_base);
+        let [x, y, z] = self.spine.neck_root();
         let length = self.neck.length;
         [
             x,
@@ -207,6 +212,21 @@ impl Spine {
             x,
             y + along * cos(self.pitch) / ONE,
             z + along * sin(self.pitch) / ONE,
+        ]
+    }
+
+    /// Where the neck starts: the middle of the trunk's last ring, between its front
+    /// and its back. A body worked out from its stations has it on the spine's end; a
+    /// measured beast's trunk has already begun to climb into its neck there.
+    pub fn neck_root(&self) -> [i32; 3] {
+        let ring = self.rings[RINGS - 1];
+        let [x, y, z] = self.at(ring.along);
+        // Out of the trunk's front: forwards when upright, down when level.
+        let front = (ring.belly - ring.back) / 2;
+        [
+            x,
+            y - front * sin(self.pitch) / ONE,
+            z + front * cos(self.pitch) / ONE,
         ]
     }
 }

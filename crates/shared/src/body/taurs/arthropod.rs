@@ -93,6 +93,7 @@ impl Arthropod {
             head: Head {
                 length: 0,
                 half: (0, 0),
+                shape: None,
             },
             limbs,
             parts,
