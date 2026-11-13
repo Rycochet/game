@@ -107,7 +107,7 @@ pub use pointer::{
     PointerOverride, PointerPosition, PointerSystems, TouchGesture, UiPointer, in_interface,
     interface_area,
 };
-pub use quest_colours::{QUEST_BLUE, QUEST_GREY, QUEST_ORANGE, QUEST_YELLOW};
+pub use quest_colours::{QUEST_BLUE, QUEST_GREY, QUEST_ORANGE, QUEST_RED, QUEST_YELLOW};
 pub use rivers::NearRivers;
 pub use roads::KnownRoads;
 pub use sky::SkyNow;

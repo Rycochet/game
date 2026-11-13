@@ -142,3 +142,29 @@ fn the_quest_followed_is_the_one_chosen_or_the_newest() {
         "only one under way is followed"
     );
 }
+
+#[test]
+fn a_boss_dealt_with_marks_its_givers_town_until_the_quest_is_taken() {
+    let id = QuestId {
+        town: CRYPT,
+        slot: Slot::Feeder,
+    };
+    let book = QuestBook {
+        slain: vec![shared::protocol::SlainBoss {
+            id,
+            kind: QuestKind::Normal,
+        }],
+        ..QuestBook::default()
+    };
+    let marks = marks_of(&book);
+    assert_eq!(
+        marks.get(&CRYPT),
+        Some(&MarkLook::new(QuestKind::Normal, false))
+    );
+    // A stranger's boss is red; one's own quest's is in its colour.
+    let red = MarkLook::of_boss(shared::protocol::BossSign::Unknown);
+    let own = MarkLook::of_boss(shared::protocol::BossSign::Quest(QuestKind::Daily));
+    assert_eq!(red.glyph(), "!");
+    assert_ne!(red.rgb, MarkLook::new(QuestKind::Normal, false).rgb);
+    assert_eq!(own, MarkLook::new(QuestKind::Daily, false));
+}

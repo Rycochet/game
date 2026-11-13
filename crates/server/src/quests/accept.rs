@@ -49,7 +49,9 @@ pub(crate) fn accept(
     );
     client.unsaved = true;
     info!("{} took quest {id:?}", client.in_log());
-    learn_targets(client, world, &quest)
+    let dealt = super::boss_kill::already_dealt(client, &quest);
+    (!dealt || super::boss_kill::tell_slain(client, world))
+        && learn_targets(client, world, &quest)
         && log::tell_changed(client, world, id)
         && tell_markers(client, world, id.town, now)
 }

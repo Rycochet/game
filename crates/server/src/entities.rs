@@ -43,6 +43,7 @@ mod moves;
 mod notice;
 mod on_ground;
 mod population;
+mod quest_mobs;
 mod run;
 mod scent;
 mod shove;
@@ -68,6 +69,8 @@ pub(super) use gear::{give, kill};
 use harmed_by::HarmedBy;
 pub(crate) use harmed_by::Kill;
 pub(crate) use heal::heal_mob;
+#[cfg(test)]
+pub(crate) use made::BOSS_NUMBER;
 use moves::{Taken, act, nearest_free, take_step};
 use notice::{Maps, Someone, Spot, cells_apart, everyone_playing, notice};
 pub(super) use run::run_mobs;
@@ -244,6 +247,8 @@ pub(crate) struct Population {
     pub(crate) mobs: Vec<Mob>,
     /// Its shape, to find ways about.
     level: Level,
+    /// Where its stairs are, which new mobs keep away from.
+    stairs: Vec<(i64, i64)>,
     /// The shape of its ground (`None` where flat), for how far apart creatures
     /// are in 3D (`combat::Body::on`).
     relief: Option<shared::relief::Relief>,

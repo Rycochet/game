@@ -5,7 +5,11 @@
 //! character's quests are kept per planet in `storage::QuestBook`.
 
 mod accept;
+mod arrivals;
 mod ask;
+mod boss_kill;
+mod boss_signs;
+mod bosses;
 mod cache;
 mod clock;
 #[cfg(feature = "debug-api")]
@@ -23,6 +27,7 @@ mod standing;
 mod turn_in;
 
 pub(crate) use ask::answer_quest;
+pub(crate) use bosses::boss_quest;
 pub(crate) use cache::TownQuests;
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
@@ -68,7 +73,11 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
 }
 
 #[cfg(test)]
+mod boss_tests;
+#[cfg(test)]
 mod dots_tests;
+#[cfg(test)]
+mod extras_tests;
 #[cfg(test)]
 mod log_tests;
 #[cfg(test)]

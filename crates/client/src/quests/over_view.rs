@@ -5,9 +5,9 @@
 use bevy::prelude::*;
 use bevy::text::FontWeight;
 
-use super::anchors::{Anchor, MarkOver, door_anchors, gate_anchors, poi_anchors};
-use super::{DoorMarkers, GateQuests, MarkLook, QuestPois};
-use crate::common::{CurrentDungeon, DrawnGround, GameView, Portal};
+use super::anchors::{Anchor, MarkOver, boss_anchors, door_anchors, gate_anchors, poi_anchors};
+use super::{BossMarks, DoorMarkers, GateQuests, MarkLook, QuestPois};
+use crate::common::{CurrentDungeon, DrawnGround, GameView, Other, Portal};
 use crate::view3d::{TokenView, ViewCamera};
 
 /// How tall a marker's sign is, in interface pixels.
@@ -24,11 +24,16 @@ pub(super) struct OverMark(MarkOver, MarkLook);
 pub(super) fn show_marks(
     view: Res<State<GameView>>,
     (dungeon, ground): (Res<CurrentDungeon>, Res<DrawnGround>),
-    (doors, gates, pois): (Res<DoorMarkers>, Res<GateQuests>, Res<QuestPois>),
+    (doors, gates, pois, bosses): (
+        Res<DoorMarkers>,
+        Res<GateQuests>,
+        Res<QuestPois>,
+        Res<BossMarks>,
+    ),
     ui_scale: Res<UiScale>,
     camera: Single<(&Camera, &GlobalTransform), With<ViewCamera>>,
     tokens: Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
-    portals: Query<&Portal>,
+    (portals, others): (Query<&Portal>, Query<&Other>),
     mut marks: Query<(Entity, &OverMark, &mut Node)>,
     mut commands: Commands,
 ) {
@@ -36,6 +41,7 @@ pub(super) fn show_marks(
         GameView::Dungeon => {
             let mut all = door_anchors(&dungeon, &ground, &doors);
             all.extend(gate_anchors(&dungeon, &gates));
+            all.extend(boss_anchors(&bosses, &tokens, &others));
             all
         }
         GameView::WorldMap => poi_anchors(&pois, &tokens, &portals),

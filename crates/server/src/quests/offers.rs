@@ -5,7 +5,7 @@
 use std::collections::BTreeSet;
 
 use shared::poi::ChunkPos;
-use shared::protocol::{Marker, OfferState};
+use shared::protocol::{Hint, Marker, OfferState};
 use shared::quest::{Quest, QuestId, SECONDS_PER_DAY, Slot, daily_givers, utc_day};
 
 use super::needs::{Verdict, judge};
@@ -94,12 +94,20 @@ fn offered(client: &Client, world: &ServerWorld, quest: &Quest, now: i64) -> Opt
         if !book.may_retake(&quest.id, now) {
             return None;
         }
+        let dealt_with = book.slain.contains(&quest.id);
         match judge(quest, client, world) {
             Verdict::Hidden => return None,
-            Verdict::Missing(hints) => OfferState::Locked(hints),
+            Verdict::Missing(mut hints) => {
+                // The giver knows, whether or not they can give it yet.
+                if dealt_with {
+                    hints.push(Hint::DealtWith);
+                }
+                OfferState::Locked(hints)
+            }
             Verdict::Met => OfferState::Available {
                 story: Box::new(quest.story.clone()),
                 reward: quest.reward.clone(),
+                dealt_with,
             },
         }
     };

@@ -4,12 +4,13 @@
 
 use bevy::prelude::*;
 use shared::hall::{GatePlace, LEVEL_ROWS, LEVEL_TOP};
+use shared::id::Id;
 use shared::poi::ChunkPos;
 use shared::protocol::LevelKind;
 use shared::quest::QuestKind;
 
-use super::{DoorMarkers, GateQuests, MarkLook, QuestPois};
-use crate::common::{CurrentDungeon, DrawnGround, Portal};
+use super::{BossMarks, DoorMarkers, GateQuests, MarkLook, QuestPois};
+use crate::common::{CurrentDungeon, DrawnGround, Other, Portal};
 use crate::dungeon_map::CELL_SIZE;
 use crate::view3d::{TOKEN_DIAMETER, TokenView};
 
@@ -21,6 +22,9 @@ const OVER_DOOR: f32 = 1.35;
 const OVER_GATE: f32 = 1.9;
 /// How high over a poi's token its marker floats, in token widths.
 const OVER_POI: f32 = 1.1;
+/// How high over a Medium creature's feet its marker floats, in cells: over
+/// a person's head; others by their size.
+const OVER_CREATURE: f32 = 1.4;
 
 /// What a marker is over, to keep the same one as the view moves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -28,6 +32,7 @@ pub(super) enum MarkOver {
     Door(u16),
     Gate(i64, i64),
     Poi(ChunkPos),
+    Creature(Id),
 }
 
 /// One marker to show: what it is over, where in the view, and how it looks.
@@ -106,6 +111,27 @@ pub(super) fn poi_anchors(
             let look = *pois.0.get(&poi.chunk)?;
             let at = token.translation() + Vec3::Y * TOKEN_DIAMETER * OVER_POI;
             Some((MarkOver::Poi(poi.chunk), at, look))
+        })
+        .collect()
+}
+
+/// The quest bosses in sight with a sign, over their heads.
+pub(super) fn boss_anchors(
+    bosses: &BossMarks,
+    tokens: &Query<(&TokenView, &GlobalTransform, &InheritedVisibility)>,
+    others: &Query<&Other>,
+) -> Vec<Anchor> {
+    if bosses.0.is_empty() {
+        return Vec::new();
+    }
+    (tokens.iter())
+        .filter(|(.., shown)| shown.get())
+        .filter_map(|(view, token, _)| {
+            let other = others.get(view.owner).ok()?;
+            let sign = *bosses.0.get(&other.id)?;
+            let tall = other.kind.def().size.quarters() as f32 / 4.0;
+            let at = token.translation() + Vec3::Y * CELL_SIZE * OVER_CREATURE * tall;
+            Some((MarkOver::Creature(other.id), at, MarkLook::of_boss(sign)))
         })
         .collect()
 }

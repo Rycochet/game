@@ -23,6 +23,7 @@ Quests generated from a town's seed, the same for everyone: who gives them (town
 - `Requirement { need, hidden }` (`shown`, `hidden`, `hides_quest`), `Need::{Standing { town, least }, Done(QuestId), Skill { skill, least }, Alignment(Band)}`, `Standing::{Stranger, Known, Trusted, Honoured, Champion}`.
 - `Step { goal, target, count, after, alternatives }` (`is_open(done)`), `Target::{Poi { chunk, hook }, Wilds { chunk }, Town { chunk }}`, `Alternative { way, skill }`, `Way::{Carry, Tame, Intimidate}`.
 - `Hook::{Boss, Item, Escortee, Kills(kind), Explore, Visit, Gather}`, `is_exclusive`, `of_poi(&Poi)`.
+- `boss_of(&Poi) -> story::Boss`: a poi's quest boss (kind, gender, name, epithet) from its own seed: the server spawns it as the story names it.
 
 ## Depends on
 
@@ -30,7 +31,7 @@ Quests generated from a town's seed, the same for everyone: who gives them (town
 
 ## Used by
 
-- The server (`server/server.md`, its `quests` module): offers, taking, handing in, progress, all through `town_quests`, `daily_quest` and the model; `shared::protocol` carries `Step`, `QuestId`, `QuestKind`, `Standing` in its quest messages.
+- The server (`server/server.md`, its `quests` module): offers, taking, handing in, progress, all through `town_quests`, `daily_quest` and the model, and its `entities` for bosses (`owner`, `boss_of`); `shared::protocol` carries `Step`, `QuestId`, `QuestKind`, `Standing` in its quest messages.
 
 ## Notes
 

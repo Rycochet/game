@@ -21,11 +21,12 @@ use crate::storage::{SavedMob, SiteId};
 impl ServerWorld {
     /// Makes sure a level about to be used has its mobs. Each keeps the id it was
     /// first given, saved with the site.
-    /// `ground` is the kind it has, for its shape (`Population::relief`).
+    /// `ground` is the kind it has, for its shape (`Population::relief`);
+    /// `levels` how many the site has, as its quest boss is on the deepest.
     pub(crate) fn populate(
         &mut self,
         (id, poi): (SiteId, Poi),
-        index: u32,
+        (index, levels): (u32, u32),
         level: &SiteLevel,
         ground: &LevelGround,
     ) {
@@ -39,10 +40,15 @@ impl ServerWorld {
             SiteId::Poi(_) if index == 0 => super::wild::take_site_mobs_back(self, id),
             _ => BTreeSet::new(),
         };
-        let plan = match id {
+        let mut plan = match id {
             SiteId::DevArea(area) => area.spawns(level),
             _ => spawns(poi.seed, index, poi.kind, &level.level, &stairs),
         };
+        if let SiteId::Poi(_) = id {
+            let boss =
+                super::quest_mobs::boss_spawn(self, &poi, (index, levels), &level.level, &stairs);
+            plan.extend(boss);
+        }
         let self_tick = self.action_clock.ticks();
         let made_at = self.made_now();
         let saved = self.site_mut(id).levels.entry(index).or_default();
@@ -86,6 +92,7 @@ impl ServerWorld {
         let population = Population {
             mobs,
             level: level.level.clone(),
+            stairs,
             relief,
             doors: Some(super::MobDoors {
                 poi,
@@ -193,7 +200,7 @@ impl ServerWorld {
                     mob.doing != Doing::Idle
                         && mob.home_level == level
                         && mob.way_back.is_empty()
-                        && !mob.is_dev_made()
+                        && mob.is_kept()
                 })
                 .map(|mob| {
                     let saved = SavedMob {

@@ -15,7 +15,7 @@ use crate::ServerWorld;
 use crate::sites::town_buildings;
 
 /// Towns kept before all are let go.
-const MOST_TOWNS: usize = 256;
+pub(super) const MOST_TOWNS: usize = 256;
 
 /// One world's towns' quests (`ServerWorld::quests`).
 pub(crate) struct TownQuests {
@@ -24,6 +24,8 @@ pub(crate) struct TownQuests {
     roads: Roads,
     towns: HashMap<ChunkPos, Town>,
     dailies: HashMap<(ChunkPos, u16, i64), Option<Arc<Quest>>>,
+    /// Each poi's boss quest, once looked for (`bosses::boss_quest`).
+    pub(super) bosses: super::bosses::Bosses,
 }
 
 /// A town's givers' buildings and its normal quests.
@@ -40,7 +42,12 @@ impl TownQuests {
             roads: Roads::new(params),
             towns: HashMap::new(),
             dailies: HashMap::new(),
+            bosses: HashMap::new(),
         }
+    }
+
+    pub(super) fn roads(&self) -> &Roads {
+        &self.roads
     }
 }
 

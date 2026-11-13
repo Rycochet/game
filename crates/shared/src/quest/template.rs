@@ -133,7 +133,7 @@ fn alternative(way: Way, skill: &str) -> Vec<Alternative> {
 }
 
 /// A poi's quest boss: the same whoever asks, from the poi's own seed.
-pub(super) fn boss_of(poi: &Poi) -> Boss {
+pub fn boss_of(poi: &Poi) -> Boss {
     let seed = poi.seed.derive("quest boss");
     let kinds = slain_with_weights(poi.kind);
     let kind = seed.rng().pick_weighted(&kinds);

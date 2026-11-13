@@ -32,6 +32,8 @@ pub(crate) struct Seen {
     planet_log: Option<WorldId>,
     /// The maps' quest dots, as last sent.
     pub(super) dots: DotsSeen,
+    /// The signs over quest bosses in sight, as last sent.
+    pub(super) bosses: Vec<shared::protocol::BossMark>,
 }
 
 impl Seen {
@@ -72,6 +74,7 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
         client
             .link
             .send(&shared::protocol::ServerMessage::Quest(whole));
+        super::boss_kill::tell_slain(client, world);
     }
     let in_hall = client.character.hall.is_some();
     if in_hall && !client.quest_seen.hall {
@@ -84,6 +87,7 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
         arrive(client, world, place, now);
     }
     tell_dots(client, world);
+    super::boss_signs::tell_bosses(client, world);
 }
 
 /// On coming to another place: steps moving on, and the town's markers.
@@ -95,6 +99,7 @@ fn arrive(client: &mut Client, world: &mut ServerWorld, place: Option<QuestPlace
     if let Some(place) = place {
         advance(client, world, Event::Arrived(place), now);
     }
+    super::arrivals::quest_mobs(client, world);
     if let Some(town) = client.quest_seen.town {
         send_markers(client, world, town, now);
     }
@@ -108,6 +113,7 @@ pub(crate) fn killed(
     world: &mut ServerWorld,
     kind: CreatureKind,
     site: SiteId,
+    boss: bool,
 ) {
     let site = match site {
         SiteId::Poi(chunk) => Some(chunk),
@@ -117,5 +123,9 @@ pub(crate) fn killed(
     if standing::killed_near(&mut client.character.quests, world, kind, at) {
         client.unsaved = true;
     }
-    advance(client, world, Event::Killed { kind, site }, unix_now());
+    let now = unix_now();
+    if boss && let Some(chunk) = site {
+        super::boss_kill::slew_boss(client, world, chunk, now);
+    }
+    advance(client, world, Event::Killed { kind, site }, now);
 }

@@ -52,6 +52,7 @@ pub(super) fn hint_text(lang: &Lang, hint: &Hint) -> String {
             "hint-skill",
             Args::new().text("skill", skill.name().to_lowercase()),
         ),
+        Hint::DealtWith => ("hint-dealt-with", Args::new()),
     };
     or_partly(lang.render(id, &args))
 }
