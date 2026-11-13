@@ -604,6 +604,10 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 title: None,
             }),
             heading: crate::facing::Heading::WEST,
+            boss: Some(crate::mob::BossLook {
+                boss: crate::story::Boss::new(CreatureKind::Giant, crate::rng::Seed::new(3)),
+                tier: crate::item::Quality::Rare,
+            }),
         }),
         ServerMessage::Moves(vec![crate::protocol::Stretch {
             id: Id(uuid::Uuid::from_u128(4)),

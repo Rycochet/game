@@ -265,3 +265,27 @@ fn parts_to_collect_are_natural_to_the_creature() {
     assert!(has(Minotaur, Horn) && has(Minotaur, Hoof));
     assert!(has(Chicken, Feather) && !has(Human, Feather));
 }
+
+#[test]
+fn a_poi_boss_has_one_tier_above_common() {
+    let world = TestWorld::new();
+    let mut tiers = BTreeSet::new();
+    for (_, quests) in every_town(&world) {
+        for quest in quests {
+            for step in &quest.steps {
+                if let Target::Poi {
+                    chunk,
+                    hook: Hook::Boss,
+                } = step.target
+                {
+                    let poi = world.pois.in_chunk(chunk).expect("its poi");
+                    let tier = boss_tier(&poi);
+                    assert_eq!(tier, boss_tier(&poi), "the same each time");
+                    assert!(tier > crate::item::Quality::Common, "{tier:?}");
+                    tiers.insert(tier);
+                }
+            }
+        }
+    }
+    assert!(tiers.len() > 1, "more than one tier: {tiers:?}");
+}

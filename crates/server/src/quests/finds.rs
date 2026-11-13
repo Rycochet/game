@@ -50,9 +50,11 @@ pub(crate) fn find_here(client: &Client, world: &mut ServerWorld) -> Option<Find
     }
     let stairs = world.stairs_of(visit.population());
     let seed = poi.seed.derive("quest item").derive("spot");
-    let at = chosen_spawns(seed, CreatureKind::Human, 1, visit.cells(), &stairs)
-        .pop()?
-        .position;
+    // Clear of the stairs if there is room, else anywhere on the level.
+    let spot = |clear_of: &[(i64, i64)]| {
+        chosen_spawns(seed, CreatureKind::Human, 1, visit.cells(), clear_of).pop()
+    };
+    let at = spot(&stairs).or_else(|| spot(&[]))?.position;
     let item = made(world, &poi, quest, client.entity_id());
     Some(Find {
         at: Spot::middle_of(at),

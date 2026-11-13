@@ -5,16 +5,21 @@
 
 use shared::creature::CreatureKind;
 use shared::dungeon::Level;
+use shared::item::Quality;
 use shared::mob::{Memory, Spawn, chosen_spawns};
 use shared::poi::Poi;
-use shared::quest::boss_of;
+use shared::quest::{boss_of, boss_tier};
 use shared::rng::Seed;
+use shared::sheet::Attribute;
 
 use super::made::{BOSS_NUMBER, EXTRA_NUMBERS};
 use super::{Mob, dressed};
 use crate::ServerWorld;
 use crate::ids::new_id;
 use crate::storage::SiteId;
+
+/// What each step of a boss's tier above Common adds to every attribute.
+const TIER_ATTRIBUTES: u16 = 2;
 
 /// The most extras one arrival brings, however many are still needed.
 const MOST_EXTRAS: u32 = 8;
@@ -34,9 +39,25 @@ pub(super) fn boss_spawn(
     }
     let boss = boss_of(poi);
     let seed = poi.seed.derive("quest boss").derive("spawn");
-    let mut spawn = chosen_spawns(seed, boss.kind, 1, level, stairs).pop()?;
+    // Clear of the stairs if there is room; on a small level (a pyramid's
+    // top), anywhere it can stand.
+    let mut spawn = (chosen_spawns(seed, boss.kind, 1, level, stairs).pop())
+        .or_else(|| chosen_spawns(seed, boss.kind, 1, level, &[]).pop())?;
     spawn.number = BOSS_NUMBER;
+    // Its gender is the story's, with that gender's bonus in place of the one
+    // rolled; and each tier above Common is stronger (owner): Claude's first
+    // guess, two to every attribute a step.
+    let (rolled, own) = (spawn.gender.bonus(), boss.gender.bonus());
     spawn.gender = boss.gender;
+    let steps = (boss_tier(poi) as u16).saturating_sub(Quality::Common as u16);
+    for which in Attribute::ALL {
+        let now = spawn
+            .attributes
+            .get(which)
+            .saturating_sub(rolled.get(which));
+        let tiered = now + own.get(which) + TIER_ATTRIBUTES * steps;
+        spawn.attributes.set(which, tiered);
+    }
     spawn.appearance = spawn.appearance.fitted(boss.gender);
     Some(spawn)
 }

@@ -298,6 +298,8 @@ mod doors_tests;
 #[cfg(test)]
 mod harmed_tests;
 #[cfg(test)]
+mod quest_mobs_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod timid_tests;

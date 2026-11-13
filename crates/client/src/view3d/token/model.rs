@@ -5,7 +5,7 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use super::{HullMaterials, TokenView};
-use crate::common::{ModelMaterial, Token, TokenModel};
+use crate::common::{ModelMaterial, Token, TokenGlow, TokenModel};
 
 /// World units a millimetre of a model is drawn: a person of the usual height stands
 /// about as tall as the pictures did, on a base drawn to the same scale.
@@ -17,14 +17,14 @@ pub const MODEL_SCALE: f32 = 0.0124;
 /// turned now, in radians.
 #[derive(Component, Default)]
 pub struct ModelAnchor {
-    pub(super) shown: Option<(TokenModel, usize)>,
+    pub(super) shown: Option<(TokenModel, usize, Option<TokenGlow>)>,
     pub(super) angle: Option<f32>,
 }
 
 impl ModelAnchor {
     /// The model shown, if any.
     pub fn model(&self) -> Option<&TokenModel> {
-        self.shown.as_ref().map(|(model, _)| model)
+        self.shown.as_ref().map(|(model, ..)| model)
     }
 }
 
@@ -36,8 +36,9 @@ pub struct ModelPart(pub(super) Handle<ModelMaterial>);
 /// how its owner feels changes, and taking it away when there is none.
 pub fn sync_models(
     mut commands: Commands,
-    hulls: Res<HullMaterials>,
-    owners: Query<(&Token, Option<&TokenModel>)>,
+    mut hulls: ResMut<HullMaterials>,
+    mut hull_materials: ResMut<Assets<super::hull::HullMaterial>>,
+    owners: Query<(&Token, Option<&TokenModel>, Option<&TokenGlow>)>,
     views: Query<&TokenView>,
     mut anchors: Query<(Entity, &mut ModelAnchor, &ChildOf)>,
     mut visibility: Query<&mut Visibility, Without<ModelAnchor>>,
@@ -49,7 +50,9 @@ pub fn sync_models(
         let wanted = owners
             .get(view.owner)
             .ok()
-            .and_then(|(token, model)| model.map(|model| (model.clone(), token.attitude as usize)));
+            .and_then(|(token, model, glow)| {
+                model.map(|model| (model.clone(), token.attitude as usize, glow.copied()))
+            });
         if shown.shown == wanted {
             continue;
         }
@@ -57,7 +60,9 @@ pub fn sync_models(
         shown.shown = wanted.clone();
         // The model stands over its base and would count as hiding it, so the base's
         // x-ray only shows without one; the model's own shows where it is.
-        let no_base = owners.get(view.owner).is_ok_and(|(token, _)| token.no_base);
+        let no_base = owners
+            .get(view.owner)
+            .is_ok_and(|(token, ..)| token.no_base);
         let base_xray = match no_base || wanted.is_some() {
             true => Visibility::Hidden,
             false => Visibility::Inherited,
@@ -67,10 +72,11 @@ pub fn sync_models(
                 shown.set_if_neq(base_xray);
             }
         }
-        let Some((model, attitude)) = wanted else {
+        let Some((model, attitude, glow)) = wanted else {
             continue;
         };
         let meshes = &model.0;
+        let glow = glow.map(|TokenGlow(rgb)| hulls.glow(rgb, &mut hull_materials));
         commands.entity(anchor).with_children(|parent| {
             for (mesh, material) in &meshes.parts {
                 parent.spawn((
@@ -85,6 +91,13 @@ pub fn sync_models(
                 MeshMaterial3d(hulls.black.clone()),
                 NotShadowCaster,
             ));
+            if let Some(glow) = glow {
+                parent.spawn((
+                    Mesh3d(meshes.hull.clone()),
+                    MeshMaterial3d(glow),
+                    NotShadowCaster,
+                ));
+            }
             // Through whatever hides it: a faint fill and the outline, in its colour.
             parent.spawn((
                 Mesh3d(meshes.skin.clone()),

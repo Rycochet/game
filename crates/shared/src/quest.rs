@@ -40,7 +40,7 @@ pub use model::Quest;
 pub use owner::owner;
 pub use requirement::{Need, Requirement, Standing};
 pub use step::{Alternative, Step, Target, Way};
-pub use template::{boss_of, item_of};
+pub use template::{boss_of, boss_tier, item_of};
 pub use town::town_quests;
 pub use world::{QuestWorld, is_larger, radius};
 
