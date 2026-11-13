@@ -39,6 +39,7 @@ mod others;
 mod overlay;
 mod parts;
 mod place;
+mod quest_marks;
 mod redraw;
 mod room;
 mod scale;

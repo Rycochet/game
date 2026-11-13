@@ -59,6 +59,7 @@ mod window_follow;
 mod window_open;
 #[cfg(not(target_arch = "wasm32"))]
 mod window_save;
+mod wording;
 mod world;
 
 pub use account_role::{AccountRole, OpenAccounts};
@@ -119,6 +120,7 @@ pub use view::{ViewFacing, ViewStats, ViewTurn};
 pub use vitals::{BottomHud, OwnVitals, ToldVitals, VitalsCircle};
 pub use wild_heights::{DRAWN_PER_16TH, WildCellHeights};
 pub use window::{KeepDrawing, frame_settings};
+pub use wording::Wording;
 pub use world::{CurrentWorld, KnownPois, WorldChanged};
 
 pub struct CommonPlugin;
@@ -134,6 +136,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<RememberWindow>()
             .insert_resource(preferences);
         app.insert_resource(ClearColor(Color::BLACK))
+            .init_resource::<Wording>()
             .init_resource::<KeepDrawing>()
             .init_resource::<OwnVitals>()
             .init_resource::<BottomHud>()

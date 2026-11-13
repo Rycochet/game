@@ -36,6 +36,10 @@ pub struct Progress {
     pub at: i64,
     /// How far along each step is: its count, or 1 once done if uncounted.
     pub counts: Vec<u32>,
+    /// Every step is done: it waits to be handed in. Kept so the Hall's gates
+    /// can show it without making the quest again on another planet.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ready: bool,
 }
 
 /// A quest failed or given up.

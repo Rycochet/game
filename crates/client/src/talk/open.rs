@@ -1,17 +1,20 @@
-//! Opening a shop's panel: clicking its door, walking there, and asking again with truesight.
+//! Talking at a door: clicking it, walking there, and asking the server what
+//! the giver has and (for a shop) what is in stock; asking again with
+//! truesight.
 
 use bevy::prelude::*;
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, QuestAsk};
 
-use super::{Heading, Keepers, OpenTrades, beside, front_of};
+use super::{Heading, Keepers, OpenTalks, beside, front_of, key_of};
 use crate::common::{CurrentDungeon, MapPosition, Truesight};
 use crate::connection::ToServer;
 use crate::dom::Dom;
 use crate::dungeon_map::DoorClicked;
 use crate::player::{Arrived, Player, TakeStep, TravelTo, Walking};
+use crate::quests::DoorMarkers;
 use crate::widgets::UiId;
 
-/// Walking anywhere else, or a step of their own: they aren't going to the shop.
+/// Walking anywhere else, or a step of their own: they aren't going to the door.
 pub(super) fn change_of_mind(
     (mut steps, mut walking): (MessageReader<TakeStep>, MessageReader<Walking>),
     mut journeys: MessageReader<TravelTo>,
@@ -27,14 +30,32 @@ pub(super) fn change_of_mind(
     }
 }
 
-/// A click on a shop's door brings its panel to the front if it is open, opens it
-/// if the player is beside it, or else walks them to it.
+/// What the server is asked on coming to a door: what its giver has, in the
+/// town the player is in, and its stock if it is a shop. The panel opens on
+/// the answers.
+fn ask_at_door(
+    building: u16,
+    keepers: &Keepers,
+    doors: &DoorMarkers,
+    to_server: &mut MessageWriter<ToServer>,
+) {
+    if let Some(town) = doors.town {
+        let talk = QuestAsk::Talk { town, building };
+        to_server.write(ToServer(ClientMessage::Quest(talk)));
+    }
+    if let Some(&with) = keepers.0.get(&building) {
+        to_server.write(ToServer(ClientMessage::OpenTrade { with }));
+    }
+}
+
+/// A click on a door brings its panel to the front if it is open, asks the
+/// server if the player is beside it, or else walks them to it.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn follow_clicked_door(
     mut clicks: MessageReader<DoorClicked>,
     dungeon: Res<CurrentDungeon>,
-    keepers: Res<Keepers>,
-    open: Res<OpenTrades>,
+    (keepers, doors): (Res<Keepers>, Res<DoorMarkers>),
+    open: Res<OpenTalks>,
     player: Single<&MapPosition, With<Player>>,
     mut heading: ResMut<Heading>,
     mut travel: MessageWriter<TravelTo>,
@@ -47,21 +68,13 @@ pub(super) fn follow_clicked_door(
             continue;
         };
         let front = front_of(building);
-        // Only somewhere to walk to if it isn't a shop.
-        let Some(&with) = keepers.0.get(&building.id) else {
-            travel.write(TravelTo {
-                x: front.0,
-                y: front.1,
-            });
-            continue;
-        };
-        if open.is_open_with(with) {
-            dom.raise(&UiId::of("trade", with, "panel").to_string());
+        if open.is_open(building.id) {
+            dom.raise(&UiId::of("talk", key_of(building.id), "panel").to_string());
         } else if beside(**player, building.door) {
             heading.0 = None;
-            to_server.write(ToServer(ClientMessage::OpenTrade { with }));
+            ask_at_door(building.id, &keepers, &doors, &mut to_server);
         } else {
-            heading.0 = Some((with, front));
+            heading.0 = Some((building.id, front));
             travel.write(TravelTo {
                 x: front.0,
                 y: front.1,
@@ -73,12 +86,11 @@ pub(super) fn follow_clicked_door(
 /// Truesight changes what the server tells of what is shown here.
 pub(super) fn ask_again_with_truesight(
     truesight: Res<Truesight>,
-    open: Res<OpenTrades>,
+    open: Res<OpenTalks>,
     mut to_server: MessageWriter<ToServer>,
 ) {
     if truesight.is_changed() && !truesight.is_added() {
-        for trade in &open.0 {
-            let with = trade.grid.with;
+        for with in open.0.iter().filter_map(|talk| talk.keeper()) {
             to_server.write(ToServer(ClientMessage::OpenTrade { with }));
         }
     }
@@ -87,17 +99,18 @@ pub(super) fn ask_again_with_truesight(
 pub(super) fn open_on_arrival(
     mut arrivals: MessageReader<Arrived>,
     mut heading: ResMut<Heading>,
-    open: Res<OpenTrades>,
+    open: Res<OpenTalks>,
+    (keepers, doors): (Res<Keepers>, Res<DoorMarkers>),
     mut to_server: MessageWriter<ToServer>,
 ) {
     let Some(&Arrived { x, y }) = arrivals.read().last() else {
         return;
     };
-    if let Some((with, front)) = heading.0.take()
+    if let Some((building, front)) = heading.0.take()
         && front == (x, y)
-        && !open.is_open_with(with)
+        && !open.is_open(building)
     {
         // After the steps there, so the server has the player at it.
-        to_server.write(ToServer(ClientMessage::OpenTrade { with }));
+        ask_at_door(building, &keepers, &doors, &mut to_server);
     }
 }

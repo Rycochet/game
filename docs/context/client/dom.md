@@ -83,7 +83,7 @@ Attributes on all: `id`, `form`, `class`, `title` (a tooltip; a panel's or dialo
 
 Classes the theme knows: `p.warning`, `p.faint`, `p.medium`, `p.refused`, `p.status`, `p.status-warning`, `table.striped`, `span.joined`, `span.labelled`, `span.columns`, `span.apart`, `span.tip`, `span.place`, `div.tight`, `div.joined`, `div.sections`, `div.groups`, `div.plain`, `div.rows` / `form.rows`, `small.joined`, `label.field`, `dialog.sections`, `button.main`, `.quiet`, `.danger`, `.folder`, `.small`, `select.small` (the icon dropdown), `input.error`, `key-box.warned`, `img.gold`, `progress.loading`.
 
-Forms in use: `hud` (the corner buttons), `menu`, the requesters' (`quit`, `ironman`, `refused`, `slow_drawing`, `going_online`, `going_offline`, `locking_down`, `reopening`, `online_failed`), `settings`, `settings.<page>`, `settings.keep_graphics`, `credits`, `connect`, `connect.certificate`, `connect.forget`, `server_options`, `login`, `loading`, `character_select`, `character_create`, `debug.menu`, `debug.submenu`, `debug.<panel>`, `inventory`, `clothes`, `bag#<id>`, `ground`, `split`, `nearby`, `trade#<who>`, `accounts`, `step_pad`, `notices`, `hover`, `status`, `vitals`, `minimap`, `full_map`; code-made ids also use `planet`, `abilities`, `skills`. A moving panel is `<form>/panel`.
+Forms in use: `hud` (the corner buttons), `menu`, the requesters' (`quit`, `ironman`, `refused`, `slow_drawing`, `going_online`, `going_offline`, `locking_down`, `reopening`, `online_failed`), `settings`, `settings.<page>`, `settings.keep_graphics`, `credits`, `connect`, `connect.certificate`, `connect.forget`, `server_options`, `login`, `loading`, `character_select`, `character_create`, `debug.menu`, `debug.submenu`, `debug.<panel>`, `inventory`, `clothes`, `bag#<id>`, `ground`, `split`, `nearby`, `talk#<key>`, `accounts`, `step_pad`, `notices`, `hover`, `status`, `vitals`, `minimap`, `full_map`; code-made ids also use `planet`, `abilities`, `skills`. A moving panel is `<form>/panel`.
 
 ## Still code
 
@@ -101,7 +101,7 @@ What the move to markup left, on purpose or for the owner:
 
 ## Used by
 
-Every module with interface: `system_menu`, `debug_menu`, `login`, `loading_screen`, `character_select`, `character_create`, `inventory`, `trade`, `accounts_panel`, `abilities`, `character`, `step_pad`, `notices`, `hover`, `ui`, `vitals`, `minimap`; `widgets` (`Hit`, `Finder`, `Solid`, `Opaque`, `DomInput`, `GridShown`); `view3d` (`Hit`: the wheel zooms only on the view); `target` (`Hit`).
+Every module with interface: `system_menu`, `debug_menu`, `login`, `loading_screen`, `character_select`, `character_create`, `inventory`, `talk`, `accounts_panel`, `abilities`, `character`, `step_pad`, `notices`, `hover`, `ui`, `vitals`, `minimap`; `widgets` (`Hit`, `Finder`, `Solid`, `Opaque`, `DomInput`, `GridShown`); `view3d` (`Hit`: the wheel zooms only on the view); `target` (`Hit`).
 
 ## Notes
 

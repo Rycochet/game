@@ -18,7 +18,7 @@ What town shops have in stock, and working it out when one is opened. Only the s
 
 ## Used by
 
-- `server` (`sites`), client `trade`.
+- `server` (`sites`), client `talk`.
 
 ## Notes
 

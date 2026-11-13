@@ -15,6 +15,7 @@ mod give_up;
 mod log;
 mod needs;
 mod offers;
+mod planets;
 mod progress;
 mod standing;
 mod turn_in;
@@ -63,5 +64,7 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
         .send(&ServerMessage::Quest(QuestNews::Markers { town, markers }))
 }
 
+#[cfg(test)]
+mod planets_tests;
 #[cfg(test)]
 mod tests;

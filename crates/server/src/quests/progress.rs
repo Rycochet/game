@@ -85,6 +85,7 @@ pub(crate) fn moved_on(
             moved = true;
         }
     }
+    progress.ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
     moved
 }
 
@@ -106,6 +107,7 @@ pub(crate) fn complete_step(
     if let (Some(count), Some(step)) = (progress.counts.get_mut(step), quest.steps.get(step)) {
         *count = step.count.unwrap_or(1);
     }
+    progress.ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
     client.unsaved = true;
     true
 }

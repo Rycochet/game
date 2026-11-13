@@ -24,11 +24,14 @@ fn no_system_asks_for_what_another_of_its_parameters_has() {
     starts(show_gift_aim);
     starts(close_on_escape);
     starts(close_when_left);
+    starts(news::read_quest_news);
+    starts(input::read_events);
+    starts(quests_page::show_pages);
 }
 
 #[test]
 fn the_panel_is_good_markup_with_the_grids_columns() {
-    stock::TRADE.assert_good();
+    markup::TALK.assert_good();
     let columns = format!("columns=\"{COLUMNS}\"");
-    assert!(stock::TRADE.source.contains(&columns));
+    assert!(markup::TALK.source.contains(&columns));
 }
