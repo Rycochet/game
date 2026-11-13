@@ -34,6 +34,12 @@ impl HeadAxes {
         self.origin + self.along * along + self.up * up + Vec3::X * across
     }
 
+    /// How far a point is along the head's line, up from it and across.
+    pub(super) fn local(&self, at: Vec3) -> (f32, f32, f32) {
+        let from = at - self.origin;
+        (from.dot(self.along), from.dot(self.up), from.x)
+    }
+
     /// The middle of a ring's outline.
     fn middle(&self, ring: &Ring) -> Vec3 {
         self.at(

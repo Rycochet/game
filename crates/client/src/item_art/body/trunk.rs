@@ -53,6 +53,33 @@ fn drawn(rings: &[Ring; RINGS]) -> Vec<Ring> {
     kept
 }
 
+/// The ring this far along: between the two either side of it, or the end one.
+pub(super) fn ring_at(rings: &[Ring], along: f32) -> Ring {
+    let after = rings.iter().position(|ring| ring.along as f32 >= along);
+    let (before, after) = match after {
+        None => return rings[rings.len() - 1],
+        Some(0) => return rings[0],
+        Some(at) => (rings[at - 1], rings[at]),
+    };
+    let share = (along - before.along as f32) / (after.along - before.along).max(1) as f32;
+    let mix = |a: i32, b: i32| a + ((b - a) as f32 * share).round() as i32;
+    Ring {
+        along: mix(before.along, after.along),
+        half: mix(before.half, after.half),
+        belly: mix(before.belly, after.belly),
+        back: mix(before.back, after.back),
+    }
+}
+
+/// How far a point of the trunk is towards its front from the middle of its ring
+/// there, in the ring's half depths: 1 at a beast's belly, -1 at its back.
+pub(super) fn underside(layout: &Layout, at: Vec3) -> f32 {
+    let axes = Axes::of(layout);
+    let ring = ring_at(&layout.spine.rings, (at - axes.base).dot(axes.along));
+    let deep = ((ring.belly + ring.back) as f32 / 2.0).max(1.0);
+    (at - middle_of(&axes, &ring)).dot(axes.front) / deep
+}
+
 /// The point at the middle of a ring's outline, between its front and its back.
 pub(super) fn middle_of(axes: &Axes, ring: &Ring) -> Vec3 {
     axes.at(ring.along as f32) + axes.front * (ring.belly - ring.back) as f32 / 2.0

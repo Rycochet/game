@@ -26,7 +26,7 @@ pub(super) const CATTLE: CreatureDef = CreatureDef {
         ("athletics/swimming", level_practice(1)),
     ],
     abilities: &[Ability::Kick, Ability::Trample],
-    looks: &[Trait::CoatColour],
+    looks: &[Trait::CoatColour, Trait::Markings],
 };
 
 /// Grey hunters in packs: quick, with keen noses, seeing in the dark.
@@ -47,5 +47,5 @@ pub(super) const WOLF: CreatureDef = CreatureDef {
         ("athletics/swimming", level_practice(1)),
     ],
     abilities: &[Ability::NightVision],
-    looks: &[Trait::CoatColour],
+    looks: &[Trait::CoatColour, Trait::Markings],
 };

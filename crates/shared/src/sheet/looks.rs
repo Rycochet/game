@@ -6,6 +6,7 @@
 use crate::creature::CreatureKind;
 
 use super::Trait;
+use super::markings::{Marks, markings_choices};
 
 /// One choice for a trait: what it is called and, for a colour, its colour and
 /// any pattern over it.
@@ -17,12 +18,15 @@ pub struct Choice {
     pub pattern: Pattern,
 }
 
-/// What is over a colour, for pictures of it (the colour picker's swatches).
+/// What is over a colour: specks for pictures of it (the colour picker's swatches),
+/// or markings on a body (`Trait::Markings`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Pattern {
     Plain,
     /// Small spots of this colour.
     Speckled([u8; 3]),
+    /// A second colour over parts of the body.
+    Marked(Marks),
 }
 
 const fn colour(name: &'static str, rgb: [u8; 3]) -> Choice {
@@ -228,6 +232,7 @@ impl Trait {
                 Birdfolk => BIRD_FEATHERS,
                 _ => HEN_FEATHERS,
             },
+            Self::Markings => markings_choices(kind),
         }
     }
 }

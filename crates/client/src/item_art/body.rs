@@ -20,6 +20,7 @@ mod fit;
 mod hair;
 mod head;
 mod legs;
+mod marks;
 mod morph;
 mod trunk;
 
@@ -29,6 +30,7 @@ use fit::fitted;
 pub(super) use fit::turn_of;
 pub(super) use hair::{Cover, hair};
 pub(super) use head::{HeadAxes, crown};
+pub(super) use marks::split as split_marks;
 #[cfg(test)]
 pub(super) use morph::placed as morph_placed;
 pub(super) use morph::{morph_parts, pieces as bare_pieces};
@@ -259,9 +261,13 @@ pub(super) fn body_parts(
 ) -> Vec<Part> {
     // The picture's plane faces the camera, as weapons' do.
     let camera = Transform::from_translation(CAMERA_AT).looking_at(Vec3::ZERO, CAMERA_UP);
-    let [skin, coat, feathers, hair, mane] = fitted(layout, height, hair);
+    let [skin, marked, coat, feathers, hair, mane] = fitted(layout, height, hair, colours.marks);
     [
         (skin, colours.skin),
+        (
+            marked,
+            colours.marks.map_or(colours.skin, |marks| marks.colour),
+        ),
         (coat, colours.coat),
         (feathers, colours.feathers),
         (hair, colours.hair),

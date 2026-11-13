@@ -163,7 +163,10 @@ fn each_kind_draws_in_its_own_colours() {
         for &which in kind.def().looks {
             let choices = which.choices_for(kind);
             assert!(!choices.is_empty(), "{kind:?} {which:?}");
-            if !matches!(which, Trait::Height | Trait::HairStyle | Trait::Beard) {
+            if !matches!(
+                which,
+                Trait::Height | Trait::HairStyle | Trait::Beard | Trait::Markings
+            ) {
                 assert!(
                     choices.iter().all(|c| c.colour.is_some()),
                     "{kind:?} {which:?}"
@@ -229,4 +232,33 @@ fn a_sheet_as_sent_keeps_its_alignment_secret() {
         },
         sent
     );
+}
+
+#[test]
+fn markings_are_a_look_older_saves_have_the_first_of() {
+    // A look saved before markings has none chosen: a wolf then has its first, a
+    // pale belly and mask; cattle the first, plain.
+    let old = Appearance::default();
+    let wolf = old.marks(CreatureKind::Wolf).unwrap();
+    assert!(wolf.belly && wolf.face == Face::Mask);
+    assert_eq!(old.marks(CreatureKind::Cattle), None);
+    // Only kinds with markings to choose have the look, and some cattle are patched
+    // in different layouts.
+    for kind in CreatureKind::ALL {
+        let has = kind.def().looks.contains(&Trait::Markings);
+        assert_eq!(
+            has,
+            !Trait::Markings.choices_for(kind).is_empty(),
+            "{kind:?}"
+        );
+    }
+    let layouts: std::collections::BTreeSet<_> = Trait::Markings
+        .choices_for(CreatureKind::Cattle)
+        .iter()
+        .filter_map(|choice| match choice.pattern {
+            Pattern::Marked(marks) => marks.patches,
+            _ => None,
+        })
+        .collect();
+    assert!(layouts.len() > 4);
 }

@@ -25,6 +25,7 @@ mod from_build;
 mod hair;
 mod kind_bonus;
 mod looks;
+mod markings;
 mod shapeshift;
 
 pub use crate::ability::Ability;
@@ -34,6 +35,7 @@ pub use foes::{Foe, Foes};
 pub use from_build::{POINT_WEIGHT, SPREAD};
 pub use kind_bonus::{BONUS_POINTS, bonus_from};
 pub use looks::{Choice, Pattern};
+pub use markings::{Face, Marks};
 pub use shapeshift::TrueForm;
 
 /// Something that differs between creatures of a kind, only to look at.
@@ -47,6 +49,7 @@ pub enum Trait {
     // New traits go at the end: messages carry a trait by its place in this list.
     HairStyle,
     Beard,
+    Markings,
 }
 
 impl Trait {
@@ -59,6 +62,7 @@ impl Trait {
             Self::SkinShade => "Skin",
             Self::HairStyle => "Hair style",
             Self::Beard => "Beard",
+            Self::Markings => "Markings",
         }
     }
 }
@@ -92,6 +96,14 @@ impl Appearance {
     /// The colour of its coat, if it has one: a taur's lower body's.
     pub fn coat(&self, kind: CreatureKind) -> Option<[u8; 3]> {
         self.choice(kind, Trait::CoatColour)?.colour
+    }
+
+    /// Its markings, if it has any (`Trait::Markings`).
+    pub fn marks(&self, kind: CreatureKind) -> Option<Marks> {
+        match self.choice(kind, Trait::Markings)?.pattern {
+            Pattern::Marked(marks) => Some(marks),
+            _ => None,
+        }
     }
 
     /// The colour of its feathers, if it has any.

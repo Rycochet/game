@@ -10,6 +10,7 @@ mod feet;
 mod footwear;
 mod hair;
 mod legs;
+mod markings;
 mod neck;
 mod page;
 mod sets;

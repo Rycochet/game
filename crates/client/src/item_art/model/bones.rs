@@ -30,7 +30,7 @@ impl BodyPart {
 }
 
 /// A body's bones as lines between points, in millimetres.
-pub(super) struct Bones(Vec<(u32, Vec3, Vec3)>);
+pub(in crate::item_art) struct Bones(Vec<(u32, Vec3, Vec3)>);
 
 fn point(mm: [i32; 3]) -> Vec3 {
     Vec3::new(mm[0] as f32, mm[1] as f32, mm[2] as f32)
@@ -38,7 +38,7 @@ fn point(mm: [i32; 3]) -> Vec3 {
 
 impl Bones {
     /// The bones of this body, and of a taur's upper body.
-    pub(super) fn of(layout: &Layout) -> Self {
+    pub(in crate::item_art) fn of(layout: &Layout) -> Self {
         let mut bones = Vec::new();
         add(&mut bones, layout, 0);
         if let Some(upper) = layout.upper_body() {
@@ -48,7 +48,7 @@ impl Bones {
     }
 
     /// The part a point moves with: the bone nearest it.
-    pub(super) fn part_at(&self, at: Vec3) -> u32 {
+    pub(in crate::item_art) fn part_at(&self, at: Vec3) -> u32 {
         let distance = |(_, from, to): &(u32, Vec3, Vec3)| {
             let along = *to - *from;
             let share = (at - *from).dot(along) / along.length_squared().max(1.0);

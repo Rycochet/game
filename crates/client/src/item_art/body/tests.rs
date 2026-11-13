@@ -19,7 +19,7 @@ fn every_body_stays_inside_its_picture_with_room_for_its_edge() {
         let per_cell = VIEW_WIDTH / wide.max(long);
         let edge = OUTLINE_PIXELS / PIXELS_PER_CELL * per_cell;
         for styled in hairs() {
-            let parts = fitted(&layout, height, styled);
+            let parts = fitted(&layout, height, styled, None);
             for corner in parts.iter().flatten().flatten() {
                 assert!(corner.is_finite());
                 assert!(corner.x.abs() + edge <= wide * per_cell / 2.0, "{layout:?}");
