@@ -11,7 +11,7 @@ use crate::dom::parts::Choices;
 use crate::dom::pictures::picture_for;
 use crate::dom::tag::Tag;
 use crate::widgets::{
-    BUTTON_PADDING, ColourPicker, Dropdown, Swatch, TextSize, spawn_colour_picker, spawn_dropdown,
+    ColourPicker, Dropdown, Swatch, TextSize, spawn_colour_picker, spawn_dropdown,
     spawn_icon_dropdown, spawn_tabs, spawn_toggle_row,
 };
 
@@ -70,10 +70,6 @@ impl Builder<'_, '_, '_> {
                 spawn_icon_dropdown(inside, dropdown, Node::default()).id()
             });
         }
-        let node = Node {
-            padding: BUTTON_PADDING,
-            ..node
-        };
         self.spawn_in(holder, |inside| {
             spawn_dropdown(inside, dropdown, size, node).id()
         })

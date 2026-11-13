@@ -140,3 +140,5 @@ lorc/laurel-crown
 # A popup's padlock (dom/popup.rs)
 delapouite/padlock-open
 delapouite/plain-padlock
+# The "?" beside a labelled setting with a tip (dom/help_mark.rs)
+sbed/help

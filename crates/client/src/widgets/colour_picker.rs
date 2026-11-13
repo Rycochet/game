@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::text_box::line_height;
 use super::theme::{INK, RAISED_BACKGROUND, TextSize};
-use super::{BUTTON_BORDER, ButtonPressed, ButtonState, ButtonTooltip, Pressable};
+use super::{BUTTON_BORDER, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonTooltip, Pressable};
 
 /// The white edge inside the chosen swatch's own.
 const CHOSEN_EDGE: f32 = 2.0;
@@ -44,8 +44,20 @@ pub(super) struct SwatchOf {
 #[derive(Component)]
 pub(super) struct SwatchFill;
 
+/// A swatch's side: a line of writing of `size` and a button's padding above
+/// and below it, so one line of swatches stands as tall as a button.
+fn swatch_side(size: TextSize) -> f32 {
+    let Val::Px(above) = BUTTON_PADDING.top else {
+        unreachable!("a button's padding is in pixels")
+    };
+    let Val::Px(below) = BUTTON_PADDING.bottom else {
+        unreachable!("a button's padding is in pixels")
+    };
+    line_height(size) + above + below
+}
+
 /// A picker filling `node`'s width (give it one), one line as tall as a dropdown
-/// with writing of `size`. It looks like an active button, its swatches like
+/// or a button with writing of `size`. It looks like an active button, its swatches like
 /// buttons standing in it.
 pub fn spawn_colour_picker<'a>(
     parent: &'a mut ChildSpawnerCommands,
@@ -53,7 +65,7 @@ pub fn spawn_colour_picker<'a>(
     size: TextSize,
     node: Node,
 ) -> EntityCommands<'a> {
-    let side = line_height(size);
+    let side = swatch_side(size);
     let swatches: Vec<(Swatch, String)> = picker
         .swatches
         .iter()
