@@ -67,8 +67,8 @@ pub use browser::open_in_browser;
 pub use characters::{CharacterChoice, CharacterSelect, PlayFor, PlayableHere};
 pub use clock::{GameClock, HerbGrowthShift, NIGHT_LIGHT, ServerClock};
 pub use creatures::{
-    AbilitiesPage, CancelledEnergy, CarryLimit, Dressing, MakesCharacters, MakingCharacter, Other,
-    PlayerGait, PlayerSize, PlayerSpeed, SkillsPage, SpentEnergy,
+    AbilitiesPage, CancelledEnergy, CarryLimit, CharacterRefused, Dressing, MakesCharacters,
+    MakingCharacter, Other, PlayerGait, PlayerSize, PlayerSpeed, SkillsPage, SpentEnergy,
 };
 pub use debug::{
     CreateMobOrder, DebugInfo, DebugTools, DetectMonsters, FreezeMobs, GodMode, InspectedMob,
@@ -188,6 +188,7 @@ impl Plugin for CommonPlugin {
             .init_resource::<Sneaking>()
             .init_resource::<CarryLimit>()
             .init_resource::<MakingCharacter>()
+            .init_resource::<CharacterRefused>()
             .init_resource::<CharacterSelect>()
             .init_resource::<PlayFor>()
             .init_resource::<PlayableHere>()

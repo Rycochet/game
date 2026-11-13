@@ -19,6 +19,7 @@ use crate::vitals::Vitals;
 
 mod attributes;
 mod build;
+mod fits;
 mod foes;
 mod from_build;
 mod hair;
@@ -67,13 +68,6 @@ impl Trait {
 pub struct Appearance(pub BTreeMap<Trait, u8>);
 
 impl Appearance {
-    /// Whether every choice is for a trait this kind has, and is one of its choices.
-    pub fn suits(&self, kind: CreatureKind) -> bool {
-        self.0.iter().all(|(&which, &choice)| {
-            kind.def().looks.contains(&which) && (choice as usize) < which.choices_for(kind).len()
-        })
-    }
-
     /// What is chosen for this trait, if this kind has it: the first if not given.
     pub fn choice(&self, kind: CreatureKind, which: Trait) -> Option<Choice> {
         if !kind.def().looks.contains(&which) {

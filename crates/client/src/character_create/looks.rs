@@ -30,14 +30,17 @@ pub(super) struct LookLabel(pub Trait);
 #[derive(Resource, Default)]
 pub(super) struct PatternPictures(HashMap<([u8; 3], Pattern), Handle<Image>>);
 
-/// Fills the looks box: a picker or a list for each of the kind's looks.
+/// Fills the looks box: a picker or a list for each of the kind's looks that
+/// its gender has (no beard for a female). Ids count the kind's looks, so a
+/// look keeps its id whichever are left out.
 pub(super) fn spawn_looks(
     looks: &mut ChildSpawnerCommands,
     draft: &Draft,
     pictures: &mut PatternPictures,
     images: &mut Assets<Image>,
 ) {
-    for (index, &which) in draft.kind.def().looks.iter().enumerate() {
+    let looks_here = draft.kind.def().looks.iter().enumerate();
+    for (index, &which) in looks_here.filter(|(_, which)| which.applies(draft.kind, draft.gender)) {
         let choices = which.choices_for(draft.kind);
         let selected = draft.appearance.0.get(&which).copied().unwrap_or(0) as usize;
         let id = UiId::new(FORM, "look").at(index);

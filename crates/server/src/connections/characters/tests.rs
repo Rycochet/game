@@ -108,7 +108,10 @@ fn a_guest_may_have_only_one() {
     assert_eq!((list.len(), can_create), (1, false));
     again.send(&make("Bo"));
     let (mut connections, world) = tick(connections, world);
-    assert!(matches!(answers(&again)[..], [ServerMessage::Refused(_)]));
+    assert!(matches!(
+        answers(&again)[..],
+        [ServerMessage::CharacterRefused(_)]
+    ));
 
     // But may delete theirs and make another (owner, 2026-11-13).
     let ash = list[0].summary.id;

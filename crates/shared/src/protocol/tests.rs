@@ -278,6 +278,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             can_create: true,
             difficulties: crate::difficulty::Difficulties::ALL,
         },
+        ServerMessage::CharacterRefused("Bo is taken: choose another name".into()),
         ServerMessage::Killed { permanent: true },
         ServerMessage::Difficulty {
             current: Some(crate::difficulty::Difficulty::Easy),

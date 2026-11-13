@@ -1116,17 +1116,29 @@ fn a_new_character_is_what_they_asked_if_it_is_allowed() {
     // Kinds nobody may play (too big for one cell, as a giant), looks that don't
     // suit them, and triangles with a dot outside.
     let told = make("a", CreatureKind::Horse, Appearance::default(), centred);
-    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    assert!(
+        matches!(told[..], [ServerMessage::CharacterRefused(_)]),
+        "{told:?}"
+    );
     let told = make("d", CreatureKind::Giant, Appearance::default(), centred);
-    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    assert!(
+        matches!(told[..], [ServerMessage::CharacterRefused(_)]),
+        "{told:?}"
+    );
     let told = make("b", CreatureKind::Kobold, red.clone(), centred);
-    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    assert!(
+        matches!(told[..], [ServerMessage::CharacterRefused(_)]),
+        "{told:?}"
+    );
     let outside = Build {
         dots: [Dot([900, 900, 0]), Dot::CENTRE, Dot::CENTRE],
         turn: 0,
     };
     let told = make("e", CreatureKind::Dwarf, red.clone(), outside);
-    assert!(matches!(told[..], [ServerMessage::Refused(_)]), "{told:?}");
+    assert!(
+        matches!(told[..], [ServerMessage::CharacterRefused(_)]),
+        "{told:?}"
+    );
 
     let strong = Build {
         dots: [Dot([1000, 0, 0]), Dot::CENTRE, Dot::CENTRE],

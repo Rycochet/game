@@ -8,7 +8,7 @@ use shared::rng::{Rng, Seed};
 
 use super::draft::Draft;
 use super::screen::{NameBox, RandomName};
-use crate::common::MakingCharacter;
+use crate::common::{CharacterRefused, MakingCharacter};
 use crate::widgets::{ButtonPressed, TextBox};
 
 /// Where suggestions come from: seeded from the clock once, then rolling on.
@@ -33,6 +33,7 @@ fn untouched(draft: &Draft) -> bool {
 #[allow(clippy::too_many_arguments)]
 pub(super) fn suggest_names(
     making: Res<MakingCharacter>,
+    refused: Res<CharacterRefused>,
     mut pressed: MessageReader<ButtonPressed>,
     button: Single<Entity, With<RandomName>>,
     mut name_box: Single<&mut TextBox, With<NameBox>>,
@@ -41,7 +42,8 @@ pub(super) fn suggest_names(
     mut named_for: Local<Option<CreatureKind>>,
     time: Res<Time<Real>>,
 ) {
-    let opened = making.is_changed() && making.0;
+    // Opened again after the server turned the name down: it stays.
+    let opened = making.is_changed() && making.0 && refused.0.is_none();
     let new_kind = *named_for != Some(draft.kind) && untouched(&draft);
     let asked = pressed.read().any(|press| press.0 == *button);
     if !(opened || new_kind || asked) {

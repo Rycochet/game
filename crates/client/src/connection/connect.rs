@@ -126,6 +126,7 @@ pub(super) fn hang_up(commands: &mut Commands) {
     commands.remove_resource::<ServerConnection>();
     // A character half made is asked for again on connecting again.
     commands.insert_resource(crate::common::MakingCharacter(false));
+    commands.insert_resource(crate::common::CharacterRefused(None));
     commands.insert_resource(crate::common::CharacterSelect::default());
     commands.insert_resource(crate::common::LoggingIn::Not);
     commands.insert_resource(crate::common::PlayDifficulty::default());

@@ -18,22 +18,39 @@ fn every_kind_has_attributes_and_looks() {
             Attributes::for_kind(kind, crate::gender::Gender::Neutral, &Build::CENTRED)
         );
         assert_eq!(sheet.skills, crate::skill::Skills::starting(kind));
-        assert!(sheet.appearance.suits(kind));
+        assert!(sheet.appearance.suits(kind, Gender::Neutral));
     }
 }
 
 #[test]
 fn a_look_must_suit_the_kind_and_be_a_real_choice() {
     let look = |which, choice| Appearance(BTreeMap::from([(which, choice)]));
-    assert!(look(Trait::HairColour, 3).suits(CreatureKind::Human));
+    assert!(look(Trait::HairColour, 3).suits(CreatureKind::Human, Gender::Neutral));
     assert_eq!(
         look(Trait::HairColour, 3).says(CreatureKind::Human, Trait::HairColour),
         "Red"
     );
-    assert!(!look(Trait::HairColour, 99).suits(CreatureKind::Human));
+    assert!(!look(Trait::HairColour, 99).suits(CreatureKind::Human, Gender::Neutral));
     // Chickens have no hair.
-    assert!(!look(Trait::HairColour, 0).suits(CreatureKind::Chicken));
-    assert!(look(Trait::FeatherColour, 1).suits(CreatureKind::Chicken));
+    assert!(!look(Trait::HairColour, 0).suits(CreatureKind::Chicken, Gender::Neutral));
+    assert!(look(Trait::FeatherColour, 1).suits(CreatureKind::Chicken, Gender::Neutral));
+}
+
+#[test]
+fn a_female_has_no_beard() {
+    let bearded = Appearance(BTreeMap::from([(Trait::Beard, 2), (Trait::HairColour, 1)]));
+    let human = CreatureKind::Human;
+    assert!(bearded.suits(human, Gender::Male));
+    assert!(bearded.suits(human, Gender::Neutral));
+    assert!(!bearded.suits(human, Gender::Female));
+    assert!(!Trait::Beard.applies(human, Gender::Female));
+    assert!(Trait::Beard.applies(CreatureKind::Dwarf, Gender::Male));
+    // Fitting drops only the beard, and only for a female.
+    let fitted = bearded.clone().fitted(Gender::Female);
+    assert!(fitted.suits(human, Gender::Female));
+    assert_eq!(fitted.0.get(&Trait::HairColour), Some(&1));
+    assert_eq!(fitted.hair(human).beard, crate::body::Beard::None);
+    assert_eq!(bearded.clone().fitted(Gender::Male), bearded);
 }
 
 #[test]

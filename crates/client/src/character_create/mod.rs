@@ -7,6 +7,7 @@ use bevy::prelude::*;
 
 use crate::common::MakingCharacter;
 
+mod buttons;
 mod difficulty;
 mod draft;
 mod form;
@@ -41,6 +42,7 @@ impl Plugin for CharacterCreatePlugin {
                     name::suggest_names,
                     input::point_at_triangles,
                     input::keys_for_triangles,
+                    buttons::press_triangle_buttons,
                     form::press_begin,
                     show::draw_triangles,
                     show::place_labels,

@@ -29,7 +29,7 @@ fn mobs_stand_apart_on_walkable_cells_with_looks_that_suit_them() {
         let mobs = spawns(Seed::new(seed), 0, PoiKind::Crypt, &level, &[]);
         for (index, mob) in mobs.iter().enumerate() {
             assert!(level.is_walkable(mob.position.0, mob.position.1));
-            assert!(mob.appearance.suits(mob.kind));
+            assert!(mob.appearance.suits(mob.kind, mob.gender));
             assert!(mobs[index + 1..].iter().all(|o| o.position != mob.position));
         }
     }

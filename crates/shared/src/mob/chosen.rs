@@ -52,7 +52,7 @@ pub fn chosen_spawns(
             number,
             kind,
             position,
-            appearance: looks(&roll, kind),
+            appearance: looks(&roll, kind).fitted(gender),
             gender,
             alignment: Alignment::rolled(kind, roll(ALIGNMENT_ROLL)),
             attributes: Attributes::for_kind(
