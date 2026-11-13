@@ -31,8 +31,8 @@ mod shop_tests;
 mod tests;
 
 pub(super) use arrival::poi_arrival;
-pub(super) use chunks::ensure_chunk;
 pub(crate) use chunks::wild_chunk;
+pub(super) use chunks::{ensure_chunk, site_as_saved};
 pub(crate) use exits::leave_by_key;
 pub(super) use exits::{back_to_wilderness, into_site};
 pub(super) use explore::enter_wilderness;

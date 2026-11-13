@@ -45,3 +45,17 @@ pub(crate) fn learn_place_name(client: &mut Client, world: &ServerWorld, chunk: 
     client.unsaved = true;
     !client.world_chunks.contains(&chunk) || client.link.send(&chunk_message(client, world, chunk))
 }
+
+/// The character learns where the poi in `chunk` is and what it is called
+/// (a quest sends them there), and the client is sent it at once if it has
+/// that chunk. `false` if the client has gone.
+pub(crate) fn learn_place(client: &mut Client, world: &ServerWorld, chunk: ChunkPos) -> bool {
+    let known = client.character.pois.entry(chunk).or_default();
+    if known.known && known.named {
+        return true;
+    }
+    known.known = true;
+    known.named = true;
+    client.unsaved = true;
+    !client.world_chunks.contains(&chunk) || client.link.send(&chunk_message(client, world, chunk))
+}

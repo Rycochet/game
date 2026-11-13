@@ -280,4 +280,6 @@ pub enum ClientMessage {
     Door(DoorAsk),
     /// The player turned in place to face this way (free and at once); not answered.
     Face(crate::facing::Heading),
+    /// About quests (`QuestAsk`).
+    Quest(super::QuestAsk),
 }

@@ -1,6 +1,6 @@
 # shared: quest
 
-Quests generated from a town's seed, the same for everyone: who gives them (town buildings, by slots), what they ask (a step graph on hooks of nearby pois or the wilds round the town), what they need, what they pay, how they move alignment, and their story through `shared::story`. Only the server calls the generator: pois' seeds are secret. Offering, accepting, progress and saves are the server's (Quest system PR 3). Plan: `quests.md`.
+Quests generated from a town's seed, the same for everyone: who gives them (town buildings, by slots), what they ask (a step graph on hooks of nearby pois or the wilds round the town), what they need, what they pay, how they move alignment, and their story through `shared::story`. Only the server calls the generator: pois' seeds are secret. Offering, accepting, progress and saves are the server's (`server/server.md`, `quests`). Plan: `quests.md`.
 
 ## Files
 
@@ -30,7 +30,7 @@ Quests generated from a town's seed, the same for everyone: who gives them (town
 
 ## Used by
 
-- Nothing yet: the server (Quest system PR 3).
+- The server (`server/server.md`, its `quests` module): offers, taking, handing in, progress, all through `town_quests`, `daily_quest` and the model; `shared::protocol` carries `Step`, `QuestId`, `QuestKind`, `Standing` in its quest messages.
 
 ## Notes
 

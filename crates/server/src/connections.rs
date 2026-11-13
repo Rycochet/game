@@ -71,7 +71,7 @@ pub(super) use roads::send_roads;
 #[cfg(feature = "debug-api")]
 pub(super) use systems::save_all;
 pub(super) use systems::{
-    run_mobs, save_changes, share_doors, sync_entities, sync_ground, tell_the_time,
+    follow_quests, run_mobs, save_changes, share_doors, sync_entities, sync_ground, tell_the_time,
 };
 pub(super) use welcome::made_for;
 use welcome::welcome;
@@ -216,6 +216,8 @@ pub struct Client {
     looking_up: Vec<Id>,
     /// Dev tools for other players (Give Item, Learn Skills), once messages are read.
     for_others: Vec<(Id, for_others::ForOther)>,
+    /// Where and in which world it was last looked at for quests.
+    pub(crate) quest_seen: crate::quests::Seen,
 }
 
 #[cfg(test)]

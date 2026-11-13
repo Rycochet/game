@@ -80,6 +80,7 @@ impl Client {
             hall_origin: 0,
             last_step: None,
             looking_up: Vec::new(),
+            quest_seen: Default::default(),
         }
     }
 

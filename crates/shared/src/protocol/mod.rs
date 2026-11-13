@@ -41,6 +41,7 @@ mod door_ask;
 mod kind_change;
 mod moves;
 mod ping;
+mod quest;
 mod role_ask;
 mod server_message;
 mod strike;
@@ -56,6 +57,10 @@ pub use dev_vitals::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals};
 pub use door_ask::DoorAsk;
 pub use kind_change::KindChange;
 pub use moves::{MOST_MOVE, Stretch, cell_of_units, is_middle, units_of_cell};
+pub use quest::{
+    DailyDone, Hint, LogEntry, Marker, Offer, OfferState, QuestAsk, QuestNews, QuestRefusal,
+    QuestState,
+};
 pub use role_ask::{FoundAccount, RoleAnswer, RoleAsk};
 pub use server_message::ServerMessage;
 pub use strike::Strike;
@@ -63,7 +68,7 @@ pub use world_chunk::{GateInfo, SeenPoi, WorldChunk, WorldInfo};
 
 /// Bump whenever a message changes, so mismatched clients and servers refuse
 /// each other instead of misreading messages.
-pub const PROTOCOL_VERSION: u32 = 86;
+pub const PROTOCOL_VERSION: u32 = 87;
 
 /// The most items one `ClientMessage::LookUpItems` is answered for.
 pub const MOST_LOOKED_UP: usize = 64;

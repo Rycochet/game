@@ -150,6 +150,11 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         ClientMessage::OpenTrade {
             with: Id::for_test(3),
         },
+        ClientMessage::Quest(super::QuestAsk::Talk {
+            town: ChunkPos { x: 2, y: -1 },
+            building: 4,
+        }),
+        ClientMessage::Quest(super::QuestAsk::Log),
         ClientMessage::Door(super::DoorAsk::Open { x: -2, y: 5 }),
         ClientMessage::Door(super::DoorAsk::CloseNear),
         ClientMessage::Door(super::DoorAsk::DevAll { open: false }),
@@ -353,6 +358,30 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             with: Id::for_test(3),
             items: Vec::new(),
         },
+        ServerMessage::Quest(super::QuestNews::Markers {
+            town: ChunkPos { x: 2, y: -1 },
+            markers: vec![
+                (4, super::Marker::Available(crate::quest::QuestKind::Daily)),
+                (5, super::Marker::Locked),
+            ],
+        }),
+        ServerMessage::Quest(super::QuestNews::Talk {
+            town: ChunkPos { x: 2, y: -1 },
+            building: 4,
+            offers: vec![super::Offer {
+                id: crate::quest::QuestId {
+                    town: ChunkPos { x: 2, y: -1 },
+                    slot: crate::quest::Slot::Feeder,
+                },
+                kind: crate::quest::QuestKind::Normal,
+                state: super::OfferState::Locked(vec![
+                    super::Hint::Standing {
+                        least: crate::quest::Standing::Known,
+                    },
+                    super::Hint::Earlier,
+                ]),
+            }],
+        }),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],
             items: Vec::new(),

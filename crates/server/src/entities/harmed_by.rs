@@ -76,6 +76,7 @@ pub(super) fn credit_kills(clients: &mut [Client], world: &mut ServerWorld) {
             let here = client.visit.as_ref().map(|visit| visit.population());
             if here == Some(kill.place) {
                 client.sheet.foes.defeated(kill.kind);
+                crate::quests::killed(client, world, kill.kind, kill.place.0);
                 if let (Some(deed), Some(alignment)) =
                     (kill.deed_for(who), client.sheet.alignment.as_mut())
                 {

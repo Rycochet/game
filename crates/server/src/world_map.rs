@@ -16,7 +16,7 @@ use crate::storage::KnownPoi;
 use crate::{ServerWorld, sites};
 pub(crate) use arrival::{arrival, nearest_gate};
 use place_names::chunk_message;
-pub(crate) use place_names::learn_place_name;
+pub(crate) use place_names::{learn_place, learn_place_name};
 
 /// The player takes a step on the world map, unless it leads into water (but
 /// a good swimmer may swim the sea near the coast) (a

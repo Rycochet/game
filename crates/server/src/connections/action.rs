@@ -32,6 +32,7 @@ pub(super) enum Action {
     OpenTrade {
         with: Id,
     },
+    Quest(shared::protocol::QuestAsk),
     Ground(GroundAction),
     UseAbility {
         ability: shared::ability::Ability,
