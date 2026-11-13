@@ -4,7 +4,7 @@
 //! not finished (owner).
 
 use bevy::prelude::*;
-use shared::protocol::{Marker, QuestState};
+use shared::protocol::{BossSign, Marker, QuestState};
 use shared::quest::QuestKind;
 
 /// What a marker shows.
@@ -17,7 +17,8 @@ pub struct MarkLook {
 }
 
 use crate::common::{
-    QUEST_BLUE as BLUE, QUEST_GREY as GREY, QUEST_ORANGE as ORANGE, QUEST_YELLOW as YELLOW,
+    QUEST_BLUE as BLUE, QUEST_GREY as GREY, QUEST_ORANGE as ORANGE, QUEST_RED as RED,
+    QUEST_YELLOW as YELLOW,
 };
 
 impl MarkLook {
@@ -44,6 +45,18 @@ impl MarkLook {
             QuestState::Ready => Self::new(kind, true),
             QuestState::Taken => Self::of(Marker::Taken),
             QuestState::Done | QuestState::Failed | QuestState::Abandoned => Self::new(kind, false),
+        }
+    }
+
+    /// The sign over a quest boss: a red "!" for a stranger's quest, else
+    /// the quest's "!" (owner).
+    pub fn of_boss(sign: BossSign) -> Self {
+        match sign {
+            BossSign::Unknown => Self {
+                ready: false,
+                rgb: RED,
+            },
+            BossSign::Quest(kind) => Self::new(kind, false),
         }
     }
 

@@ -198,6 +198,7 @@ fn empty(level: shared::dungeon::Level) -> Population {
         due: Default::default(),
         away: 0,
         empty_since: None,
+        stairs: Vec::new(),
         scents: Default::default(),
         last_at: BTreeMap::new(),
     }

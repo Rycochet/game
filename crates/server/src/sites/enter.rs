@@ -50,6 +50,21 @@ pub(crate) fn dev_enter(
     enter_site(client, world, poi, id, level, arrival, false)
 }
 
+/// Tests: enters a real poi's site straight onto level `level`.
+#[cfg(test)]
+pub(crate) fn test_enter_poi(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    poi: Poi,
+    level: u32,
+) -> bool {
+    leave(client, world);
+    client.visit = None;
+    let id = SiteId::Poi(poi.chunk);
+    let arrival = Arrival::From(Exit::WorldMap);
+    enter_site(client, world, poi, id, level, arrival, false)
+}
+
 /// Developer tools: a made-up site as if new, whatever anyone has done there or
 /// remembers of it, and the player in it. It is on no map: leaving it comes back
 /// to where they stand now.

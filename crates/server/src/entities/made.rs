@@ -14,6 +14,11 @@ use crate::storage::SiteId;
 /// Numbers from here on are mobs made by developer tools (Create Mob): no
 /// level's own mob has one, and nothing about them is kept.
 pub(super) const DEV_MOB_NUMBERS: u32 = 1 << 31;
+/// A site's quest boss: kept like a level's own (`dead` while it is down).
+pub(crate) const BOSS_NUMBER: u32 = DEV_MOB_NUMBERS - 1;
+/// Numbers from here up to the boss's are extras a quest's "Slay" brings
+/// (`quest_mobs`): never kept.
+pub(super) const EXTRA_NUMBERS: u32 = 1 << 30;
 
 impl Mob {
     /// A mob as rolled (`spawn`), carrying `carrying`, belonging on level
@@ -81,5 +86,16 @@ impl Mob {
     /// Whether developer tools made it: it is never kept.
     pub(super) fn is_dev_made(&self) -> bool {
         self.number >= DEV_MOB_NUMBERS
+    }
+
+    /// Whether it is its site's quest boss.
+    pub(crate) fn is_boss(&self) -> bool {
+        self.number == BOSS_NUMBER
+    }
+
+    /// Whether its site's save keeps it: a level's own or the boss, not one
+    /// developer tools made or a quest's extra.
+    pub(crate) fn is_kept(&self) -> bool {
+        self.number < EXTRA_NUMBERS || self.is_boss()
     }
 }

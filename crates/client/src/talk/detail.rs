@@ -44,14 +44,20 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
         OfferState::Available {
             story,
             reward: pays,
+            dealt_with,
         } => {
             let steps =
                 (0..story.facts.asks.len()).map(|ask| or_partly(story.step_text(lang, ask, 0)));
-            Some(Detail {
+            let mut detail = Detail {
                 accept: true,
                 turn_in: false,
                 ..about(story, steps.collect(), pays, lang)
-            })
+            };
+            // Its boss is already dead: the player says so (owner).
+            if *dealt_with {
+                detail.paragraphs.push(plain(lang, "talk-dealt-with"));
+            }
+            Some(detail)
         }
         OfferState::Taken | OfferState::Ready => {
             let entry = book.entries.get(&offer.id)?;

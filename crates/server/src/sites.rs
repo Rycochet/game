@@ -44,6 +44,8 @@ pub(crate) use doors::{
 };
 use doors::{DoorSite, VisitDoors, door_looks, ensure_locks, remember_doors, set_doors};
 use enter::enter_site;
+#[cfg(test)]
+pub(crate) use enter::test_enter_poi;
 pub(super) use enter::{dev_enter, enter_poi, generate, resume};
 use keepers::{NewKeepers, keepers_in_window, keepers_of};
 pub(super) use keepers::{give_to_keeper, keeper_building, keeper_stock, take_from_keeper};

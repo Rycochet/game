@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::hall::GateCode;
+use crate::id::Id;
 use crate::poi::ChunkPos;
 use crate::quest::{QuestId, QuestKind, Standing, Step};
 use crate::skill::SkillId;
@@ -95,6 +96,38 @@ pub enum QuestNews {
     /// may know (stairs they remember, a giver's door, a known poi). Sent
     /// whenever it changes; none for a quest means no dot on this level.
     Dots(Vec<QuestDots>),
+    /// The quest bosses on the level the player is on that they can see, and
+    /// the sign over each: sent whenever it changes, none for no sign.
+    Bosses(Vec<BossMark>),
+    /// Quests whose boss the character killed before taking them: each giver's
+    /// town has a marker on the maps until the quest is taken. Sent with the
+    /// log and whenever it changes.
+    Slain(Vec<SlainBoss>),
+}
+
+/// The sign over a quest boss for one player.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BossMark {
+    /// The mob, as in `EntityLook::id`.
+    pub id: Id,
+    pub sign: BossSign,
+}
+
+/// Which sign a quest boss has over it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BossSign {
+    /// A red "!": someone's quest, which the player doesn't have and hasn't
+    /// dealt with (owner).
+    Unknown,
+    /// The player's own quest step: the quest's colour.
+    Quest(QuestKind),
+}
+
+/// A quest whose boss the character has already dealt with, not taken yet.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SlainBoss {
+    pub id: QuestId,
+    pub kind: QuestKind,
 }
 
 /// The cells of the level the player is on that one quest's dots go on.
@@ -136,6 +169,9 @@ pub enum OfferState {
     Available {
         story: Box<Story>,
         reward: Vec<RewardPart>,
+        /// The character has already dealt with its boss: "I've already
+        /// dealt with it", and that step is done on taking it.
+        dealt_with: bool,
     },
     /// Not yet: what the giver says of why ("!" in grey).
     Locked(Vec<Hint>),
@@ -161,6 +197,8 @@ pub enum Hint {
     },
     /// The giver wants someone good at this.
     Skill(SkillId),
+    /// The giver has heard the character dealt with the quest's boss.
+    DealtWith,
 }
 
 /// A door's marker. A giver with quests in several states shows the first of

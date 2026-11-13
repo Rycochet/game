@@ -177,6 +177,7 @@ pub(super) fn bury(
             by: dead.harmed_by.clone(),
             alignment: dead.alignment,
             provoked: provoked.collect(),
+            boss: dead.is_boss(),
         });
     }
     population.due.retain(|&(_, id)| id != mob);
@@ -191,12 +192,12 @@ pub(super) fn bury(
     if kept_with == SiteId::Wilderness {
         super::wild::touched(world, dead.home);
     }
-    // What it had is saved with the level it belongs on, wherever it has got to;
-    // one made by developer tools is never kept, so nothing is marked dead.
-    let dev_made = dead.is_dev_made();
+    // What it had is saved with the level it belongs on, wherever it has got to.
+    // One not kept (developer tools', a quest's extras) is never marked dead.
+    let kept = dead.is_kept();
     let site = world.site_mut(kept_with);
     let saved = site.levels.entry(dead.home_level).or_default();
-    if !dev_made {
+    if kept {
         saved.dead.insert(dead.number);
     }
     saved.mobs.remove(&dead.number);

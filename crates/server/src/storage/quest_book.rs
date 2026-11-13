@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use shared::hall::GateCode;
 use shared::poi::ChunkPos;
 use shared::quest::QuestId;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Everything a character has done with quests on a planet.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,6 +28,10 @@ pub struct QuestBook {
     /// Standing points by town (`quests::standing` turns them into tiers).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub standing: BTreeMap<ChunkPos, u32>,
+    /// Quests whose boss the character killed before taking them (owner):
+    /// the giver offers them with that step done. Kept until taken.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub slain: BTreeSet<QuestId>,
     /// The quest followed under the minimap, chosen in the Quest Log (none:
     /// the newest taken).
     #[serde(default, skip_serializing_if = "Option::is_none")]

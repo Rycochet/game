@@ -387,6 +387,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                         least: crate::quest::Standing::Known,
                     },
                     super::Hint::Earlier,
+                    super::Hint::DealtWith,
                 ]),
             }],
         }),
@@ -404,6 +405,23 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 slot: crate::quest::Slot::Feeder,
             },
             cells: vec![(4, -7)],
+        }])),
+        ServerMessage::Quest(super::QuestNews::Bosses(vec![
+            super::BossMark {
+                id: crate::id::Id::for_test(9),
+                sign: super::BossSign::Unknown,
+            },
+            super::BossMark {
+                id: crate::id::Id::for_test(10),
+                sign: super::BossSign::Quest(crate::quest::QuestKind::Normal),
+            },
+        ])),
+        ServerMessage::Quest(super::QuestNews::Slain(vec![super::SlainBoss {
+            id: crate::quest::QuestId {
+                town: crate::poi::ChunkPos { x: 1, y: -2 },
+                slot: crate::quest::Slot::Feeder,
+            },
+            kind: crate::quest::QuestKind::Normal,
         }])),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],
