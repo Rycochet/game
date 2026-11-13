@@ -6,7 +6,7 @@ use super::super::{Exit, SiteLevel, StairsDirection};
 use super::{
     BORDER, BuildingOptions, CELLS_PER_EXTRA_STAIRS, EXTRA_STAIRS_PERCENT, MIN_FLOOR_SIZE,
     MIN_STAIRS_GAP, MIN_TAPERED_FLOOR, MOST_EXTRA_STAIRS, Outline, SAME_SIZE_PERCENT,
-    SMALL_TOP_PERCENT, Shape, add_windows,
+    SMALL_TOP_PERCENT, Shape, Walled, add_windows,
 };
 use crate::rng::Seed;
 
@@ -33,6 +33,8 @@ pub struct Plan {
     /// A ruined building's floors, all of them, from the ground up; empty if
     /// it isn't ruined.
     pub(super) ruined: Vec<SiteLevel>,
+    /// A wall round the ground floor, if it has one.
+    pub(super) wall: Option<Walled>,
 }
 
 impl Plan {
@@ -194,6 +196,7 @@ impl Plan {
             None => floors[0],
         };
 
+        let wall = (options.wall.as_ref()).and_then(|wall| Walled::plan(wall, seed, &floors[0]));
         let mut plan = Self {
             seed,
             width: width + 2 * BORDER,
@@ -206,6 +209,7 @@ impl Plan {
             ground_windows: options.ground_windows,
             stilts: options.stilts,
             ruined: Vec::new(),
+            wall,
         };
         if options.ruin > 0 {
             let storeys = plan.floors.len() as u32;

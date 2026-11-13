@@ -6,7 +6,7 @@ use shared::movement::{FlatGround, WildHeights};
 use shared::poi::ChunkPos;
 use shared::protocol::SeenStairs;
 use shared::relief::Relief;
-use shared::site::{BuildingLook, FieldLook, Rect, SiteLevel, Stairs};
+use shared::site::{BuildingLook, FieldLook, SiteLevel, Stairs};
 use shared::wilderness::{BLOCK_SIZE, BlockPos, SCALE};
 use std::collections::BTreeSet;
 
@@ -26,6 +26,8 @@ pub(super) struct Window {
     /// Town cutouts' buildings and farm cutouts' fields, as players see them.
     pub(super) buildings: Vec<BuildingLook>,
     pub(super) fields: Vec<FieldLook>,
+    /// Walls round cutouts' buildings (walled forts), as players see them.
+    pub(super) walls: Vec<shared::site::WallLook>,
     /// The doors of its cutouts, as they are now.
     pub(super) doors: VisitDoors,
 }
@@ -103,12 +105,14 @@ fn window_of(world: &mut ServerWorld, (x, y): (i64, i64), blocks: i64) -> Window
             entrance: None,
             buildings: Vec::new(),
             fields: Vec::new(),
+            walls: Vec::new(),
         },
         stairs: Vec::new(),
         mirrors: Vec::new(),
         cutouts: Vec::new(),
         buildings: Vec::new(),
         fields: Vec::new(),
+        walls: Vec::new(),
         doors: VisitDoors::new(),
     };
     for chunk in chunks {
@@ -264,23 +268,7 @@ fn add_cutout(world: &mut ServerWorld, frame: &Frame, chunk: ChunkPos, window: &
         let x = stairs.x + turn;
         window.level.stairs.push(Stairs { x, ..*stairs });
     }
-    let turned = |rect: Rect| Rect {
-        x: rect.x + turn,
-        ..rect
-    };
-    for building in &wild_chunk.buildings {
-        window.buildings.push(BuildingLook {
-            rects: building.rects.iter().copied().map(turned).collect(),
-            door: (building.door.0 + turn, building.door.1),
-            ..building.clone()
-        });
-    }
-    for field in &wild_chunk.fields {
-        window.fields.push(FieldLook {
-            rect: turned(field.rect),
-            ..*field
-        });
-    }
+    super::window_looks::add_looks(window, wild_chunk, turn);
     let Some((ox, oy)) = cutout.offset() else {
         return;
     };

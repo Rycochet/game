@@ -36,6 +36,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
     let gates = gates_of(&maps.wild, &world.pois);
     let plan = ChunkPlan::new(&maps.wild, chunk, poi.zip(site.as_ref()), &gates, &roads);
     let (mut stairs, mut buildings, mut fields) = (Vec::new(), Vec::new(), Vec::new());
+    let mut walls = Vec::new();
     let (mut entrance, mut town, mut spawns) = (None, Vec::new(), Vec::new());
     let border = plan.cutout().map(Cutout::border).unwrap_or_default();
     let flats = plan
@@ -48,6 +49,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
         entrance = entrance_of(cutout, &first);
         if let Some(offset) = cutout.offset() {
             (buildings, fields) = looks(&first, offset);
+            walls = first.walls.iter().map(|wall| wall.moved(offset)).collect();
             town.clone_from(&first.buildings);
             spawns = first_level_mobs(cutout.poi(), &first, offset);
         }
@@ -57,6 +59,7 @@ pub(in crate::sites) fn ensure_chunk(world: &mut ServerWorld, chunk: ChunkPos) {
         stairs,
         buildings,
         fields,
+        walls,
         town,
         spawns,
         border,

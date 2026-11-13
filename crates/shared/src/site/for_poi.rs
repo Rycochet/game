@@ -7,10 +7,25 @@ use super::farm::FarmOptions;
 use super::herbalist::HerbalistOptions;
 use super::oasis::OasisOptions;
 use super::town::TownOptions;
+use super::wall::{WallMaterial, WallOptions};
 use crate::poi::PoiKind;
 
 /// Of the places in outside walls a window could go, how many have one.
 const WINDOWS_PERCENT: u32 = 30;
+
+/// Half of forts have a wall round them (owner, 2026-11-13): 2 to 8 cells
+/// out, with a pond of 2 × 2 to 3 × 3 inside, mostly of planks or stone,
+/// sometimes logs.
+const FORT_WALL: WallOptions = WallOptions {
+    percent: 50,
+    gap: (2, 8),
+    pond: Some((2, 3)),
+    materials: &[
+        (WallMaterial::Plank, 40),
+        (WallMaterial::Stone, 40),
+        (WallMaterial::Log, 20),
+    ],
+};
 
 impl Generator {
     /// The generator for each kind of world map poi.
@@ -38,6 +53,7 @@ impl Generator {
                 windows_percent: WINDOWS_PERCENT,
                 ground_windows,
                 stilts: false,
+                wall: None,
             })
         };
         let cave = |size, levels, entrance, doors, water_percent, lava_percent| {
@@ -80,6 +96,7 @@ impl Generator {
                     windows_percent: WINDOWS_PERCENT,
                     ground_windows,
                     stilts: false,
+                    wall: None,
                 },
                 fields: (1, 8),
             }),
@@ -100,6 +117,7 @@ impl Generator {
                     windows_percent: WINDOWS_PERCENT,
                     ground_windows,
                     stilts: false,
+                    wall: None,
                 },
                 strips: (3, 5),
                 length: (7, 12),
@@ -161,13 +179,21 @@ impl Generator {
                 4,
                 12,
             )),
-            Fort => at_least_three_floors(building(
+            // Always a basement (owner); half have a wall round them.
+            Fort => match at_least_three_floors(building(
                 (30, 50),
                 (26, 44),
                 &[Rectangle, CutCorners],
                 3,
                 12,
-            )),
+            )) {
+                Self::Building(options) => Self::Building(BuildingOptions {
+                    basement_percent: 100,
+                    wall: Some(FORT_WALL),
+                    ..options
+                }),
+                other => other,
+            },
             StonePyramid | SandPyramid => Self::Building(BuildingOptions {
                 width: (25, 45),
                 height: (25, 45),
@@ -185,6 +211,7 @@ impl Generator {
                 windows_percent: 0,
                 ground_windows,
                 stilts: false,
+                wall: None,
             }),
         }
     }

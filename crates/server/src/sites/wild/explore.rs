@@ -216,6 +216,7 @@ fn send_looks(
     client.link.send(&ServerMessage::Buildings(made.buildings))
         && client.link.send(&ServerMessage::Keepers(keepers))
         && client.link.send(&ServerMessage::Fields(made.fields))
+        && client.link.send(&ServerMessage::Walls(made.walls))
         && send_borders(client, cutouts)
 }
 
@@ -231,6 +232,7 @@ fn set_ins(visit: &Visit) -> &[SetIn] {
 struct Looks {
     buildings: Vec<BuildingLook>,
     fields: Vec<FieldLook>,
+    walls: Vec<shared::site::WallLook>,
 }
 
 impl Looks {
@@ -238,6 +240,7 @@ impl Looks {
         Looks {
             buildings: std::mem::take(&mut made.buildings),
             fields: std::mem::take(&mut made.fields),
+            walls: std::mem::take(&mut made.walls),
         }
     }
 }

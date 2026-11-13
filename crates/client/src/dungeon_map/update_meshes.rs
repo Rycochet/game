@@ -228,6 +228,7 @@ pub(super) fn update_meshes(
         &dungeon.buildings[..],
         &town_lights.0,
         &dungeon.fields[..],
+        &dungeon.walls[..],
         ruined,
     );
     let (seen_now, place) = (

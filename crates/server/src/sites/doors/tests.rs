@@ -255,3 +255,49 @@ fn a_step_into_a_closed_door_is_refused_and_the_door_told_again() {
     });
     assert!(told, "{answers:?}");
 }
+
+/// Into a walled fort, standing outside its gate: the gate's two doors.
+fn outside_a_gate(test: &mut TestClient) -> [(i64, i64); 2] {
+    let walled = (0..100)
+        .find(|&n| {
+            let site =
+                shared::site::Site::new(shared::poi::PoiKind::Fort, shared::rng::Seed::new(n));
+            !site.level(0).walls.is_empty()
+        })
+        .expect("a walled fort");
+    test.send(&[ClientMessage::DevEnterSite {
+        kind: shared::poi::PoiKind::Fort,
+        seed: walled,
+        level: 0,
+        ruin: 0,
+    }]);
+    let visit = test.client.visit.as_ref().unwrap();
+    let gate = visit.level.walls[0].gates[0];
+    let (x, y) = (gate.x, gate.y + 1);
+    test.send(&[ClientMessage::DevTeleport { x, y }]);
+    gate.cells()
+}
+
+#[test]
+fn a_gates_two_doors_start_open_and_close_together() {
+    let mut test = TestClient::new();
+    let [first, second] = outside_a_gate(&mut test);
+    assert_eq!(swing_of(&test, first), swing_of(&test, second));
+    ask(&mut test, DoorAsk::DevAll { open: false });
+    assert_eq!(swing_of(&test, first), Swing::Closed);
+    ask(
+        &mut test,
+        DoorAsk::Open {
+            x: first.0,
+            y: first.1,
+        },
+    );
+    assert_eq!(swing_of(&test, first), Swing::Open(Side::North));
+    assert_eq!(swing_of(&test, second), Swing::Open(Side::North));
+    let visit = test.client.visit.as_ref().unwrap();
+    let saved = &test.world.site(visit.id).levels[&visit.index].doors;
+    assert_eq!(saved[&second].swing, Swing::Open(Side::North));
+    ask(&mut test, DoorAsk::CloseNear);
+    assert_eq!(swing_of(&test, first), Swing::Closed);
+    assert_eq!(swing_of(&test, second), Swing::Closed);
+}

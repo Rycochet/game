@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::super::wall::WallOptions;
+
 /// The shape of a building seen from above.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Outline {
@@ -53,4 +55,6 @@ pub struct BuildingOptions {
     /// Raised on pillars: the ground floor is only covered ground and lone
     /// pillars, with one staircase up to the floors above.
     pub stilts: bool,
+    /// A wall round it, if it may have one (forts).
+    pub wall: Option<WallOptions>,
 }

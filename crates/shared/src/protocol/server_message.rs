@@ -166,9 +166,10 @@ pub enum ServerMessage {
     /// A town's buildings, sent after `EnterLevel` and before its cells:
     /// players know a town's layout from the start.
     Buildings(Vec<crate::site::BuildingLook>),
-    /// A farm's fields, sent after `EnterLevel` on its ground floor: what is
-    /// needed to choose what grows in them.
+    /// A farm's fields, sent after `EnterLevel` on its ground floor.
     Fields(Vec<crate::site::FieldLook>),
+    /// A walled fort's walls, after `Fields` (always in the wilderness).
+    Walls(Vec<crate::site::WallLook>),
     /// The player is now in the Hall of Worlds (`shared::hall`), at `at`. The
     /// client works out its cells itself. Positions in the Hall (this, and
     /// `Position`, `Teleported`, entities, `DevTeleport`) are counted from

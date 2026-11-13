@@ -60,6 +60,7 @@ impl Town {
             entrance: Some(entrance),
             buildings,
             fields: Vec::new(),
+            walls: Vec::new(),
         }
     }
 

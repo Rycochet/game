@@ -13,15 +13,14 @@ mod fences;
 mod lay_out;
 mod options;
 mod plan;
-mod pond;
 mod tracks;
 
-use fences::{fence_field, fence_line};
+use fences::fence_field;
+pub(super) use fences::fence_line;
 use lay_out::lay_out;
 pub(super) use lay_out::{Plot, surroundings};
 pub use options::{FarmOptions, FieldLook};
 pub use plan::Plan;
-use pond::dig_pond;
 use tracks::lay_tracks;
 
 /// Ground left between the house's yard, each field and the next. At least 1

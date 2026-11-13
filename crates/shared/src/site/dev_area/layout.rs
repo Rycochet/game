@@ -97,5 +97,6 @@ pub(super) fn with_stairs(level: Level, at: (i64, i64)) -> SiteLevel {
         entrance: Some(at),
         buildings: Vec::new(),
         fields: Vec::new(),
+        walls: Vec::new(),
     }
 }

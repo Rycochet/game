@@ -11,9 +11,11 @@ use shared::dungeon::Cell;
 
 use super::super::mesh::Surface;
 use super::super::outlined::{OUTLINE_WIDTH, Prism, add_face, grow_convex};
+use super::gate_leaf::gate_hinge;
 use super::leaf_pose::{LeafPose, askew};
 use super::{
-    FRAME_SHADE, Layer, Layers, OPENING_HALF, Opening, Scene, Tile, half_thickness, heights,
+    FRAME_SHADE, HALF_CELL, Layer, Layers, OPENING_HALF, Opening, Scene, Tile, half_thickness,
+    heights,
 };
 
 /// A leaf's thickness, and the gap left round it in the hole.
@@ -40,7 +42,9 @@ pub(super) fn sides_of(x: i64, y: i64) -> (f32, f32) {
 impl Tile<'_> {
     /// A door's leaf, as it hangs, and the lines round its hole for the x-ray.
     pub(super) fn door_leaf(&self, layers: &mut Layers, layer: Layer, opening: &Opening) {
+        let gate = gate_hinge(self.scene, (self.x, self.y));
         let (hinge_side, _) = sides_of(self.x, self.y);
+        let hinge_side = gate.unwrap_or(hinge_side);
         // As it is drawn now: swinging, or as it hangs.
         let at = (self.x, self.y);
         let pose = self.scene.leaves.get(&at).copied();
@@ -57,8 +61,15 @@ impl Tile<'_> {
         let through = -opening.out * swing * cos - opening.along * hinge_side * sin;
         // The leaf's shape: across from the hinge, and up, a little inside
         // the hole.
-        let width = 2.0 * OPENING_HALF - LEAF_GAP;
+        // A gate's leaf reaches to the middle of the gate, to meet the other.
+        let width = match gate {
+            Some(_) => OPENING_HALF + HALF_CELL - LEAF_GAP / 2.0,
+            None => 2.0 * OPENING_HALF - LEAF_GAP,
+        };
         let mut profile = vec![Vec2::new(0.0, 0.0), Vec2::new(width, 0.0)];
+        if gate.is_some() {
+            profile.push(Vec2::new(width, opening.top(0.0) - LEAF_GAP));
+        }
         let mut tops: Vec<Vec2> = opening
             .columns()
             .into_iter()
@@ -100,7 +111,9 @@ impl Tile<'_> {
             add_face(&mut layers.outlined.black, corners, normal);
             add_face(&mut layers.outlined.lines, corners, normal);
         }
-        for side in [1.0, -1.0] {
+        // A gate stands in a rampart, which has no hole to show the line of.
+        let sides: &[f32] = if gate.is_some() { &[] } else { &[1.0, -1.0] };
+        for &side in sides {
             self.rim(
                 opening,
                 side,

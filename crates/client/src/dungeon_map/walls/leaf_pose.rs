@@ -29,7 +29,9 @@ impl LeafPose {
     /// hanging askew. A door whose swing isn't known is open, the way a hash
     /// of its cell says.
     pub fn of(level: &Level, at: (i64, i64)) -> Self {
-        let (_, hashed) = sides_of(at.0, at.1);
+        // A gate's two leaves turn the same way.
+        let first = shared::door::gate_first_leaf(level, at.0, at.1);
+        let (_, hashed) = sides_of(first.0, first.1);
         let secret = level.cell(at.0, at.1) == Cell::SecretDoor;
         let way = |side: Side| match side {
             Side::South | Side::East => 1.0,

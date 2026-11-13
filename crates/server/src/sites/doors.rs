@@ -4,7 +4,7 @@
 //! everyone else on the level when one changes. A door in a poi's cutout in the
 //! wilderness is its site's (`Mirror`), so both see the same.
 
-use shared::door::{Door, Side, Swing, door_is_outside, starting_door};
+use shared::door::{Door, Side, Swing, door_is_outside, gate_first_leaf, starting_door};
 use shared::dungeon::{Cell, Level};
 use shared::poi::Poi;
 use shared::site::PoiLook;
@@ -20,6 +20,7 @@ use crate::storage::SiteId;
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod act;
+mod gate;
 mod kick;
 mod locks;
 mod looks;
@@ -105,9 +106,12 @@ fn first_door(
     (x, y): (i64, i64),
     at: (i64, i64),
 ) -> Door {
-    let outside = door_is_outside(level, x, y);
-    let runs = level.opening_runs_east_west(x, y);
-    let secret = level.cell(x, y) == Cell::SecretDoor;
+    // A gate's two leaves start as one: as its west or north one.
+    let (fx, fy) = gate_first_leaf(level, x, y);
+    let at = (at.0 + fx - x, at.1 + fy - y);
+    let outside = door_is_outside(level, fx, fy);
+    let runs = level.opening_runs_east_west(fx, fy);
+    let secret = level.cell(fx, fy) == Cell::SecretDoor;
     starting_door(poi, ruined, index, at, secret, outside, runs)
 }
 

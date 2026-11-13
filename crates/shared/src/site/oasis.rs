@@ -93,6 +93,7 @@ fn lay_out(options: &OasisOptions, seed: Seed) -> SiteLevel {
         entrance: Some(entrance),
         buildings: Vec::new(),
         fields: Vec::new(),
+        walls: Vec::new(),
     }
 }
 

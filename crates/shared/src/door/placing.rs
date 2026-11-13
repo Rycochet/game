@@ -30,6 +30,8 @@ pub fn place_locks(
     let doors: Vec<((i64, i64), bool)> = level
         .swings()
         .filter(|&(_, swing)| swing.is_shut())
+        // Never a gate: its two leaves go together.
+        .filter(|&((x, y), _)| super::gate_partner(level, x, y).is_none())
         .map(|((x, y), _)| ((x, y), level.cell(x, y) == Cell::SecretDoor))
         .collect();
     for ((x, y), secret) in doors {

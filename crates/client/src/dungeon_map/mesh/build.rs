@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::dungeon::{Level, Sight};
 use shared::protocol::SeenStairs;
-use shared::site::{BuildingLook, FieldLook};
+use shared::site::{BuildingLook, FieldLook, WallLook};
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::liquid::LooksLiquid;
@@ -49,7 +49,7 @@ pub fn build(
     cut: &Sight,
     wild: Option<Wild>,
 ) -> DungeonMeshes {
-    let looks = (buildings, lit_buildings, fields, ruined);
+    let looks = (buildings, lit_buildings, fields, &[][..], ruined);
     let no_swings = BTreeMap::new();
     let seen = (views, sight, remembered, cut);
     build_posed(
@@ -71,10 +71,11 @@ pub fn build_posed(
     (views, sight, remembered, cut): (&[View], &Sight, &Sight, &Sight),
     light: &LightGrid,
     stairs: &[SeenStairs],
-    (buildings, lit_buildings, fields, ruined): (
+    (buildings, lit_buildings, fields, walls, ruined): (
         &[BuildingLook],
         &BTreeSet<u16>,
         &[FieldLook],
+        &[WallLook],
         bool,
     ),
     (camera, shape): (Vec3, Shape),
@@ -99,6 +100,7 @@ pub fn build_posed(
         buildings,
         lit_buildings,
         fields,
+        walls,
         ruined,
         tint: wild.and_then(|wild| wild.tints),
         heights: wild.map(|wild| wild.heights),

@@ -26,6 +26,7 @@ mod options;
 mod plan;
 mod shape;
 mod splitter;
+mod walled;
 
 use doors::{add_doors, add_extra_doors, join_corridors};
 use entrances::{add_entrances, between};
@@ -34,6 +35,7 @@ pub use options::{BuildingOptions, Outline};
 pub use plan::Plan;
 pub(super) use shape::Shape;
 use splitter::{Corridor, Rect, Splitter};
+use walled::Walled;
 
 /// Outside ground round the ground floor, in cells.
 const BORDER: i64 = 3;

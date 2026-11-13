@@ -3,10 +3,11 @@
 use super::super::SiteLevel;
 use super::super::building::{self};
 use super::super::grid::{chance, roll};
+use super::super::pond::{PondShape, dig_pond};
 use super::super::town::Rect;
 use super::{
     ALL_CROPS_PERCENT, ALL_PASTURE_PERCENT, BORDER, FarmOptions, FieldLook, LANE, MIN_FIELD,
-    PLACE_SIZE, POND_PERCENT, dig_pond, fence_field, lay_tracks,
+    PLACE_SIZE, POND_BLOBS, POND_PERCENT, POND_REACH, fence_field, lay_tracks,
 };
 use crate::dungeon::{Cell, Level};
 use crate::rng::{Rng, Seed};
@@ -41,7 +42,11 @@ pub(super) fn lay_out(options: &FarmOptions, seed: Seed, house: &building::Plan)
     let mut gates = Vec::new();
     for (index, &plot) in plots.iter().enumerate() {
         if pond && index + 1 == plots.len() {
-            dig_pond(&mut level, &mut rng, plot);
+            let shape = PondShape {
+                blobs: POND_BLOBS,
+                reach: POND_REACH,
+            };
+            dig_pond(&mut level, &mut rng, plot, shape);
             continue;
         }
         let gate = fence_field(&mut level, &mut rng, plot, entrance, ruin);

@@ -19,9 +19,11 @@ mod farm;
 mod grid;
 mod herbalist;
 mod oasis;
+mod pond;
 mod ruin;
 pub use ruin::MAX_RUIN;
 mod town;
+mod wall;
 
 pub use building::{BuildingOptions, Outline};
 pub use cave::{CaveEntrance, CaveOptions};
@@ -30,6 +32,7 @@ pub use farm::{FarmOptions, FieldLook};
 pub use herbalist::HerbalistOptions;
 pub use oasis::OasisOptions;
 pub use town::{BuildingKind, BuildingLook, Rect, RoofKind, TownBuilding, TownOptions, WallKind};
+pub use wall::{Gate, PoiWall, WallLook, WallMaterial, WallOptions};
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod descent;
