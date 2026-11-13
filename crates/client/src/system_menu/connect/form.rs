@@ -174,8 +174,8 @@ pub(in crate::system_menu) fn use_connect(
                     key,
                     name,
                 });
-                // Straight to Character Select, or for a guest straight in
-                // (owner, 2026-11-10: `connection`).
+                // Straight to Character Select, guests too (owner,
+                // 2026-11-13: `connection`).
                 *play_for = PlayFor::Choose;
                 *session = Session::Playing;
                 *menu = SystemMenu::Closed;

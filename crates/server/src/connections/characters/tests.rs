@@ -107,8 +107,20 @@ fn a_guest_may_have_only_one() {
     let (list, can_create) = offered(&answers(&again)[1..]);
     assert_eq!((list.len(), can_create), (1, false));
     again.send(&make("Bo"));
-    let _ = tick(connections, world);
+    let (mut connections, world) = tick(connections, world);
     assert!(matches!(answers(&again)[..], [ServerMessage::Refused(_)]));
+
+    // But may delete theirs and make another (owner, 2026-11-13).
+    let ash = list[0].summary.id;
+    let (third, link) = local_pair();
+    connections.add(link);
+    third.send(&MAKES);
+    third.send(&GUEST);
+    third.send(&ClientMessage::DeleteCharacter { id: ash });
+    let (connections, world) = tick(connections, world);
+    let told = answers(&third);
+    assert_eq!(offered(&told[2..]), (Vec::new(), true), "{told:?}");
+    let _ = made(&third, "Bo", connections, world);
 }
 
 #[test]

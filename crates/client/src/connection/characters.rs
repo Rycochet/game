@@ -1,7 +1,8 @@
 //! The account's characters: what the server offers (`Characters`), played at
 //! once for Play or shown for choosing (`common::CharacterSelect`), what the
 //! player chooses there (`CharacterChoice`), and which servers this computer
-//! has characters on, for Play (`Preferences::played_on`).
+//! has characters on, for Continue (`Preferences::played_on`, with a kept
+//! login).
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, ServerMessage};
@@ -9,8 +10,8 @@ use shared::protocol::{ClientMessage, ServerMessage};
 use super::socket::Target;
 use super::{Connecting, FromServer, ServerConnection};
 use crate::common::{
-    CharacterChoice, CharacterSelect, ChosenServer, MakingCharacter, PlayDifficulty, PlayFor,
-    PlayableHere, Preferences, Session,
+    AccountEmail, CharacterChoice, CharacterSelect, ChosenServer, MakingCharacter, PlayDifficulty,
+    PlayFor, PlayableHere, Preferences, Session,
 };
 
 /// What `Preferences::played_on` calls a server.
@@ -35,10 +36,10 @@ fn note_played(preferences: &mut Preferences, target: &Target, any: bool) {
     }
 }
 
-/// Takes what the server offers. The first offer after connecting for Continue,
-/// or as a guest, goes straight to the character played last (a guest with none
-/// straight to making one); anything else (Characters or Connect, none to play,
-/// or an offer after one was deleted) shows the screen.
+/// Takes what the server offers. The first offer after connecting for Continue
+/// goes straight to the character played last; anything else (Characters or
+/// Connect, guests too, none to play, or an offer after one was deleted) shows
+/// the screen (owner, 2026-11-13).
 #[allow(clippy::too_many_arguments)]
 pub(super) fn answer_characters(
     mut commands: Commands,
@@ -48,7 +49,6 @@ pub(super) fn answer_characters(
     mut select: ResMut<CharacterSelect>,
     play_for: Res<PlayFor>,
     mut preferences: ResMut<Preferences>,
-    mut making: ResMut<MakingCharacter>,
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -74,15 +74,10 @@ pub(super) fn answer_characters(
                 select.list = list.clone();
                 select.can_create = *can_create;
                 let latest = select.sorted().first().map(|c| c.summary.id);
-                let straight_in = first && (*play_for == PlayFor::Latest || connecting.as_guest);
                 match latest {
-                    Some(id) if straight_in => {
+                    Some(id) if first && *play_for == PlayFor::Latest => {
                         connection.link.send(&ClientMessage::ChooseCharacter { id });
                         select.open = false;
-                    }
-                    None if straight_in && connecting.as_guest && *can_create => {
-                        select.open = false;
-                        making.0 = true;
                     }
                     _ => {
                         select.open = true;
@@ -143,18 +138,33 @@ pub(super) fn choose_character(
     }
 }
 
-/// Whether Play's server has a character of this player's, for the startup
-/// menu: again whenever that may have changed.
+/// Whether Continue's server has a character of this player's to go back to,
+/// for the startup menu: again whenever that may have changed. Only with a
+/// login kept for it (or the built-in server, which has none): a guest, or an
+/// account the server has forgotten, comes in through Characters (owner,
+/// 2026-11-13).
 pub(super) fn show_playable(
     chosen: Res<ChosenServer>,
     connecting: Res<Connecting>,
     preferences: Res<Preferences>,
+    email: Res<AccountEmail>,
     mut playable: ResMut<PlayableHere>,
 ) {
-    if !chosen.is_changed() && !preferences.is_changed() && !connecting.is_changed() {
+    let changed = chosen.is_changed() || preferences.is_changed() || connecting.is_changed();
+    // A login kept or forgotten changes the email shown.
+    if !changed && !email.is_changed() {
         return;
     }
     let target = Target::choose(&chosen, connecting.environment);
-    let here = preferences.played_on.contains(&played_key(&target));
+    let here = preferences.played_on.contains(&played_key(&target)) && logged_in(&target);
     playable.set_if_neq(PlayableHere(here));
+}
+
+/// Whether Continue would be logged in on that server without asking.
+fn logged_in(target: &Target) -> bool {
+    match target {
+        #[cfg(not(target_arch = "wasm32"))]
+        Target::Embedded => true,
+        Target::Url { .. } => super::saved_login::saved(target).is_some(),
+    }
 }

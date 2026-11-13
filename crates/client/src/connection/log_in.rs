@@ -215,7 +215,6 @@ fn guest(connection: &ServerConnection, connecting: &mut Connecting) -> Result<(
         None => super::guest::token(&connecting.target)?,
     };
     connecting.guest = Some(token);
-    connecting.as_guest = true;
     connection
         .link
         .send(&ClientMessage::Login(Credentials::Guest(token)));
