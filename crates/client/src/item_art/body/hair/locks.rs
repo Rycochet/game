@@ -20,7 +20,7 @@ fn root(skull: &Skull, cover: &Cover, turn: f32, height: f32) -> Option<Vec3> {
 
 /// How far back of the spine hanging hair keeps, to lie over the back (and armour).
 fn behind(skull: &Skull, thick: f32) -> f32 {
-    skull.neck_base.z - skull.chest_deep - thick - 25.0
+    skull.neck_base.z - skull.chest_back - thick - 25.0
 }
 
 /// A tail from the back of the head, tied near its root, down to between the shoulders.

@@ -29,7 +29,7 @@ pub struct Ring {
 
 impl Ring {
     /// A ring round the spine, as deep in front as behind.
-    const fn round(along: i32, (half, deep): (i32, i32)) -> Ring {
+    pub(super) const fn round(along: i32, (half, deep): (i32, i32)) -> Ring {
         Ring {
             along,
             half,

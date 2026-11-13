@@ -1,6 +1,6 @@
 # Plan: more accurate creature models
 
-Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks) and PR 3 (animal heads, ears, necks, tails) are built. Each PR keeps this file up to date.
+Agreed with the owner 2026-11-10 to 2026-11-12, in 6 PRs. PR 1 (the measuring tool, `cargo xtask shapes`), PR 2 (animal trunks), PR 3 (animal heads, ears, necks, tails) and PR 4 (humanoid trunks) are built. Each PR keeps this file up to date.
 
 ## Goal
 
@@ -49,7 +49,7 @@ The humanoids are recognisable; the animals (wolf, cattle, horse, chicken) are n
 | 1 | Measuring tool and source files (built) | | blocking |
 | 2 | Trunk outlines for the four-legged animals (built) | 1 | blocking |
 | 3 | Animal heads, ears, necks, tails (built) | 2 | independent |
-| 4 | Humanoid trunk and limbs from the base human | 2 | independent |
+| 4 | Humanoid trunk and limbs from the base human (built) | 2 | independent |
 | 5 | Beast peoples' heads | 3 | waits for 3 |
 | 6 | Markings | 2 | independent |
 
@@ -86,11 +86,13 @@ How it measures, and what to know when using the figures:
 - `Parts`: `Ears::{Swept, Upright, Sideways, Dropped}` (`ear_shape`), `Tail::{Plain, Bushy, Thin, Tufted}` (`tail_shape`), `dewlap`, `udder`, `comb`. Wolf: upright ears, a bushy hanging tail, a thicker neck and a 25 mm coat on its trunk (`Fourfoot::coat`). Cattle: sideways ears under the horns, a thin tail with its switch, dewlap and udder (`item_art/body/extras.rs`). Horse: upright ears. Hen: comb and wattles.
 - For PR 5: a beast people's head is a `HeadShape` too (`DOG_HEAD` is measured for it), placed on its frame's chin; helmets (`armour/head/face.rs`) then need checking against it, as the bipeds' oval is what they fit now.
 
-### PR 4: humanoids
-- The base human measured into rings; each people's rings follow from its `Proportions`, as its frame does.
-- `trunk_half` and `trunk_depth` (what armour is offset from, used in about 11 files) read the rings, so armour follows the new surface; front and back now differ, so those calls say which.
-- A test that every armour, footwear and underclothes sample stays outside the body, and a look through Item Pictures for each kind.
-- The riskiest PR: a piece that clips needs its model adjusting.
+### PR 4: humanoid trunks (built)
+- The tool measures the base mesh standing upright (`xtask/src/shapes/upright.rs`): level rings from the crotch to the `neck` joint, front and back from a line straight up through the hip joints (the spine of our bipeds), and each limb bone's half thickness across and front to back at five cuts square to it. Figures in `body/measured_person.rs` (`PERSON_TRUNK`, `MeasuredUpright`, thousandths of the height; checked by `xtask test`).
+- `MeasuredUpright::rings(frame)` puts them on any frame, so every people (and the giant, on its own figures) is shaped from its frame as before: the measured levels (crotch, hip joints, shoulders, neck) go to the frame's; widths are still the frame's (hips, waist, chest, shoulders, neck); depth is scaled to the frame's hips, waist and chest, split front and back as measured; the trunk leans back towards the top so the neck stays over the spine. The shape fades in from the hip joints (round, as before) to the waist, and the crotch ring (the hips', round) and the neck's base ring are as before, so legs, neck, head, helmets, tassets and leg armour's tops don't move (shaping the hips too sank tassets and chausses' seats into the belly). `Layout::biped` uses it; `rings::from_stations` remains for bodies with no measurements (birds, arthropods).
+- What it gives a person: the chest about 160 mm in front of the spine and 60 behind (shoulder blades 80), the small of the back about 50 behind; the frame's chest was 110 each way.
+- `item_art/armour/worn/tests.rs`: every sample item on every people stays outside the middle of the trunk's front and back (from a little above the hips to a little below the shoulders). Run against `master` too: there, as here, hidden parts (sleeve roots in the shoulders, tasset hinges under the fauld, leg pieces' seats) go inside the body by design; the strapped and tied breast bands' straps and knot and the barbe's pleats sank into the chest even before, and were fixed.
+- Client: an upright ring is drawn as half an oval in front of the spine and half behind (a level one, a beast's, as one oval round its middle as before; between for a leaning spine), and `trunk_half` gives a `Girth { across, front, back }` in that shape; `trunk_depth` takes which side. Torso shells, waist `Hips` (and so underclothes), neck `Around`, shoulders and capes follow it; beards and hanging hair keep off the rings' front and back.
+- Limbs were left as they were: the measured bones match the frames within a few millimetres (thigh 82 to 54 mm, shin 56 to 30, upper arm 45 to 38, forearm 38 to 23 against our 42 to 28).
 
 ### PR 5: beast peoples' heads
 - Minotaur from the cow head, kobold and lizardfolk from the reptile mouth, others where a target fits.

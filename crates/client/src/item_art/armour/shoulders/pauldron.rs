@@ -101,7 +101,7 @@ pub(super) fn add_cop_and_lames(
 pub(super) fn add_besagew(model: &mut Model, frame: &Frame, arm: &Arm, look: Look) {
     let x = arm.joint.x.abs() - arm.radius * 0.8;
     let y = arm.joint.y - arm.reach * 0.55;
-    let z = trunk_depth(frame, x, y) + WING_CLEAR + 8.0;
+    let z = trunk_depth(frame, x, y, true) + WING_CLEAR + 8.0;
     let centre = Vec3::new(arm.sign * x, y, z);
     let facing = Vec3::new(arm.sign * 0.3, 0.1, 1.0).normalize();
     add_disc(

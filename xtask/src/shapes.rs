@@ -24,6 +24,7 @@ mod table;
 mod target;
 #[cfg(test)]
 mod tests;
+mod upright;
 
 use std::fs;
 use std::path::Path;
@@ -33,13 +34,16 @@ pub use check::check;
 use fourfoot::Fourfoot;
 use head::Head;
 use mesh::Mesh;
+use upright::Upright;
 
 pub const USAGE: &str = "\
 Usage: cargo xtask shapes [rings=10]
 
-  Prints, for each four-legged beast in spare_assets/makehuman/ (cow, dog,
-  horse), `rings` rings along its trunk and its legs' thickness at levels up
-  from the ground, in thousandths of its height at the withers.";
+  Prints, for the base person in spare_assets/makehuman/, `rings` rings up
+  its trunk and its limbs' thickness, in thousandths of its height; for each
+  four-legged beast (cow, dog, horse), `rings` rings along its trunk and its
+  legs' thickness at levels up from the ground, in thousandths of its height
+  at the withers; and the heads' rings.";
 
 const SOURCE: &str = "spare_assets/makehuman";
 const BASE: &str = "base.obj";
@@ -91,9 +95,10 @@ pub fn run(root: &Path, args: &[String]) -> ExitCode {
     }
 }
 
-/// Every beast's tables.
+/// Every body's tables.
 fn measure_all(root: &Path, rings: usize) -> Result<Vec<String>, String> {
-    let mut tables = Vec::new();
+    let person = measure_upright(root, rings)?;
+    let mut tables = vec![table::upright("Person", BASE, &person)];
     for (name, target) in FOURFEET {
         let beast = measure(root, target, rings)?;
         tables.push(table::fourfoot(name, target, &beast));
@@ -115,6 +120,15 @@ fn reshaped(root: &Path, target: &str) -> Result<Mesh, String> {
     let mut mesh = Mesh::read(&read(BASE)?).map_err(|error| format!("{BASE}: {error}"))?;
     target::apply(&mut mesh, &read(target)?).map_err(|error| format!("{target}: {error}"))?;
     Ok(mesh)
+}
+
+/// The base mesh itself, a person standing upright, measured with `rings`
+/// rings up its trunk.
+fn measure_upright(root: &Path, rings: usize) -> Result<Upright, String> {
+    let path = root.join(SOURCE).join(BASE);
+    let text = fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mesh = Mesh::read(&text).map_err(|error| format!("{BASE}: {error}"))?;
+    Upright::measure(&mesh, rings).map_err(|error| format!("{BASE}: {error}"))
 }
 
 /// One head measured, `HEAD_RINGS` rings along it.

@@ -55,7 +55,7 @@ pub(super) fn wing_surface<'a>(
     move |u: f32, v: f32| {
         let x = outer + (inner - outer) * u;
         let y = top - v * drop * (0.55 + 0.45 * (PI * u).sin());
-        let deep = trunk_depth(frame, x, y) + WING_CLEAR;
+        let deep = trunk_depth(frame, x, y, front) + WING_CLEAR;
         let z = if front { deep } else { -deep };
         let normal = Vec3::new(sign * x * 0.004, 0.25, z.signum()).normalize();
         (Vec3::new(sign * x, y, z), normal)

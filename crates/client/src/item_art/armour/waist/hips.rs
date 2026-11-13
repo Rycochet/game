@@ -46,11 +46,8 @@ impl Hips<'_> {
     /// A point `out` millimetres off the trunk's skin at this height and angle, with the
     /// way out from it. Below the crotch the trunk's lowest ring carries on down.
     pub fn at(&self, height: f32, angle: f32, out: f32) -> (Vec3, Vec3) {
-        let (across, deep) = trunk_half(self.frame, height.max(self.crotch()));
-        let (a, b) = (across + out, deep + out);
-        let point = Vec3::new(a * angle.cos(), height, b * angle.sin());
-        let normal = Vec3::new(angle.cos() / a, 0.0, angle.sin() / b).normalize_or(Vec3::Z);
-        (point, normal)
+        let girth = trunk_half(self.frame, height.max(self.crotch()));
+        girth.grown(out).at(angle, height)
     }
 }
 

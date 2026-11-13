@@ -57,7 +57,8 @@ fn inside(frame: &Frame, point: Vec3) -> f32 {
         deepest = deepest.max((1.0 - scaled.length()) * f(frame.head.0));
     }
     if point.y <= f(frame.neck_base) && point.y > f(frame.waist) {
-        let (a, d) = trunk_half(frame, point.y);
+        let girth = trunk_half(frame, point.y);
+        let (a, d) = (girth.across, girth.deep(point.z >= 0.0));
         let ellipse = Vec2::new(point.x / a, point.z / d).length();
         if ellipse < 1.0 {
             deepest = deepest.max((1.0 - ellipse) * d);

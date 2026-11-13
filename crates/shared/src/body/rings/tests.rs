@@ -4,8 +4,9 @@ use crate::creature::CreatureKind;
 
 #[test]
 fn a_body_from_its_stations_keeps_its_six_levels() {
+    // Bipeds are shaped as measured now; their stations still make rings like this.
     let layout = Layout::biped(&PERSON.frame(), crate::body::NONE);
-    let rings = layout.spine.rings;
+    let rings = from_stations(&layout);
     let s = &layout.spine;
     assert_eq!(rings[1], Ring::round(0, s.hips.half));
     assert_eq!(rings[3], Ring::round(s.waist.along, s.waist.half));

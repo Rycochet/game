@@ -49,7 +49,8 @@ fn worn_pieces_are_on_the_torso_and_off_its_skin() {
         for corner in model.parts.iter().flat_map(|(_, t)| t.iter().flatten()) {
             // Away from the arms, where sleeves are.
             let level = frame.waist as f32..frame.chest as f32;
-            let (across, deep) = trunk_half(&frame, corner.y);
+            let girth = trunk_half(&frame, corner.y);
+            let (across, deep) = (girth.across, girth.deep(corner.z >= 0.0));
             if level.contains(&corner.y) && corner.x.abs() < across * 0.7 {
                 let inside = (corner.x / across).powi(2) + (corner.z / deep).powi(2);
                 assert!(inside > 1.0, "{look:?} {corner}");

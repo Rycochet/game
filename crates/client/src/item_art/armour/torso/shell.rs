@@ -142,8 +142,8 @@ impl Shell<'_> {
             None => top,
         };
         let y = bottom + (top - bottom) * v;
-        let (across, deep) = trunk_half(self.frame, y.min(self.frame.shoulder as f32 - 40.0));
-        let x = across * angle.cos();
+        let girth = trunk_half(self.frame, y.min(self.frame.shoulder as f32 - 40.0));
+        let x = girth.across * angle.cos();
         // Bell cuirasses flare out at the hem, all round.
         let flare = if self.breast == Some(Breast::Bell) {
             30.0 * (1.0 - v / 0.2).max(0.0).powi(2)
@@ -151,9 +151,6 @@ impl Shell<'_> {
             0.0
         };
         let out = self.out + self.shaping(angle, y, x) + flare;
-        let (a, b) = (across + out, deep + out);
-        let point = Vec3::new(a * angle.cos(), y, b * angle.sin());
-        let normal = Vec3::new(angle.cos() / a, 0.0, angle.sin() / b).normalize_or(Vec3::Z);
-        (point, normal)
+        girth.grown(out).at(angle, y)
     }
 }

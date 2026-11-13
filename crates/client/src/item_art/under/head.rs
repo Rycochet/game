@@ -8,7 +8,7 @@ use shared::underclothes::{Coif, CoifForm, Wimple, WimpleForm};
 
 use super::shape::Cloth;
 use crate::item_art::armour::{Model, Stuff};
-use crate::item_art::body::limb;
+use crate::item_art::body::{limb, trunk_depth};
 
 /// Off the head: clear of hair (6 mm, 9 long).
 const OFF_HAIR: f32 = 11.0;
@@ -128,8 +128,10 @@ impl Cloth<'_> {
                     chin + high * 0.15,
                     (neck + 30.0) * angle.cos(),
                 );
-                let bottom =
-                    Vec3::new(55.0 * angle.sin(), base - 60.0, (neck + 45.0) * angle.cos());
+                // Lying on the chest, which stands out in front of the neck.
+                let (x, y) = (55.0 * angle.sin(), base - 60.0);
+                let chest = trunk_depth(self.frame, x, y, true) + 6.0;
+                let bottom = Vec3::new(x, y, ((neck + 45.0) * angle.cos()).max(chest));
                 limb(model.of(Stuff::Shade), &[(top, 1.5), (bottom, 1.5)]);
             }
         }
