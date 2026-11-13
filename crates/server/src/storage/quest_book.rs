@@ -4,6 +4,7 @@
 //! (`shared::quest`). Times are Unix seconds, as dailies go by real days.
 
 use serde::{Deserialize, Serialize};
+use shared::hall::GateCode;
 use shared::poi::ChunkPos;
 use shared::quest::QuestId;
 use std::collections::BTreeMap;
@@ -27,6 +28,15 @@ pub struct QuestBook {
     /// Standing points by town (`quests::standing` turns them into tiers).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub standing: BTreeMap<ChunkPos, u32>,
+    /// The quest followed under the minimap, chosen in the Quest Log (none:
+    /// the newest taken).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tracked: Option<QuestId>,
+    /// The planet's name in runes, learned while there, so the Quest Log can
+    /// name it from anywhere (`None` until then, or if it isn't a Hall
+    /// planet).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<GateCode>,
 }
 
 /// How far along a quest taken is.
@@ -63,6 +73,15 @@ pub struct Dailies {
 pub const RETAKE_AFTER: i64 = 60 * 60;
 
 impl QuestBook {
+    /// Whether anything has been done with quests here: the Quest Log lists
+    /// the planet.
+    pub fn has_history(&self) -> bool {
+        !(self.taken.is_empty()
+            && self.done.is_empty()
+            && self.ended.is_empty()
+            && self.dailies.is_empty())
+    }
+
     /// Whether `id` may be taken again at `now`, as far as failing or giving
     /// it up goes.
     pub fn may_retake(&self, id: &QuestId, now: i64) -> bool {

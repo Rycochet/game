@@ -93,6 +93,7 @@ pub(crate) fn handle_messages(
     super::heal::heal_players(clients, &mut worlds);
     super::for_others::do_for_others(clients, &mut worlds);
     answer_look_ups(clients, &mut worlds);
+    crate::quests::answer_planet_logs(clients, &mut worlds);
     super::role_ask::refresh_roles(clients, accounts, &mut worlds);
     clients.retain(|client| !client.gone);
 }

@@ -12,23 +12,34 @@ use super::{
 pub(in crate::widgets) fn show_dropdowns(
     mut commands: Commands,
     mut open: ResMut<OpenList>,
-    changed: Query<(&Dropdown, &Children), Changed<Dropdown>>,
+    changed: Query<(Entity, &Dropdown, &Children), Changed<Dropdown>>,
     dropdowns: Query<&Dropdown>,
     mut labels: Query<&mut Text>,
     mut pictures: Query<&mut ImageNode>,
     rows: Query<Entity, With<ListRows>>,
 ) {
-    for (dropdown, children) in &changed {
+    for (entity, dropdown, children) in &changed {
+        let icon = dropdown.icons.get(dropdown.selected);
+        let mut pictured = false;
         for &child in children {
             if let Ok(mut text) = labels.get_mut(child) {
                 text.0 = label_of(dropdown);
             }
-            let icon = dropdown.icons.get(dropdown.selected);
-            if let (Ok(mut picture), Some(icon)) = (pictures.get_mut(child), icon)
-                && picture.image != *icon
-            {
-                picture.image = icon.clone();
+            if let Ok(mut picture) = pictures.get_mut(child) {
+                pictured = true;
+                if let Some(icon) = icon
+                    && picture.image != *icon
+                {
+                    picture.image = icon.clone();
+                }
             }
+        }
+        // A dropdown with words given pictures shows the chosen one's too.
+        if let (false, Some(icon)) = (pictured, icon) {
+            let picture = commands
+                .spawn((ImageNode::new(icon.clone()), picture_node()))
+                .id();
+            commands.entity(entity).insert_children(0, &[picture]);
         }
     }
     let Some(list) = &mut open.0 else {
@@ -94,12 +105,20 @@ fn with_icon(button: &mut EntityCommands, icon: Handle<Image>) {
         align_items: AlignItems::Center,
         ..default()
     });
-    let node = Node {
-        width: px(ROW_ICON),
+    let picture = button
+        .commands()
+        .spawn((ImageNode::new(icon), picture_node()))
+        .id();
+    button.insert_children(0, &[picture]);
+}
+
+/// An option's picture: a line high, as wide as its shape (square for an
+/// icon, long for a planet's runes).
+fn picture_node() -> Node {
+    Node {
         height: px(ROW_ICON),
         flex_shrink: 0.0,
+        margin: UiRect::right(px(GAP)),
         ..default()
-    };
-    let picture = button.commands().spawn((ImageNode::new(icon), node)).id();
-    button.insert_children(0, &[picture]);
+    }
 }

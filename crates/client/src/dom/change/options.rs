@@ -37,3 +37,17 @@ pub(super) fn set_options(
     }
     Ok(())
 }
+
+/// Gives a `select`'s options a picture each.
+pub(super) fn set_option_pictures(
+    world: &mut World,
+    entity: Entity,
+    pictures: Vec<Handle<Image>>,
+) -> Result<(), String> {
+    const WRONG: &str = "only a select's options can have pictures";
+    let control = world.get::<Control>(entity).copied();
+    let Control(widget) = control.ok_or(WRONG)?;
+    let mut dropdown = world.get_mut::<Dropdown>(widget).ok_or(WRONG)?;
+    dropdown.icons = pictures;
+    Ok(())
+}

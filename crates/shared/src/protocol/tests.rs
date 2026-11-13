@@ -364,6 +364,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
             markers: vec![
                 (4, super::Marker::Available(crate::quest::QuestKind::Daily)),
                 (5, super::Marker::Locked),
+                (6, super::Marker::Taken),
             ],
         }),
         ServerMessage::Quest(super::QuestNews::Talk {
@@ -391,8 +392,12 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
         }),
         ServerMessage::Quest(super::QuestNews::Planets(vec![super::PlanetQuests {
             world: crate::world::WorldSeed::new(5).id(),
+            code: crate::hall::GateCode::of_planet(crate::world::WorldSeed::new(5)),
+            here: false,
+            taken: true,
             ready: true,
         }])),
+        ServerMessage::Quest(super::QuestNews::Tracked(None)),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],
             items: Vec::new(),

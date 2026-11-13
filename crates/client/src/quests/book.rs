@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use shared::poi::ChunkPos;
-use shared::protocol::{LogEntry, Marker};
+use shared::protocol::{DailyDone, LogEntry, Marker, PlanetQuests, QuestState};
 use shared::quest::QuestId;
 use shared::world::WorldId;
 use std::collections::BTreeMap;
@@ -12,6 +12,34 @@ use std::collections::BTreeMap;
 #[derive(Resource, Default)]
 pub struct QuestBook {
     pub entries: BTreeMap<QuestId, LogEntry>,
+    /// The daily givers they have done dailies for here.
+    pub dailies: Vec<DailyDone>,
+    /// The quest they chose to follow (none: the newest taken).
+    pub tracked: Option<QuestId>,
+}
+
+/// Every planet the character has quest history on, as last told (asked for
+/// by the Quest Log, and told on coming into the Hall).
+#[derive(Resource, Default)]
+pub struct QuestPlanets(pub Vec<PlanetQuests>);
+
+impl QuestBook {
+    /// The quest followed: the one chosen while it is under way, else the
+    /// newest taken (Claude, in the quests plan).
+    pub fn followed(&self) -> Option<QuestId> {
+        let under_way =
+            |entry: &&LogEntry| matches!(entry.state, QuestState::Taken | QuestState::Ready);
+        let chosen = self.tracked.and_then(|id| self.entries.get(&id));
+        if let Some(entry) = chosen.filter(under_way) {
+            return Some(entry.id);
+        }
+        let newest = self
+            .entries
+            .values()
+            .filter(under_way)
+            .max_by_key(|entry| entry.at);
+        newest.map(|entry| entry.id)
+    }
 }
 
 /// Which steps of a quest are done, from how far along each is.

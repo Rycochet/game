@@ -32,6 +32,8 @@ pub(super) enum Change {
     Empty,
     /// A `select`'s options, each its value and its words.
     Options(Vec<(String, String)>),
+    /// A picture before each of a `select`'s options' words.
+    OptionPictures(Vec<Handle<Image>>),
     /// A panel that moves, brought in front of the others.
     Raise,
 }
@@ -105,6 +107,13 @@ impl Dom<'_> {
     /// and its words. Set its `value` after, to say which is chosen.
     pub fn set_options(&mut self, id: &str, options: impl IntoIterator<Item = (String, String)>) {
         self.ask(id, Change::Options(options.into_iter().collect()));
+    }
+
+    /// Gives a `select`'s options a picture each, shown before their words on
+    /// it and in its list, as tall as a line and as wide as the picture's
+    /// shape (a planet's runes). After `set_options`, which takes them off.
+    pub fn set_option_pictures(&mut self, id: &str, pictures: Vec<Handle<Image>>) {
+        self.ask(id, Change::OptionPictures(pictures));
     }
 }
 

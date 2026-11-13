@@ -224,6 +224,16 @@ fn golden() {
 }
 
 #[test]
+fn a_planet_is_named_by_its_first_gate() {
+    let code = GateCode::of_planet(WorldSeed::new(12345)).unwrap();
+    assert_eq!(code.to_string(), "ᚻᚠᚠ᛫ᚠᛇᚢᚣ");
+    assert_eq!(
+        GateCode::of_planet(WorldSeed::new(u64::from(PLANETS))),
+        None
+    );
+}
+
+#[test]
 fn rune_glyphs_fit_and_differ() {
     let mut shapes: Vec<Vec<Stroke>> = Vec::new();
     for strokes in RUNE_STROKES {

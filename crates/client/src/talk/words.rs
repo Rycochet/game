@@ -2,20 +2,13 @@
 //! is, what a giver says when a quest can't be taken yet (never numbers), and
 //! when something asked can't be done.
 
-use shared::lang::{Args, Lang, RenderError};
+use shared::lang::{Args, Lang};
 use shared::protocol::{Hint, QuestRefusal};
 use shared::quest::Standing;
 use shared::site::BuildingKind;
 use shared::story::Person;
 
-/// What could be written of a message: any part missing is left in braces
-/// (and logged), rather than nothing shown.
-pub(super) fn or_partly(written: Result<String, RenderError>) -> String {
-    written.unwrap_or_else(|error| {
-        bevy::log::warn!("Words missing in {}: {:?}", error.id, error.problems);
-        error.text
-    })
-}
+pub(super) use crate::quests::{or_partly, plain};
 
 /// The message naming what the giver of a building of `kind` does, if it has
 /// one ("occupation-potion-shop"): a house's has none.
@@ -71,10 +64,5 @@ pub(super) fn refusal(lang: &Lang, why: QuestRefusal) -> String {
         QuestRefusal::NotOffered => "refused-not-offered",
         QuestRefusal::NotReady => "refused-not-ready",
     };
-    or_partly(lang.render(id, &Args::new()))
-}
-
-/// A message with no values.
-pub(super) fn plain(lang: &Lang, id: &str) -> String {
     or_partly(lang.render(id, &Args::new()))
 }

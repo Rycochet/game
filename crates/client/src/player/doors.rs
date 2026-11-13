@@ -1,8 +1,8 @@
 //! Doors in the player's way. Walking into a closed door asks the server to
 //! open it (`DoorAsk::Open`) instead of stepping; a journey waits at one until
 //! it is open, or ends there if the server refuses (`DoorRefused`), or if the
-//! door itself was where it was going. The Close Doors key (L) closes the open
-//! doors beside the player. Nothing knows whether a key fits a lock: the door
+//! door itself was where it was going. The Open/Close Doors key (O) is
+//! `door_key`'s. Nothing knows whether a key fits a lock: the door
 //! is tried.
 
 use bevy::prelude::*;
@@ -10,7 +10,7 @@ use shared::door::door_cost;
 use shared::protocol::{ClientMessage, DoorAsk, ServerMessage};
 
 use super::{Player, Travel};
-use crate::common::{Action, CurrentDungeon, GameView, Preferences, SpentEnergy};
+use crate::common::{CurrentDungeon, SpentEnergy};
 use crate::connection::{FromServer, ToServer};
 
 /// Something asked of doors, for the server: sent by `send_door_asks`, which
@@ -47,20 +47,6 @@ pub(super) fn send_door_asks(
     for &AskDoor(ask) in asks.read() {
         to_server.write(ToServer(ClientMessage::Door(ask)));
         spent.write(SpentEnergy(door_cost()));
-    }
-}
-
-/// The Close Doors key (L): closes the open doors beside the player.
-pub(super) fn close_doors(
-    preferences: Res<Preferences>,
-    keys: Res<ButtonInput<KeyCode>>,
-    view: Res<State<GameView>>,
-    mut asks: MessageWriter<AskDoor>,
-) {
-    if *view.get() == GameView::Dungeon
-        && preferences.controls.just_pressed(&keys, Action::CloseDoors)
-    {
-        asks.write(AskDoor(DoorAsk::CloseNear));
     }
 }
 

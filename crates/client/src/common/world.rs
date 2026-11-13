@@ -127,6 +127,11 @@ impl KnownPois {
         self.names.get(&(chunk.y, chunk.x)).map(String::as_str)
     }
 
+    /// A chunk's poi, if the server has sent the chunk and it has one.
+    pub fn poi_in(&self, chunk: ChunkPos) -> Option<SeenPoi> {
+        self.chunks.get(&(chunk.y, chunk.x)).copied().flatten()
+    }
+
     /// Whether the server has sent a chunk (numbered as it does, wrapped round
     /// the planet).
     pub fn is_known(&self, chunk: ChunkPos) -> bool {

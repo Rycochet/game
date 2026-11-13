@@ -9,7 +9,10 @@
 
 use core::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use super::{GateAddress, GatePlace};
+use crate::world::WorldSeed;
 
 /// The runes codes are written in: the Anglo-Saxon futhorc in its usual
 /// order, without æsc (ᚫ), the easiest to mistake for ac (ᚪ).
@@ -58,10 +61,16 @@ const BITS_PER_RUNE: u32 = 5;
 
 /// A gate code, as each rune's index in `RUNES`. Any 7 runes make one, but
 /// only those whose design matches lead anywhere (`place`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GateCode(pub [u8; CODE_LENGTH]);
 
 impl GateCode {
+    /// A planet's own name in runes (owner: from its seed): the code of its
+    /// first World Gate. `None` if it isn't one of the Hall's planets.
+    pub fn of_planet(world: WorldSeed) -> Option<Self> {
+        GateAddress::for_world(world, 0).map(|address| Self::of(address.place()))
+    }
+
     pub fn of(place: GatePlace) -> Self {
         let value = (u64::from(place.design().index()) << 32) | u64::from(place.address().bits());
         let mut runes = [0; CODE_LENGTH];

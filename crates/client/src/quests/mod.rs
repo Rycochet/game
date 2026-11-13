@@ -13,10 +13,12 @@ mod look;
 mod over_view;
 mod poi_marks;
 mod read;
+mod words;
 
-pub use book::{DoorMarkers, GateQuests, QuestBook, done_steps};
+pub use book::{DoorMarkers, GateQuests, QuestBook, QuestPlanets, done_steps};
 pub use look::MarkLook;
 pub use poi_marks::QuestPois;
+pub use words::{or_partly, plain, reward_line, step_lines};
 
 pub struct QuestsPlugin;
 
@@ -25,6 +27,7 @@ impl Plugin for QuestsPlugin {
         app.init_resource::<QuestBook>()
             .init_resource::<DoorMarkers>()
             .init_resource::<GateQuests>()
+            .init_resource::<QuestPlanets>()
             .init_resource::<QuestPois>()
             .add_systems(
                 Update,
@@ -39,4 +42,4 @@ impl Plugin for QuestsPlugin {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

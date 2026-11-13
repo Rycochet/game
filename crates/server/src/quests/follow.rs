@@ -3,6 +3,7 @@
 //! town they are in.
 
 use shared::creature::CreatureKind;
+use shared::hall::GateCode;
 use shared::poi::ChunkPos;
 use shared::world::WorldId;
 
@@ -26,11 +27,21 @@ pub(crate) struct Seen {
     town: Option<ChunkPos>,
     /// They are in the Hall, and have been told their planets.
     hall: bool,
+    /// A planet whose log they asked for this tick (`planet_log`).
+    planet_log: Option<WorldId>,
 }
 
 impl Seen {
     pub(crate) fn town(&self) -> Option<ChunkPos> {
         self.town
+    }
+
+    pub(crate) fn ask_planet_log(&mut self, world: WorldId) {
+        self.planet_log = Some(world);
+    }
+
+    pub(crate) fn take_planet_log(&mut self) -> Option<WorldId> {
+        self.planet_log.take()
     }
 }
 
@@ -52,6 +63,8 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
             world: client.world,
             ..Seen::default()
         };
+        // Learned here, so the Quest Log can name the planet from anywhere.
+        client.character.quests.code = GateCode::of_planet(world.seed);
         let whole = log::whole_log(client, world);
         client
             .link

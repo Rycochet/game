@@ -16,8 +16,9 @@ pub enum Action {
     Up,
     /// Down the stairs underfoot, or into the wilderness from the world map.
     Down,
-    /// Close the open doors beside the player (until the FAB menu has a way).
-    CloseDoors,
+    /// Close an open door beside the player, or else open the closed one they
+    /// face or stand beside (owner: O, as L went to the Quest Log).
+    OpenCloseDoors,
     /// Turn the character (not the camera) left, an eighth a tap or while
     /// held. No key by default (owner, 2026-11-12).
     FaceLeft,
@@ -40,6 +41,8 @@ pub enum Action {
     Abilities,
     /// The Skills page.
     Skills,
+    /// The Quest Log panel.
+    QuestLog,
     /// Use the action bar's slot (0 to 9, keys 1 to 0).
     UseSlot(u8),
     FullMap,
@@ -80,14 +83,14 @@ impl Group {
 }
 
 impl Action {
-    pub const ALL: [Self; 34] = [
+    pub const ALL: [Self; 35] = [
         Self::StepUp,
         Self::StepDown,
         Self::StepLeft,
         Self::StepRight,
         Self::Up,
         Self::Down,
-        Self::CloseDoors,
+        Self::OpenCloseDoors,
         Self::FaceLeft,
         Self::FaceRight,
         Self::TurnLeft,
@@ -111,6 +114,7 @@ impl Action {
         Self::Inventory,
         Self::Abilities,
         Self::Skills,
+        Self::QuestLog,
         Self::FullMap,
         Self::TurnItem,
         Self::DebugMenu,
@@ -126,7 +130,7 @@ impl Action {
             Self::StepRight => "Step Right",
             Self::Up => "Up / Leave",
             Self::Down => "Down / Explore",
-            Self::CloseDoors => "Close Doors",
+            Self::OpenCloseDoors => "Open/Close Doors",
             Self::FaceLeft => "Turn Left",
             Self::FaceRight => "Turn Right",
             Self::TurnLeft => "Turn Camera Left",
@@ -140,6 +144,7 @@ impl Action {
             Self::Inventory => "Inventory",
             Self::Abilities => "Abilities",
             Self::Skills => "Skills",
+            Self::QuestLog => "Quest Log",
             Self::UseSlot(slot) => BAR_NAMES[slot as usize % BAR_NAMES.len()],
             Self::FullMap => "Full Map",
             Self::TurnItem => "Turn Held Item",
@@ -157,7 +162,7 @@ impl Action {
             Self::StepRight => "step_right",
             Self::Up => "up",
             Self::Down => "down",
-            Self::CloseDoors => "close_doors",
+            Self::OpenCloseDoors => "open_close_doors",
             Self::FaceLeft => "turn_left",
             Self::FaceRight => "turn_right",
             Self::TurnLeft => "turn_camera_left",
@@ -171,6 +176,7 @@ impl Action {
             Self::Inventory => "inventory",
             Self::Abilities => "abilities",
             Self::Skills => "skills",
+            Self::QuestLog => "quest_log",
             Self::UseSlot(slot) => BAR_IDS[slot as usize % BAR_IDS.len()],
             Self::FullMap => "full_map",
             Self::TurnItem => "turn_item",
@@ -194,14 +200,14 @@ impl Action {
     pub fn group(self) -> Group {
         match self {
             Self::StepUp | Self::StepDown | Self::StepLeft | Self::StepRight => Group::Movement,
-            Self::Up | Self::Down | Self::CloseDoors => Group::Movement,
+            Self::Up | Self::Down | Self::OpenCloseDoors => Group::Movement,
             Self::FaceLeft | Self::FaceRight => Group::Movement,
             Self::TurnLeft | Self::TurnRight | Self::ZoomIn | Self::ZoomOut => Group::Camera,
             Self::ResetView => Group::Camera,
             Self::NextTarget | Self::PreviousTarget => Group::Targeting,
             Self::UseSlot(_) => Group::ActionBar,
             Self::Character | Self::Inventory | Self::Abilities | Self::Skills => Group::Interface,
-            Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
+            Self::QuestLog | Self::FullMap | Self::TurnItem | Self::DebugMenu => Group::Interface,
             Self::FullScreen => Group::Interface,
         }
     }
@@ -220,7 +226,7 @@ impl Action {
             Self::StepRight => [key(KeyCode::KeyD), key(KeyCode::Numpad6)],
             Self::Up => [shift(KeyCode::Comma), key(KeyCode::NumpadDecimal)],
             Self::Down => [shift(KeyCode::Period), key(KeyCode::Numpad0)],
-            Self::CloseDoors => [key(KeyCode::KeyL), None],
+            Self::OpenCloseDoors => [key(KeyCode::KeyO), None],
             Self::FaceLeft | Self::FaceRight => [None, None],
             Self::TurnLeft => [None, key(KeyCode::Numpad7)],
             Self::TurnRight => [None, key(KeyCode::Numpad9)],
@@ -234,6 +240,7 @@ impl Action {
             Self::Inventory => [key(KeyCode::KeyI), None],
             Self::Abilities => [key(KeyCode::KeyB), None],
             Self::Skills => [key(KeyCode::KeyK), None],
+            Self::QuestLog => [key(KeyCode::KeyL), None],
             Self::UseSlot(slot) => [key(BAR_KEYS[slot as usize % BAR_KEYS.len()]), None],
             Self::FullMap => [key(KeyCode::KeyM), None],
             Self::TurnItem => [key(KeyCode::KeyR), None],

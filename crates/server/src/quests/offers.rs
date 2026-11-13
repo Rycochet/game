@@ -123,8 +123,9 @@ pub(crate) fn on_offer(
         .map(|offer| offer.quest)
 }
 
-/// The marker over each giver's door in a town that has one: "?" first, then
-/// "!", then a grey "!".
+/// The marker over each giver's door in a town that has one, by the owner's
+/// order: "?" to hand in, a grey "?" for one under way, "!" on offer, then a
+/// grey "!".
 pub(crate) fn town_markers(
     client: &Client,
     world: &mut ServerWorld,
@@ -141,22 +142,20 @@ pub(crate) fn town_markers(
     let mut markers = Vec::new();
     for building in buildings {
         let offers = giver_offers(client, world, town, building, now);
-        let marker = offers.iter().find_map(|offer| match offer.state {
-            OfferState::Ready => Some(Marker::Ready(offer.quest.kind)),
-            _ => None,
-        });
-        let marker = marker.or_else(|| {
-            offers.iter().find_map(|offer| match offer.state {
-                OfferState::Available { .. } => Some(Marker::Available(offer.quest.kind)),
-                _ => None,
-            })
-        });
-        let locked = offers
-            .iter()
-            .any(|offer| matches!(offer.state, OfferState::Locked(_)));
-        if let Some(marker) = marker.or(locked.then_some(Marker::Locked)) {
-            markers.push((building, marker));
+        if let Some(marker) = offers.iter().map(marker_of).min_by_key(|m| m.0) {
+            markers.push((building, marker.1));
         }
     }
     markers
+}
+
+/// The marker one quest would give its giver's door, with its rank (lowest
+/// shows).
+fn marker_of(offer: &Offered) -> (u8, Marker) {
+    match offer.state {
+        OfferState::Ready => (0, Marker::Ready(offer.quest.kind)),
+        OfferState::Taken => (1, Marker::Taken),
+        OfferState::Available { .. } => (2, Marker::Available(offer.quest.kind)),
+        OfferState::Locked(_) => (3, Marker::Locked),
+    }
 }

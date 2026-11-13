@@ -13,7 +13,7 @@ The Hall of Worlds: a special place with fixed rules, made by no generator. A ma
 - `GatePlace { column, side }`: `from_number(u32)` / `number()` (`2 × column + side`, north first: every `u32` is one gate), `at(x, y)`, `x()`, `y()`, `front()` (the walkway tile in front), `address()`, `design()`, `code()`.
 - `GateAddress`: `new(seed, entrance)` (`None` past `PLANETS` or 16), `for_world(WorldSeed, entrance)`, `from_bits` / `bits()` (`entrance << 28 | seed`), `seed()`, `entrance()` (the order `WorldGates::find` gives), `world()`, `place()`.
 - `GateDesign` (`RoundArch`, `SquareLintel`, `PointedArch`, `HorseshoeArch`, `Ogee`, `Trefoil`, `SteppedCorbel`, `Keyhole`; `ALL`, `of(place)`, `index()`): from a hash of the place.
-- `GateCode([u8; 7])`: `of(place)`, `place()` (`None` if the design doesn't match: a typo), `parse(text)` (ignores spaces and `SEPARATOR`), `Display` (3 runes, `SEPARATOR` ᛫, 4 runes). `RUNES` (32), `CODE_LENGTH` (7). `RUNE_STROKES`: each rune as straight strokes on a 4 × 6 grid (`y` down), `SEPARATOR_STROKES` the dot: what every rune shown anywhere is drawn from, never a font (owner), so they are identical (tests: on the grid, no two alike).
+- `GateCode([u8; 7])` (`Serialize`): `of(place)`, `of_planet(WorldSeed)` (a planet's own name in runes: its first World Gate's code; `None` off the Hall's planets), `place()` (`None` if the design doesn't match: a typo), `parse(text)` (ignores spaces and `SEPARATOR`), `Display` (3 runes, `SEPARATOR` ᛫, 4 runes). `RUNES` (32), `CODE_LENGTH` (7). `RUNE_STROKES`: each rune as straight strokes on a 4 × 6 grid (`y` down), `SEPARATOR_STROKES` the dot: what every rune shown anywhere is drawn from, never a font (owner), so they are identical (tests: on the grid, no two alike).
 
 ## Depends on
 

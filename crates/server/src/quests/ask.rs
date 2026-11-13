@@ -3,8 +3,10 @@
 
 use bevy::prelude::*;
 use shared::protocol::{Offer, QuestAsk, QuestNews, ServerMessage};
+use shared::quest::QuestId;
 
 use super::clock::unix_now;
+use super::planets::tell_planets;
 use super::{accept, give_up, log, offers, send_markers, turn_in};
 use crate::ServerWorld;
 use crate::connections::Client;
@@ -51,5 +53,22 @@ pub(crate) fn answer_quest(client: &mut Client, world: &mut ServerWorld, ask: Qu
             let whole = log::whole_log(client, world);
             client.link.send(&ServerMessage::Quest(whole))
         }
+        QuestAsk::PlanetLog(planet) => {
+            client.quest_seen.ask_planet_log(planet);
+            true
+        }
+        QuestAsk::Planets => tell_planets(client),
+        QuestAsk::Track(id) => track(client, id),
     }
+}
+
+/// Follows a quest taken on this planet (or none). One not taken is refused
+/// by answering with what is followed now.
+fn track(client: &mut Client, id: Option<QuestId>) -> bool {
+    let book = &mut client.character.quests;
+    if id.is_none_or(|id| book.taken.contains_key(&id)) {
+        book.tracked = id;
+    }
+    let news = QuestNews::Tracked(book.tracked);
+    client.link.send(&ServerMessage::Quest(news))
 }
