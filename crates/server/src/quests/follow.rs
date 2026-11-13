@@ -7,6 +7,7 @@ use shared::poi::ChunkPos;
 use shared::world::WorldId;
 
 use super::clock::unix_now;
+use super::planets::tell_planets;
 use super::progress::{Event, advance};
 use super::{log, send_markers, standing};
 use crate::ServerWorld;
@@ -23,6 +24,8 @@ pub(crate) struct Seen {
     place: Option<(ChunkPos, u32)>,
     /// The town they are in, if any: markers follow.
     town: Option<ChunkPos>,
+    /// They are in the Hall, and have been told their planets.
+    hall: bool,
 }
 
 impl Seen {
@@ -54,6 +57,11 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
             .link
             .send(&shared::protocol::ServerMessage::Quest(whole));
     }
+    let in_hall = client.character.hall.is_some();
+    if in_hall && !client.quest_seen.hall {
+        tell_planets(client);
+    }
+    client.quest_seen.hall = in_hall;
     let place: Option<QuestPlace> = client.visit.as_ref().and_then(|visit| visit.quest_place());
     let key = place.map(|place| (place.poi.chunk, place.level));
     if key == client.quest_seen.place {

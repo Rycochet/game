@@ -94,6 +94,11 @@ impl Client {
     }
 
     /// Whether it is being disconnected.
+    /// What the character knows of worlds other than this one, by world.
+    pub(crate) fn other_worlds(&self) -> &BTreeMap<shared::world::WorldId, CharacterWorldSave> {
+        &self.other_worlds
+    }
+
     pub(crate) fn is_gone(&self) -> bool {
         self.gone
     }

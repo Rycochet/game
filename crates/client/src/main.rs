@@ -31,14 +31,15 @@ mod minimap;
 mod notices;
 mod planet_view;
 mod player;
+mod quests;
 mod site;
 mod skills_page;
 mod step_pad;
 mod surface_style;
 mod system_menu;
+mod talk;
 mod target;
 mod touch;
-mod trade;
 mod ui;
 mod view3d;
 mod vitals;
@@ -124,7 +125,7 @@ fn main() {
         character_create::CharacterCreatePlugin,
         entities::EntitiesPlugin,
         ground::GroundPlugin,
-        trade::TradePlugin,
+        talk::TalkPlugin,
         item_art::ItemArtPlugin,
         planet_view::PlanetViewPlugin,
         hall_view::HallViewPlugin,
@@ -139,6 +140,7 @@ fn main() {
     app.add_plugins(step_pad::StepPadPlugin);
     app.add_plugins(notices::NoticesPlugin);
     app.add_plugins(accounts_panel::AccountsPanelPlugin);
+    app.add_plugins(quests::QuestsPlugin);
     app.add_plugins(app_icon::AppIconPlugin);
 
     // Native only: developer tools. (The embedded single-player server is

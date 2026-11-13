@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{OpenTrades, beside};
+use super::{OpenTalks, beside};
 use crate::common::{GameView, MapPosition};
 use crate::dom::{UiEvent, UiValue};
 use crate::player::Player;
@@ -10,42 +10,42 @@ use crate::player::Player;
 /// Esc closes the panel opened last rather than opening the system menu.
 pub(super) fn close_on_escape(
     mut keys: ResMut<ButtonInput<KeyCode>>,
-    mut open: ResMut<OpenTrades>,
+    mut open: ResMut<OpenTalks>,
     nodes: Query<(), With<Node>>,
     mut commands: Commands,
 ) {
-    open.0.retain(|trade| nodes.contains(trade.panel));
+    open.0.retain(|talk| nodes.contains(talk.panel));
     if !open.0.is_empty()
         && keys.clear_just_pressed(KeyCode::Escape)
-        && let Some(trade) = open.0.pop()
+        && let Some(talk) = open.0.pop()
     {
-        commands.entity(trade.panel).despawn();
+        commands.entity(talk.panel).despawn();
     }
 }
 
 /// Walking out of reach or leaving the map closes a panel, and so does its
-/// close button, which says so by its id (`trade#<with>/panel`): its document
+/// close button, which says so by its id (`talk#<key>/panel`): its document
 /// goes then.
 pub(super) fn close_when_left(
     mut events: MessageReader<UiEvent>,
     view: Res<State<GameView>>,
     player: Single<&MapPosition, With<Player>>,
     nodes: Query<(), With<Node>>,
-    mut open: ResMut<OpenTrades>,
+    mut open: ResMut<OpenTalks>,
     mut commands: Commands,
 ) {
     let on_map = *view.get() == GameView::Dungeon;
     let closed =
-        |event: &&UiEvent| event.id.parts() == ("trade", "panel") && event.value == UiValue::Closed;
+        |event: &&UiEvent| event.id.parts() == ("talk", "panel") && event.value == UiValue::Closed;
     let closed: Vec<_> = events.read().filter(closed).collect();
     let closed: Vec<_> = closed.iter().filter_map(|event| event.id.which()).collect();
-    open.0.retain(|trade| {
-        if !nodes.contains(trade.panel) {
+    open.0.retain(|talk| {
+        if !nodes.contains(talk.panel) {
             return false;
         }
-        let stays = on_map && beside(**player, trade.place) && !closed.contains(&trade.grid.with);
+        let stays = on_map && beside(**player, talk.place) && !closed.contains(&talk.key());
         if !stays {
-            commands.entity(trade.panel).despawn();
+            commands.entity(talk.panel).despawn();
         }
         stays
     });

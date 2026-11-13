@@ -42,4 +42,5 @@ pub(super) struct Sources<'w, 's> {
     pub(super) pois: Query<'w, 's, (&'static Portal, &'static Token)>,
     pub(super) asset_server: Res<'w, AssetServer>,
     pub(super) full: Res<'w, FullMap>,
+    pub(super) quest_pois: Res<'w, crate::quests::QuestPois>,
 }
