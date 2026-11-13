@@ -30,7 +30,10 @@ pub(super) fn add(app: &mut App) {
         // After `Update`, where the widgets say what was done to them.
         .add_systems(
             PostUpdate,
-            bridge::report.before(super::build::build_documents),
+            (
+                bridge::report.before(super::build::build_documents),
+                label::fade_labels,
+            ),
         );
 }
 

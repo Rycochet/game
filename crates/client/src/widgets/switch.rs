@@ -57,9 +57,13 @@ pub(super) struct Slides(pub(super) HashMap<SlideKey, f32>);
 pub(super) struct SwitchTrack(pub(super) Entity);
 #[derive(Component)]
 pub(super) struct SwitchThumb(pub(super) Entity);
+/// The box of the tick or the cross, its strokes in it.
+#[derive(Component)]
+pub(super) struct SwitchMark(pub(super) Entity);
 
 /// A switch, `on` or off, with `node` for where it goes (its size is its own).
-/// Disable it with `ButtonState::Disabled`. Insert its `UiId` on what this returns.
+/// Disable it with `ButtonState::Disabled`: it then shows a plain grey track,
+/// a dim thumb with no shadow and faint marks, and doesn't light up. Insert its `UiId` on what this returns.
 pub fn spawn_switch<'a>(
     parent: &'a mut ChildSpawnerCommands,
     state: ButtonState,
@@ -96,8 +100,8 @@ pub fn spawn_switch<'a>(
                 )),
             ))
             .with_children(|track| {
-                spawn_mark(track, 0.0, &TICK);
-                spawn_mark(track, TRACK.x / 2.0, &CROSS);
+                spawn_mark(track, id, 0.0, &TICK);
+                spawn_mark(track, id, TRACK.x / 2.0, &CROSS);
             });
         inside.spawn((
             SwitchThumb(id),
@@ -110,24 +114,33 @@ pub fn spawn_switch<'a>(
                 border_radius: BorderRadius::MAX,
                 ..default()
             },
-            BackgroundColor(show::THUMB_COLOUR),
-            BoxShadow::new(show::THUMB_SHADOW, px(0), px(1), px(0), px(3)),
+            BackgroundColor(show::thumb_colour(state.is_disabled())),
+            BoxShadow::new(
+                show::shadow_colour(state.is_disabled()),
+                px(0),
+                px(1),
+                px(0),
+                px(3),
+            ),
         ));
     });
     switch
 }
 
 /// A tick or cross in the half of the track starting `left`.
-fn spawn_mark(track: &mut ChildSpawnerCommands, left: f32, strokes: &[Stroke]) {
+fn spawn_mark(track: &mut ChildSpawnerCommands, switch: Entity, left: f32, strokes: &[Stroke]) {
     track
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            left: px(left + (TRACK.x / 2.0 - MARK_BOX) / 2.0),
-            top: px((TRACK.y - MARK_BOX) / 2.0),
-            width: px(MARK_BOX),
-            height: px(MARK_BOX),
-            ..default()
-        })
+        .spawn((
+            SwitchMark(switch),
+            Node {
+                position_type: PositionType::Absolute,
+                left: px(left + (TRACK.x / 2.0 - MARK_BOX) / 2.0),
+                top: px((TRACK.y - MARK_BOX) / 2.0),
+                width: px(MARK_BOX),
+                height: px(MARK_BOX),
+                ..default()
+            },
+        ))
         .with_children(|mark| super::spawn_strokes(mark, strokes, show::MARK_COLOUR));
 }
 

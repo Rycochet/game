@@ -12,6 +12,7 @@ use shared::protocol::{OnlineSettings, OnlineState, RouterPort};
 
 use super::super::{Action, BUTTON_ROW, FONT, GAP, SystemMenu};
 use crate::common::{Hosting, Preferences};
+use crate::dom::HelpAfter;
 use crate::widgets::{
     ButtonPressed, ButtonState, HoverTip, INK, Pressable, Switch, TextSize, UiId, WARNING_TEXT,
     copy_to_clipboard, field_label, spawn_copy_button, spawn_switch,
@@ -53,15 +54,22 @@ pub(super) fn spawn_upnp_rows(panel: &mut ChildSpawnerCommands, width: f32) {
         Some(true) => ButtonState::DisabledSelected,
     };
     let mut switch_row = panel.spawn(row.clone());
-    if environment.is_some() {
-        switch_row.insert(HoverTip(SET_BY_ENVIRONMENT.into()));
-    }
+    let mut label = None;
     switch_row.with_children(|row| {
-        row.spawn(field_label("Open the port on my router (UPnP)"));
+        label = Some(
+            row.spawn(field_label("Open the port on my router (UPnP)"))
+                .id(),
+        );
         let on = environment.unwrap_or(false);
         spawn_switch(row, state, on, default())
             .insert((UpnpSwitch, UiId::new("server_options", "upnp")));
     });
+    // A "?" after the words says there is a reason it can't be changed.
+    if environment.is_some()
+        && let Some(label) = label
+    {
+        switch_row.insert((HoverTip(SET_BY_ENVIRONMENT.into()), HelpAfter(label)));
+    }
     panel.spawn(row).with_children(|row| {
         row.spawn((
             RouterText,

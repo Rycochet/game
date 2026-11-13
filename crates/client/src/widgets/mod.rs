@@ -66,7 +66,7 @@ pub use fullscreen::{
     spawn_sized_layer,
 };
 pub use hold_button::HoldButton;
-pub use hover_tip::HoverTip;
+pub use hover_tip::{HoverTip, Pinned, PinnedTip};
 pub use item::{
     CELL, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
     PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
@@ -155,6 +155,7 @@ impl Plugin for WidgetsPlugin {
             .add_message::<KeyChosen>()
             .init_resource::<key_box::KeyWaiting>()
             .init_resource::<switch::Slides>()
+            .init_resource::<PinnedTip>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
             .init_resource::<crate::common::BandShift>()
@@ -235,7 +236,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 Update,
                 (
-                    (tabs::choose_tabs, tabs::press_tabs, tabs::show_tab_feet).chain(),
+                    (tabs::choose_tabs, tabs::press_tabs, tabs::show_tab_bottoms).chain(),
                     feedback::spread_ripples,
                     feedback::show_button_tooltips,
                     progress::show_progress,

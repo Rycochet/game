@@ -49,12 +49,19 @@ fn state(app: &App, swatch: Entity) -> ButtonState {
 }
 
 #[test]
-fn swatches_are_square_and_a_line_as_tall_as_a_dropdown() {
+fn swatches_are_square_and_a_line_as_tall_as_a_button() {
     let (mut app, _) = app();
     let first = swatch(&mut app, 0);
     let node = app.world().get::<Node>(first).unwrap();
     assert_eq!(node.width, node.height);
-    assert_eq!(node.width, px(line_height(TextSize::Medium)));
+    // A line of writing, and a button's padding above and below it.
+    let (Val::Px(above), Val::Px(below)) = (BUTTON_PADDING.top, BUTTON_PADDING.bottom) else {
+        unreachable!()
+    };
+    assert_eq!(
+        node.width,
+        px(line_height(TextSize::Medium) + above + below)
+    );
 }
 
 #[test]

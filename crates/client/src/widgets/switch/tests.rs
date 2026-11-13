@@ -81,3 +81,17 @@ fn a_disabled_switch_stays_as_it_is() {
     assert!(press(&mut app, switch).is_empty());
     assert_eq!(app.world().get::<Switch>(switch), Some(&Switch(true)));
 }
+
+#[test]
+fn a_disabled_switch_is_plainly_disabled() {
+    use super::show::{mark_colour, shadow_colour, thumb_colour};
+    // The same flat grey whichever way it is set.
+    assert_eq!(
+        track_colour(0.0, true, Hover::Away),
+        track_colour(1.0, true, Hover::Away)
+    );
+    assert_ne!(thumb_colour(true), thumb_colour(false));
+    assert_eq!(shadow_colour(true).alpha(), 0.0);
+    assert!(shadow_colour(false).alpha() > 0.0);
+    assert!(mark_colour(true).alpha() < mark_colour(false).alpha());
+}

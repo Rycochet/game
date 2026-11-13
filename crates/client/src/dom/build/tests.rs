@@ -16,6 +16,8 @@ pub(crate) fn app() -> App {
         .init_asset::<Image>()
         // What the input systems read.
         .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<crate::widgets::PinnedTip>()
         .init_resource::<bevy::input::mouse::AccumulatedMouseScroll>()
         .init_resource::<crate::common::UiPointer>()
         // What the widgets showing controls say, and are told.

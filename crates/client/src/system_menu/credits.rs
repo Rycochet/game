@@ -10,13 +10,20 @@ use crate::html;
 use crate::widgets::{AutoScroll, UiId};
 
 /// The layer: a title with a close button, and the list, which scrolls by
-/// itself. Each entry is a copy of the template, filled from `CREDITS`.
+/// itself. Each group's heading and entry is a copy of a template, filled
+/// from `CREDITS`.
 static CREDITS_LAYER: Template = html!(
     "system_menu.credits",
     r#"
 <form id="credits">
   <dialog id="layer" title="Credits" modal closable depth="1" width="560" hidden>
     <scroll id="list" max-height="65%" auto>
+      <template id="heading">
+        <div class="tight" align="center" width="496" margin-top="8" margin-bottom="12">
+          <h2 id="title"/>
+          <hr/>
+        </div>
+      </template>
       <template id="entry">
         <div class="tight" align="center" width="496" margin-bottom="12">
           <p id="what" class="faint"/>
@@ -29,42 +36,71 @@ static CREDITS_LAYER: Template = html!(
 "#
 );
 
-/// What was done, and by whom (or what it is, and whose).
-pub(super) const CREDITS: &[(&str, &str)] = &[
-    ("Created by", "Ryc O'Chet"),
-    ("Code and placeholder 3D images", "Claude Code (Opus 5.5)"),
+/// A heading, and under it what was done, and by whom (or what it is, and
+/// whose). A group with no heading stands on its own at the end.
+pub(super) type Group = (&'static str, &'static [(&'static str, &'static str)]);
+
+/// Who made the game, and what it is made with, by type.
+pub(super) const CREDITS: &[Group] = &[
     (
-        "Monster and terrain tiles, and the AngbandTk tiles",
-        "David E. Gervais",
+        "Made by",
+        &[
+            ("Created by", "Ryc O'Chet"),
+            ("Code and placeholder 3D images", "Claude Code (Opus 5.5)"),
+        ],
     ),
     (
-        "Icons, from game-icons.net",
-        "Lorc, Delapouite and the site's other contributors",
-    ),
-    ("Title font: Cinzel Decorative", "Natanael Gama"),
-    (
-        "Writing font: Lexend",
-        "Bonnie Shaver-Troup, Thomas Jockin, Santiago Orozco, Héctor Gómez and Superunion",
-    ),
-    ("Emoji font: Noto Emoji", "Google"),
-    (
-        "Some creatures (the drider): System Reference Document 5.1, CC BY 4.0",
-        "Wizards of the Coast LLC",
-    ),
-    (
-        "The shapes of animals' bodies and heads: measured from MakeHuman animal models, CC BY",
-        "JALdMIC",
+        "Art",
+        &[
+            (
+                "Monster and terrain tiles, and the AngbandTk tiles",
+                "David E. Gervais",
+            ),
+            (
+                "Icons, from game-icons.net",
+                "Lorc, Delapouite and the site's other contributors",
+            ),
+        ],
     ),
     (
-        "Built with",
-        "Bevy, and the many open source libraries it and the game use",
+        "Fonts",
+        &[
+            ("Title font: Cinzel Decorative", "Natanael Gama"),
+            (
+                "Writing font: Lexend",
+                "Bonnie Shaver-Troup, Thomas Jockin, Santiago Orozco, Héctor Gómez and Superunion",
+            ),
+            ("Emoji font: Noto Emoji", "Google"),
+        ],
+    ),
+    (
+        "Models and shapes",
+        &[
+            (
+                "The shapes of animals' bodies and heads: measured from MakeHuman animal models, CC BY",
+                "JALdMIC",
+            ),
+            (
+                "Some creatures (the drider): System Reference Document 5.1, CC BY 4.0",
+                "Wizards of the Coast LLC",
+            ),
+        ],
+    ),
+    (
+        "Software",
+        &[(
+            "Built with",
+            "Bevy, and the many open source libraries it and the game use",
+        )],
     ),
     (
         "Licence",
-        "Hall of Worlds may be shared and changed, but not sold: Creative Commons \
-         Attribution-NonCommercial 4.0. The art and fonts keep their own licences.",
+        &[(
+            "",
+            "Hall of Worlds may be shared and changed, but not sold: Creative Commons              Attribution-NonCommercial 4.0. The art and fonts keep their own licences.",
+        )],
     ),
-    ("", "Thank you for playing!"),
+    ("", &[("", "Thank you for playing!")]),
 ];
 
 /// The list, so opening the layer can start it from the top.
@@ -73,14 +109,22 @@ pub(super) struct CreditsList;
 
 pub(super) fn spawn_credits(commands: &mut Commands, dom: &mut Dom) {
     commands.spawn(document(&CREDITS_LAYER));
-    for (entry, &(what, who)) in CREDITS.iter().enumerate() {
-        dom.copy_template("credits/entry", "credits/list", entry);
-        dom.set_text(&format!("credits/who.{entry}"), who);
-        let what_id = format!("credits/what.{entry}");
-        if what.is_empty() {
-            dom.set_flag(&what_id, "hidden", true);
-        } else {
-            dom.set_text(&what_id, what);
+    let mut entry = 0;
+    for (group, &(heading, entries)) in CREDITS.iter().enumerate() {
+        if !heading.is_empty() {
+            dom.copy_template("credits/heading", "credits/list", group);
+            dom.set_text(&format!("credits/title.{group}"), heading);
+        }
+        for &(what, who) in entries {
+            dom.copy_template("credits/entry", "credits/list", entry);
+            dom.set_text(&format!("credits/who.{entry}"), who);
+            let what_id = format!("credits/what.{entry}");
+            if what.is_empty() {
+                dom.set_flag(&what_id, "hidden", true);
+            } else {
+                dom.set_text(&what_id, what);
+            }
+            entry += 1;
         }
     }
 }

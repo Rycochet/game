@@ -10,6 +10,7 @@ use shared::difficulty::{Difficulties, Difficulty};
 
 use super::super::{BUTTON_ROW, FONT, GAP};
 use crate::common::{Preferences, difficulty_words};
+use crate::dom::HelpAfter;
 use crate::widgets::{
     ButtonPressed, ButtonState, ButtonTooltip, Checked, HoverTip, Pressable, UiId, field_label,
     spawn_check_button,
@@ -23,9 +24,24 @@ const SET_BY_ENVIRONMENT: &str = "Set by HOW_DIFFICULTIES when the game was star
 const LAST_ONE: &str = "At least one difficulty must be allowed.";
 
 pub(super) fn spawn_difficulty_row(panel: &mut ChildSpawnerCommands) {
-    let mut label = panel.spawn(field_label("Difficulties players may choose"));
-    if server::difficulties_from_environment().is_some() {
-        label.insert(HoverTip(SET_BY_ENVIRONMENT.into()));
+    // In a row of its own, so a "?" can follow the words when there is a
+    // reason the boxes can't be changed.
+    let mut heading = panel.spawn(Node {
+        align_items: AlignItems::Center,
+        ..default()
+    });
+    let mut label = None;
+    heading.with_children(|heading| {
+        label = Some(
+            heading
+                .spawn(field_label("Difficulties players may choose"))
+                .id(),
+        );
+    });
+    if server::difficulties_from_environment().is_some()
+        && let Some(label) = label
+    {
+        heading.insert((HoverTip(SET_BY_ENVIRONMENT.into()), HelpAfter(label)));
     }
     let row = Node {
         column_gap: px(GAP),

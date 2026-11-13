@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use super::super::text_box::RaisesKeyboard;
 use super::super::{
-    ButtonState, INK, Pressable, TextSize, spawn_button, spawn_small_icon_button, spawn_strokes,
+    BUTTON_PADDING, ButtonState, INK, Pressable, TextSize, spawn_button, spawn_small_icon_button,
+    spawn_strokes,
 };
 use super::{ARROW_RIGHT, ARROW_STROKES, ARROW_WIDE};
 
@@ -69,6 +70,14 @@ pub fn spawn_dropdown<'a>(
 ) -> EntityCommands<'a> {
     let label = label_of(&dropdown);
     let searchable = dropdown.searchable;
+    // As tall as a button with the same writing, unless `node` pads it.
+    let node = match node.padding == UiRect::default() {
+        true => Node {
+            padding: BUTTON_PADDING,
+            ..node
+        },
+        false => node,
+    };
     let mut button = spawn_button(parent, ButtonState::Normal, label, size, node);
     button.insert((dropdown, Pressable));
     button.with_children(|inside| {

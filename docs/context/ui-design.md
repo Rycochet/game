@@ -27,13 +27,13 @@ Status: **have**, **later** (build when a screen needs it), **no** (no use in th
 | Close button | have | A moving panel's, or a `dialog closable`'s. A normal raised button, with a letter X. |
 | Checkbox | have | `input type="checkbox"`, its words in a `label`. A whole clickable row with a drawn tick, for picking things out of a list (the debug menu's toggles); settings use switches. **Ask the owner before using an indeterminate dash:** they are unsure about it. |
 | Toggle row | have | `toggle-row` of `option`s. Joined buttons, one chosen, all visible: for 2 to 5 options. Stands in for radio buttons. |
-| Colour picker | have | `colour-picker` of `option`s. Square swatches edge to edge in a box like an active button, wrapping like words; one line as tall as a dropdown. A swatch is a colour or a picture (patterns, gradients). The chosen one has a flat border with a white one inside; each names itself in a tooltip, and the label above says what is chosen. For looks: hair, skin, coat, feathers. |
+| Colour picker | have | `colour-picker` of `option`s. Square swatches edge to edge in a box like an active button, wrapping like words; one line as tall as a dropdown, and so a button. A swatch is a colour or a picture (patterns, gradients). The chosen one has a flat border with a white one inside; each names itself in a tooltip, and the label above says what is chosen. For looks: hair, skin, coat, feathers. |
 | Slider | have | `input type="range"`. Picture or plain track with a wide handle. Ticks, value bubble, arrow keys and ranges later. |
 | Text box | have | `input type="text"`. Sunken, a line tall even when empty, focus border, error state, optional label above, optional grey words after the text (Connect's port found). No floating label. A thin caret anywhere in the writing, solid while typing and fading gently twice a second when idle; selection by keys, mouse or finger (double click a word, triple click all), kept paler without the keyboard; cut, copy and paste by keys; long writing slides. No right-click menu for now (owner, 2026-11-06: maybe after feedback). A box may take items: one dropped on it is written in at the caret, shown as its picture in its quality's frame, named on hovering, and one place for editing. |
 | Text with items | have | Any writing in markup with `${item:<uuid>}` in it, shown as in a box that takes them. |
-| Dropdown | have | `select` of `option`s. One widget for Select and Autocomplete, with search as an option, and an arrow. Clear button and multiple choice later. |
+| Dropdown | have | `select` of `option`s. One widget for Select and Autocomplete, with search as an option, and an arrow. As tall as a button. Clear button and multiple choice later. |
 | Key box | have | `key-box`. A text box's look, showing a key binding ("Shift + G") or nothing, centred. A click or tap makes it wait ("Press key", or the modifiers held so far, "Shift + …") for the next key, with any modifiers held, or a modifier pressed and let go alone; Esc or a click elsewhere cancels, Backspace empties it. Disabled grey; an error edge when its binding was taken by another. Settings, Controls. A gamepad's box would wait for a button ("Press button"). |
-| Switch | have | `input type="checkbox" switch`. A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
+| Switch | have | `input type="checkbox" switch`. A pill about a phone's size (52 × 32), with a tick in the left half of its track and a cross in the right; the round thumb covers one, so off shows the cross. Green track when on, grey when off. Disabled, it is plainly so: a flat grey track whichever way it is set, a dim thumb with no shadow, faint tick and cross, a faint label, and no change on hovering. A press anywhere flips it and the thumb slides across (jumps with Reduce Motion). For settings that apply at once: every on/off setting in Settings. |
 | Fab, ButtonGroup, Rating, SpeedDial | no | |
 
 ## Showing things
@@ -41,7 +41,7 @@ Status: **have**, **later** (build when a screen needs it), **no** (no use in th
 | Piece | Status | Here |
 | --- | --- | --- |
 | Text | have | `p`, `h1`, `h2`, `small`, `label`: each a `TextSize`. |
-| Tooltip | have | `title` on any element. One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. Never the only way to learn something: fingers have no hover. |
+| Tooltip | have | `title` on any element. One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. A labelled row with a tip (`span.labelled` with a `title`, or a `HoverTip` set from code) shows a small round "?" after its label, so a player can see which settings say more: pointing at it shows the tip, and a click or tap pins it beside the "?" until the next press or key. Never the only way to learn something: fingers have no hover. |
 | Icon | have | `img`: `icon:<name>`, `picture:<name>` (drawn in code) or an asset. |
 | Scroll area | have | `scroll`. Wheel, finger or bar. The bar shows only with more than fits, unless the area asks for it always, or the player turns on Always Show Scroll Bars (Settings, Interface: for accessibility, and for seeing what can scroll). |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
@@ -70,7 +70,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | --- | --- | --- |
 | Panel | have | `panel`, `panel moveable`, `panel grip`. One style of edge, shadow and parchment. **Moveable panels are told from static ones by the lighter stripes either side of the title**, which static panels don't have. A new panel opens in front of those already open. A **grip panel** has no title or close button, only a narrow grip of thinner stripes along its top (the movement pad). |
 | Full-screen layer | have | `dialog modal`: 90% of the window, 75% for one above it (`depth`). |
-| Tabs | have | `tab-bar` of `option`s. Folder-style, for switching between views of one thing (Settings, the Character panel). |
+| Tabs | have | `tab-bar` of `option`s. Folder-style, for switching between views of one thing (Settings, the Character panel). The line under the row runs straight under every unchosen tab, at the same height as its own bottom edge; the chosen tab is open below. |
 | Menu | later | Right-click item menu: use, split, drop. |
 | Card, Accordion, AppBar, Drawer, Breadcrumbs, Pagination, Stepper, BottomNavigation, Link, ImageList | no | |
 

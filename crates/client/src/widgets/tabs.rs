@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BUTTON_BORDER, BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, SHADED_EDGE,
-    TextSize, spawn_button,
+    BUTTON_PADDING, ButtonPressed, ButtonState, ButtonStyle, Pressable, SHADED_EDGE, TextSize,
+    spawn_button,
 };
 
 /// Between folder tabs.
@@ -19,11 +19,14 @@ pub(super) struct Tabs {
     pub(super) selected: usize,
 }
 
-/// A folder tab's own piece of the line under the row, over its bottom border, so
-/// an unchosen tab's bottom is one straight line with no corners cut by its sides'
-/// shading (owner, 2026-11-07). Hidden on the chosen tab, which is open below.
+/// On a folder tab. The line under the row is the row's own bottom border, one
+/// node, so it is straight at any interface size: an unchosen tab has no bottom
+/// border and stands on it, so its sides end square on the line with no corners
+/// cut by their shading (owner, 2026-11-07); the chosen one reaches down over
+/// it, open below. (Each tab drawing its own piece of the line rounded apart
+/// from the row's, a pixel off in the gaps at some sizes: owner, 2026-11-13.)
 #[derive(Component, Clone, Copy, Debug)]
-pub(super) struct TabFoot(Entity);
+pub(super) struct FolderTab;
 
 /// One of a row: its row, and where in it.
 #[derive(Component, Clone, Copy, Debug)]
@@ -98,8 +101,6 @@ fn fill_row(mut row: EntityCommands, labels: &[&str], selected: usize, look: Tab
     let folder = style == ButtonStyle::Folder;
     let node = Node {
         padding: BUTTON_PADDING,
-        // A folder tab stands on the line under the row.
-        margin: UiRect::bottom(px(if folder { -TAB_LINE } else { 0.0 })),
         ..default()
     };
     let id = row.id();
@@ -113,52 +114,37 @@ fn fill_row(mut row: EntityCommands, labels: &[&str], selected: usize, look: Tab
                 node.clone(),
             )
             .insert((Tab { row: id, index }, style, Pressable))
-            .with_children(|tab| {
-                if folder {
-                    let tab_entity = tab.target_entity();
-                    tab.spawn(foot(tab_entity, index == selected));
-                }
-            });
+            .insert_if(FolderTab, || folder);
         }
     });
     id
 }
 
-/// Covers the tab's bottom border, reaching under its sides' borders too.
-fn foot(tab: Entity, chosen: bool) -> impl Bundle {
-    (
-        TabFoot(tab),
-        Node {
-            position_type: PositionType::Absolute,
-            left: px(-BUTTON_BORDER),
-            right: px(-BUTTON_BORDER),
-            bottom: px(-BUTTON_BORDER),
-            height: px(TAB_LINE),
-            ..default()
-        },
-        BackgroundColor(SHADED_EDGE),
-        if chosen {
-            Visibility::Hidden
-        } else {
-            Visibility::Inherited
-        },
-    )
+/// Where a folder tab's bottom is: on the line, with no border of its own, or
+/// (chosen) over it, as far down as the line is thick, padded so its words
+/// stay where an unchosen tab's are.
+pub(super) fn bottom_of(chosen: bool) -> (Val, Val, Val) {
+    let Val::Px(padding) = BUTTON_PADDING.bottom else {
+        unreachable!("a button's padding is in pixels")
+    };
+    match chosen {
+        true => (px(0), px(-TAB_LINE), px(padding + TAB_LINE)),
+        false => (px(0), px(0), px(padding)),
+    }
 }
 
-/// Shows each tab's foot unless it is chosen.
-pub(super) fn show_tab_feet(
-    mut feet: Query<(&TabFoot, &mut Visibility)>,
-    tabs: Query<&ButtonState, With<Tab>>,
-) {
-    for (foot, mut visibility) in &mut feet {
-        let chosen = tabs
-            .get(foot.0)
-            .is_ok_and(|state| *state == ButtonState::Selected);
-        visibility.set_if_neq(if chosen {
-            Visibility::Hidden
-        } else {
-            Visibility::Inherited
-        });
+/// Fits each folder tab's bottom to whether it is chosen.
+pub(super) fn show_tab_bottoms(mut tabs: Query<(&ButtonState, &mut Node), With<FolderTab>>) {
+    for (state, mut node) in &mut tabs {
+        let (border, margin, padding) = bottom_of(*state == ButtonState::Selected);
+        if node.border.bottom != border
+            || node.margin.bottom != margin
+            || node.padding.bottom != padding
+        {
+            node.border.bottom = border;
+            node.margin.bottom = margin;
+            node.padding.bottom = padding;
+        }
     }
 }
 

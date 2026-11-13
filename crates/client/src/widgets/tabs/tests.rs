@@ -60,3 +60,17 @@ fn a_tab_chosen_from_code_is_shown_chosen_without_saying_so() {
         0
     );
 }
+
+#[test]
+fn only_the_chosen_tab_reaches_over_the_line() {
+    let (border, margin, padding) = bottom_of(false);
+    assert_eq!((border, margin), (px(0), px(0)));
+    assert_eq!(padding, BUTTON_PADDING.bottom);
+    let (border, margin, padding) = bottom_of(true);
+    assert_eq!((border, margin), (px(0), px(-TAB_LINE)));
+    let Val::Px(below) = BUTTON_PADDING.bottom else {
+        unreachable!()
+    };
+    // Padded by as much as it reaches down, so its words stay level.
+    assert_eq!(padding, px(below + TAB_LINE));
+}

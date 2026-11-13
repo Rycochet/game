@@ -11,6 +11,7 @@ mod controls;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
 mod error;
+mod help_mark;
 mod hold;
 mod input;
 mod layout;
@@ -33,6 +34,9 @@ use bevy::prelude::*;
 
 pub use change::Dom;
 pub use controls::{UiEvent, UiValue};
+// (Only native Server Options' rows use it so far.)
+#[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
+pub use help_mark::HelpAfter;
 pub use hold::{Dropped, Hand, HeldItem, HeldObject, HeldOver, HeldThing, HeldWhat, HoldObjects};
 pub use input::Hit;
 #[cfg(test)]
@@ -113,6 +117,18 @@ impl Plugin for DomPlugin {
                 )
                     .chain()
                     .before(bevy::ui::UiSystems::Layout),
+            )
+            .add_systems(
+                PostUpdate,
+                help_mark::place_help_marks
+                    .after(restyle::restyle)
+                    .before(bevy::ui::UiSystems::Layout),
+            )
+            .add_systems(
+                PreUpdate,
+                help_mark::pin_tips
+                    .after(DomInput::Find)
+                    .before(DomInput::Presses),
             );
     }
 }
