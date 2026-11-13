@@ -6,7 +6,6 @@
 
 use bevy::prelude::*;
 use shared::poi::ChunkPos;
-use shared::protocol::{QuestNews, ServerMessage, SlainBoss};
 
 use super::bosses::{BossQuest, Regard, boss_quest, regard};
 use super::{cache, done_flags, log, tell_markers};
@@ -58,49 +57,6 @@ fn remember(client: &mut Client, world: &mut ServerWorld, boss: BossQuest, now: 
         boss.id
     );
     learn_place(client, world, boss.id.town)
-        && tell_slain(client, world)
+        && super::ahead::tell_ahead(client, world)
         && tell_markers(client, world, boss.id.town, now)
-}
-
-/// The quests whose boss the character has dealt with, not taken yet.
-pub(super) fn slain_news(client: &Client, world: &mut ServerWorld) -> QuestNews {
-    let slain = (client.character.quests.slain.iter())
-        .filter_map(|&id| {
-            let quest = cache::quest(world, id)?;
-            Some(SlainBoss {
-                id,
-                kind: quest.kind,
-            })
-        })
-        .collect();
-    QuestNews::Slain(slain)
-}
-
-/// Tells the client which bosses it has dealt with. `false` if it has gone.
-pub(super) fn tell_slain(client: &mut Client, world: &mut ServerWorld) -> bool {
-    let news = slain_news(client, world);
-    client.link.send(&ServerMessage::Quest(news))
-}
-
-/// On taking a quest whose boss the character has already dealt with: that
-/// step is done. Whether it was.
-pub(super) fn already_dealt(client: &mut Client, quest: &shared::quest::Quest) -> bool {
-    if !client.character.quests.slain.remove(&quest.id) {
-        return false;
-    }
-    let boss = quest.steps.iter().position(|step| {
-        matches!(
-            step.target,
-            shared::quest::Target::Poi {
-                hook: shared::quest::Hook::Boss,
-                ..
-            }
-        )
-    });
-    if let (Some(step), Some(progress)) = (boss, client.character.quests.taken.get_mut(&quest.id)) {
-        progress.counts.resize(quest.steps.len(), 0);
-        progress.counts[step] = 1;
-        progress.ready = quest.ready_to_turn_in(&done_flags(quest, &progress.counts));
-    }
-    true
 }

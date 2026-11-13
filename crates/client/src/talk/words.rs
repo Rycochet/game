@@ -3,7 +3,7 @@
 //! when something asked can't be done.
 
 use shared::lang::{Args, Lang};
-use shared::protocol::{Hint, QuestRefusal};
+use shared::protocol::{Ahead, Hint, QuestRefusal};
 use shared::quest::Standing;
 use shared::site::BuildingKind;
 use shared::story::Person;
@@ -52,7 +52,8 @@ pub(super) fn hint_text(lang: &Lang, hint: &Hint) -> String {
             "hint-skill",
             Args::new().text("skill", skill.name().to_lowercase()),
         ),
-        Hint::DealtWith => ("hint-dealt-with", Args::new()),
+        Hint::Ahead(Ahead::Slain) => ("hint-dealt-with", Args::new()),
+        Hint::Ahead(Ahead::Found) => ("hint-found", Args::new()),
     };
     or_partly(lang.render(id, &args))
 }

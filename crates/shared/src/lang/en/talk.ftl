@@ -46,6 +46,7 @@ hint-elsewhere-named = They speak of you in { $town }? Not yet, they don't.
 hint-elsewhere = Someone else should have good words for you first.
 hint-skill = I'd want someone good at { $skill }.
 hint-dealt-with = I've heard what you did out there. I won't forget it.
+hint-found = I've heard you came across something of ours. Hold on to it.
 
 ## When something asked of a quest can't be done.
 
@@ -59,4 +60,5 @@ refused-not-ready = That isn't done yet.
 talk-reward = Reward: { $reward }
 talk-steps = What to do:
 talk-dealt-with = "I've already dealt with it," you tell them. "Then the worst of it is done."
+talk-found = "I've already found it," you tell them. "Then you've saved me a long walk."
 talk-step-done = { $step } (done)

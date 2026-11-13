@@ -42,6 +42,12 @@ pub(super) fn boss_spawn(
 }
 
 impl ServerWorld {
+    /// Where the stairs are on a level in use, which what a quest places
+    /// keeps away from.
+    pub(crate) fn stairs_of(&self, place: (SiteId, u32)) -> Vec<(i64, i64)> {
+        (self.populations.0.get(&place)).map_or_else(Vec::new, |p| p.stairs.clone())
+    }
+
     /// Brings a site's quest boss back on level `place`, if it is down there
     /// (Claude, owner: for someone on its step or who hasn't killed it). Not
     /// kept: on the level's next populating it is down again, unless someone

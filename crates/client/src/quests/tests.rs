@@ -150,9 +150,10 @@ fn a_boss_dealt_with_marks_its_givers_town_until_the_quest_is_taken() {
         slot: Slot::Feeder,
     };
     let book = QuestBook {
-        slain: vec![shared::protocol::SlainBoss {
+        ahead: vec![shared::protocol::DoneAhead {
             id,
             kind: QuestKind::Normal,
+            ahead: shared::protocol::Ahead::Slain,
         }],
         ..QuestBook::default()
     };

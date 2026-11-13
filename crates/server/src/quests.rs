@@ -5,6 +5,7 @@
 //! character's quests are kept per planet in `storage::QuestBook`.
 
 mod accept;
+mod ahead;
 mod arrivals;
 mod ask;
 mod boss_kill;
@@ -15,6 +16,7 @@ mod clock;
 #[cfg(feature = "debug-api")]
 pub(crate) mod debug_api;
 mod dots;
+mod finds;
 mod follow;
 mod give_up;
 mod log;
@@ -30,6 +32,7 @@ mod turn_in;
 pub(crate) use ask::answer_quest;
 pub(crate) use bosses::boss_quest;
 pub(crate) use cache::TownQuests;
+pub(crate) use finds::{Find, find_here, picked_up};
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
 
@@ -79,6 +82,8 @@ mod boss_tests;
 mod dots_tests;
 #[cfg(test)]
 mod extras_tests;
+#[cfg(test)]
+mod finds_tests;
 #[cfg(test)]
 mod log_tests;
 #[cfg(test)]

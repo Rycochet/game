@@ -3,9 +3,9 @@
 //! character may know it. In a site of a step's poi, the stairs they remember
 //! that lead towards the level it is done on; in the wilderness, the step's
 //! poi or town; for a quest to hand in, its giver's door once in their town
-//! (towns are known whole), else the town; a quest boss once in sight. The
-//! world map needs none: the client has every step's poi, made known on
-//! taking the quest.
+//! (towns are known whole), else the town; a quest boss once in sight, a quest
+//! item once where it lies has been seen. The world map needs none: the
+//! client has every step's poi, made known on taking the quest.
 
 use shared::protocol::{QuestDots, QuestNews, ServerMessage, level_chunk};
 use shared::quest::{Hook, Quest, QuestId, Step, Target};
@@ -123,29 +123,34 @@ fn step_cells(
     {
         return vec![cell];
     }
+    let memory = client.character.memory.get(&visit.id());
+    let remembered = memory.and_then(|levels| levels.get(&visit.index()));
+    let seen = |(x, y): (i64, i64)| {
+        let (chunk, bit) = level_chunk(x, y);
+        remembered.is_some_and(|masks| masks.get(&chunk).is_some_and(|m| m & (1 << bit) != 0))
+    };
+    // Their own quest item, once where it lies has been seen.
+    if in_it
+        && hook == Some(Hook::Item)
+        && let Some(find) = super::finds::find_here(client, world)
+        && seen(find.at.cell())
+    {
+        return vec![find.at.cell()];
+    }
     let goal = hook.and_then(|hook| goal_level(visit, hook));
     match goal {
-        Some(goal) if in_it => {
-            let memory = client.character.memory.get(&visit.id());
-            let remembered = memory.and_then(|levels| levels.get(&visit.index()));
-            visit.stairs_towards(goal, |(x, y)| {
-                let (chunk, bit) = level_chunk(x, y);
-                remembered
-                    .is_some_and(|masks| masks.get(&chunk).is_some_and(|m| m & (1 << bit) != 0))
-            })
-        }
+        Some(goal) if in_it => visit.stairs_towards(goal, seen),
         _ => Vec::new(),
     }
 }
 
 /// The level of its site a hook's step is done on, when it is one level:
-/// reaching the deepest, or the boss there (`entities::quest_mobs`). (A
-/// quest item's level joins this when they exist; counted kills may be on
-/// any.)
+/// reaching the deepest, or the boss or quest item there
+/// (`entities::quest_mobs`, `finds`); counted kills may be on any.
 fn goal_level(visit: &Visit, hook: Hook) -> Option<u32> {
     let levels = visit.site()?.levels();
     match hook {
-        Hook::Explore | Hook::Boss => Some(levels.saturating_sub(1)),
+        Hook::Explore | Hook::Boss | Hook::Item => Some(levels.saturating_sub(1)),
         _ => None,
     }
 }

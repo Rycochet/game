@@ -23,7 +23,7 @@ Quests generated from a town's seed, the same for everyone: who gives them (town
 - `Requirement { need, hidden }` (`shown`, `hidden`, `hides_quest`), `Need::{Standing { town, least }, Done(QuestId), Skill { skill, least }, Alignment(Band)}`, `Standing::{Stranger, Known, Trusted, Honoured, Champion}`.
 - `Step { goal, target, count, after, alternatives }` (`is_open(done)`), `Target::{Poi { chunk, hook }, Wilds { chunk }, Town { chunk }}`, `Alternative { way, skill }`, `Way::{Carry, Tame, Intimidate}`.
 - `Hook::{Boss, Item, Escortee, Kills(kind), Explore, Visit, Gather}`, `is_exclusive`, `of_poi(&Poi)`.
-- `boss_of(&Poi) -> story::Boss`: a poi's quest boss (kind, gender, name, epithet) from its own seed: the server spawns it as the story names it.
+- `boss_of(&Poi) -> story::Boss`: a poi's quest boss (kind, gender, name, epithet) from its own seed: the server spawns it as the story names it. `item_of(&Poi) -> story::ItemCategory`: its unique item, a keepsake, which the server makes as the story names it.
 
 ## Depends on
 

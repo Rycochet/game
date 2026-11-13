@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::protocol::{QuestNews, ServerMessage};
 
-use super::{BossMarks, DoorMarkers, GateQuests, LevelDots, QuestBook, QuestPlanets};
+use super::{BossMarks, DoorMarkers, FindMarks, GateQuests, LevelDots, QuestBook, QuestPlanets};
 use crate::connection::FromServer;
 
 pub(super) fn read_server(
@@ -13,7 +13,7 @@ pub(super) fn read_server(
     mut gates: ResMut<GateQuests>,
     mut planets: ResMut<QuestPlanets>,
     mut dots: ResMut<LevelDots>,
-    mut bosses: ResMut<BossMarks>,
+    (mut bosses, mut finds): (ResMut<BossMarks>, ResMut<FindMarks>),
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -25,7 +25,9 @@ pub(super) fn read_server(
                 *planets = QuestPlanets::default();
                 *dots = LevelDots::default();
                 *bosses = BossMarks::default();
+                *finds = FindMarks::default();
             }
+            ServerMessage::Quest(QuestNews::Finds(told)) => finds.0.clone_from(told),
             ServerMessage::Quest(QuestNews::Bosses(told)) => {
                 bosses.0 = told.iter().map(|mark| (mark.id, mark.sign)).collect();
             }
@@ -61,7 +63,7 @@ fn take(news: &QuestNews, book: &mut QuestBook, doors: &mut DoorMarkers) {
             book.tracked = *tracked;
         }
         QuestNews::Tracked(tracked) => book.tracked = *tracked,
-        QuestNews::Slain(slain) => book.slain.clone_from(slain),
+        QuestNews::Ahead(ahead) => book.ahead.clone_from(ahead),
         QuestNews::Changed(entry) => {
             book.entries.insert(entry.id, entry.clone());
         }

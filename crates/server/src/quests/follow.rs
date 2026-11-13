@@ -34,6 +34,8 @@ pub(crate) struct Seen {
     pub(super) dots: DotsSeen,
     /// The signs over quest bosses in sight, as last sent.
     pub(super) bosses: Vec<shared::protocol::BossMark>,
+    /// The sign over the player's quest item in sight, as last sent.
+    pub(super) finds: Vec<shared::protocol::FindMark>,
 }
 
 impl Seen {
@@ -74,7 +76,7 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
         client
             .link
             .send(&shared::protocol::ServerMessage::Quest(whole));
-        super::boss_kill::tell_slain(client, world);
+        super::ahead::tell_ahead(client, world);
     }
     let in_hall = client.character.hall.is_some();
     if in_hall && !client.quest_seen.hall {
@@ -88,6 +90,7 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
     }
     tell_dots(client, world);
     super::boss_signs::tell_bosses(client, world);
+    super::finds::tell_finds(client, world);
 }
 
 /// On coming to another place: steps moving on, and the town's markers.

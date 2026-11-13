@@ -24,6 +24,7 @@ impl ItemKind {
                 Self::Aventail | Self::Bevor | Self::Collar | Self::Gorget | Self::Mantle => {
                     self.neck_def()
                 }
+                Self::Keepsake | Self::Parcel => self.quest_def(), // `quest_def.rs`
                 // Armour sets: in `set_def.rs`.
                 Self::ArmourCoat | Self::Corslet | Self::FullArmour | Self::HalfArmour => {
                     self.set_def()
@@ -196,7 +197,6 @@ impl ItemKind {
                 Self::PaddedChausses => plain("Padded Chausses", 1200, Shape::rectangle(2, 3))
                     .worn(wear(Middle, &[Legs], (1, 0), false)),
                 // Under gauntlets.
-                Self::Parcel => plain("Parcel", 1000, Shape::rectangle(2, 2)).without_quality(),
                 Self::PaddedGloves => plain("Padded Gloves", 150, Shape::rectangle(2, 1))
                     .worn(wear(Middle, &[Hands, Fingers], (1, 0), false)),
                 Self::Polearm => plain("Polearm", 3000, Shape::rectangle(1, 8)).worn(HELD),

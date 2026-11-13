@@ -13,7 +13,7 @@ Talking at town doors (owner: no one is inside yet, so the door is the person). 
 - `talk/news.rs`: `read_quest_news`: `QuestNews::Talk` (opens the panel at Quests if the giver has anything; the first answer shows Quests if something can be taken or handed in, and a lone one in full), `TurnedIn` (the giver's last words), `Refused`, `Changed`.
 - `talk/input.rs`: `read_events`: tabs, a row of the list, Accept and Complete (each followed by asking `Talk` again), Decline and Back.
 - `talk/quests_page.rs`: `show_pages` (when dirty or the quest book changes: tab bar and pages, the title "Name, occupation" from the first offer's giver, the refusal, then the list or a detail), `Ids`, `story_of`.
-- `talk/detail.rs`: `Detail`, `detail_of` (on offer: story, steps from its asks, return, reward, Accept / Decline, and the player's "I've already dealt with it" (`talk-dealt-with`) when its boss is dead; taken: steps with counts and "(done)", Complete once ready; handed in: the ending and reward).
+- `talk/detail.rs`: `Detail`, `detail_of` (on offer: story, steps from its asks, return, reward, Accept / Decline, and the player's "I've already dealt with it" (`talk-dealt-with`) when its boss is dead, or "I've already found it" (`talk-found`) when its item was picked up; taken: steps with counts and "(done)", Complete once ready; handed in: the ending and reward).
 - `talk/words.rs`: `giver_title` (`occupation-<kind>` from `talk.ftl`, none for houses), `hint_text`, `refusal`; `plain` and `or_partly` are `quests`' (shared with the Quest Log).
 - `talk/close.rs`: `close_on_escape`, `close_when_left`.
 

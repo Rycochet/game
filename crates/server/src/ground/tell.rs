@@ -8,6 +8,7 @@ use shared::spot::Spot;
 use super::bags::{bags_in_reach, standing_at};
 use crate::ServerWorld;
 use crate::connections::{Client, Phase};
+use shared::ground::in_reach;
 
 /// What was in reach: where each bag was, and each thing in them by id, with
 /// how many there were of it.
@@ -24,13 +25,21 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld) {
             continue;
         };
         let size = client.size();
+        // The player's own quest item lying here, as if in a bag of its own.
+        let find = crate::quests::find_here(client, world);
         let level = world.site(id).levels.get(&index);
         let ground = level.map(|level| &level.ground);
-        let bags = ground.map_or_else(Vec::new, |ground| bags_in_reach(ground, size, at));
-        let items: Vec<_> = (bags.iter())
+        let mut bags = ground.map_or_else(Vec::new, |ground| bags_in_reach(ground, size, at));
+        let mut items: Vec<_> = (bags.iter())
             .flat_map(|bag| ground.into_iter().flat_map(move |ground| &ground[bag]))
             .cloned()
             .collect();
+        if let Some(find) = find.filter(|find| in_reach(size, at, find.at)) {
+            if !bags.contains(&find.at) {
+                bags.push(find.at);
+            }
+            items.push(find.item);
+        }
         let counted = items.iter().map(|item| (item.id, item.count())).collect();
         let reached = (!bags.is_empty()).then(|| (bags.clone(), counted));
         if reached != client.ground_told.reached || client.ground_told.again {
@@ -53,11 +62,14 @@ fn tell_bags(client: &mut Client, world: &mut ServerWorld) {
     };
     let level = world.site(id).levels.get(&index);
     let ground = level.map(|level| &level.ground);
-    let piles: Vec<(Spot, Load)> = ground
+    let mut piles: Vec<(Spot, Load)> = ground
         .into_iter()
         .flat_map(|ground| ground.iter())
         .map(|(&at, items)| (at, Load::of(items)))
         .collect();
+    if let Some(find) = crate::quests::find_here(client, world) {
+        piles.push((find.at, Load::of(std::slice::from_ref(&find.item))));
+    }
     let levels = client.character.bags.get(&id);
     let mut known = levels
         .and_then(|levels| levels.get(&index))

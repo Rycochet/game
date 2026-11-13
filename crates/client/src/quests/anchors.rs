@@ -9,7 +9,7 @@ use shared::poi::ChunkPos;
 use shared::protocol::LevelKind;
 use shared::quest::QuestKind;
 
-use super::{BossMarks, DoorMarkers, GateQuests, MarkLook, QuestPois};
+use super::{BossMarks, DoorMarkers, FindMarks, GateQuests, MarkLook, QuestPois};
 use crate::common::{CurrentDungeon, DrawnGround, Other, Portal};
 use crate::dungeon_map::CELL_SIZE;
 use crate::view3d::{TOKEN_DIAMETER, TokenView};
@@ -25,6 +25,8 @@ const OVER_POI: f32 = 1.1;
 /// How high over a Medium creature's feet its marker floats, in cells: over
 /// a person's head; others by their size.
 const OVER_CREATURE: f32 = 1.4;
+/// How high over the ground a quest item lying there has its marker, in cells.
+const OVER_FIND: f32 = 0.6;
 
 /// What a marker is over, to keep the same one as the view moves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -33,6 +35,7 @@ pub(super) enum MarkOver {
     Gate(i64, i64),
     Poi(ChunkPos),
     Creature(Id),
+    Find(shared::spot::Spot),
 }
 
 /// One marker to show: what it is over, where in the view, and how it looks.
@@ -132,6 +135,18 @@ pub(super) fn boss_anchors(
             let tall = other.kind.def().size.quarters() as f32 / 4.0;
             let at = token.translation() + Vec3::Y * CELL_SIZE * OVER_CREATURE * tall;
             Some((MarkOver::Creature(other.id), at, MarkLook::of_boss(sign)))
+        })
+        .collect()
+}
+
+/// The player's own quest item lying in sight, over where it lies.
+pub(super) fn find_anchors(finds: &FindMarks, ground: &DrawnGround) -> Vec<Anchor> {
+    let span = shared::spot::CELL_SPAN as f32;
+    (finds.0.iter())
+        .map(|find| {
+            let cells = (find.at.x as f32 / span, find.at.y as f32 / span);
+            let at = over_ground(ground, cells, OVER_FIND);
+            (MarkOver::Find(find.at), at, MarkLook::of_boss(find.sign))
         })
         .collect()
 }

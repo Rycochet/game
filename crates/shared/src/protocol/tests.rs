@@ -387,7 +387,7 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                         least: crate::quest::Standing::Known,
                     },
                     super::Hint::Earlier,
-                    super::Hint::DealtWith,
+                    super::Hint::Ahead(super::Ahead::Found),
                 ]),
             }],
         }),
@@ -416,12 +416,17 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 sign: super::BossSign::Quest(crate::quest::QuestKind::Normal),
             },
         ])),
-        ServerMessage::Quest(super::QuestNews::Slain(vec![super::SlainBoss {
+        ServerMessage::Quest(super::QuestNews::Finds(vec![super::FindMark {
+            at: crate::spot::Spot::new(250, -30),
+            sign: super::BossSign::Unknown,
+        }])),
+        ServerMessage::Quest(super::QuestNews::Ahead(vec![super::DoneAhead {
             id: crate::quest::QuestId {
                 town: crate::poi::ChunkPos { x: 1, y: -2 },
                 slot: crate::quest::Slot::Feeder,
             },
             kind: crate::quest::QuestKind::Normal,
+            ahead: super::Ahead::Slain,
         }])),
         ServerMessage::GroundItems {
             bags: vec![crate::spot::Spot::new(1, -2)],

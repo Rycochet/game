@@ -3,7 +3,7 @@
 //! offered as already dealt with, and coming back for whoever still wants it.
 
 use shared::poi::{CHUNK_SIZE, ChunkPos, Poi};
-use shared::protocol::{BossSign, Hint, OfferState, QuestNews, ServerMessage};
+use shared::protocol::{Ahead, BossSign, Hint, OfferState, QuestNews, ServerMessage};
 use shared::quest::{Hook, Quest, Target, boss_of};
 
 use super::bosses::{BossQuest, Regard, boss_quest, regard};
@@ -152,8 +152,8 @@ fn killed_without_the_quest_it_is_remembered_and_offered_as_dealt_with() {
     let offered = offers::giver_offers(&test.client, &mut test.world, town, building, NOW);
     let state = offered.iter().find(|offer| offer.quest.id == quest.id);
     match state.map(|offer| &offer.state) {
-        Some(OfferState::Available { dealt_with, .. }) => assert!(dealt_with),
-        Some(OfferState::Locked(hints)) => assert!(hints.contains(&Hint::DealtWith)),
+        Some(OfferState::Available { ahead, .. }) => assert_eq!(*ahead, Some(Ahead::Slain)),
+        Some(OfferState::Locked(hints)) => assert!(hints.contains(&Hint::Ahead(Ahead::Slain))),
         // A later quest of a chain: offered once the one before is done.
         None => return,
         other => panic!("not offered as dealt with: {other:?}"),

@@ -1,6 +1,6 @@
 //! The pois with a step of a quest taken that can be done now ("!"), and the
 //! towns of givers waiting for a quest to be handed in ("?") or whose boss
-//! the character has already killed ("!"): for the world map and the maps
+//! the character has already killed or item found ("!"): for the world map and the maps
 //! (owner).
 
 use bevy::prelude::*;
@@ -49,11 +49,11 @@ pub(super) fn marks_of(book: &QuestBook) -> BTreeMap<ChunkPos, MarkLook> {
             _ => {}
         }
     }
-    // A boss already dealt with: its giver's town (owner).
-    for slain in &book.slain {
+    // A boss already dealt with, or an item found: its giver's town (owner).
+    for ahead in &book.ahead {
         marks
-            .entry(slain.id.town)
-            .or_insert(MarkLook::new(slain.kind, false));
+            .entry(ahead.id.town)
+            .or_insert(MarkLook::new(ahead.kind, false));
     }
     marks
 }
