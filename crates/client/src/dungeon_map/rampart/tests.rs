@@ -29,6 +29,8 @@ fn walled() -> (Level, WallLook) {
             y: 7,
             runs_east_west: true,
         }],
+        towers: Vec::new(),
+        gaps: Vec::new(),
     };
     for y in 0..8 {
         for x in 0..8 {

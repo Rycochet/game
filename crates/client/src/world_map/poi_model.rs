@@ -11,6 +11,7 @@
 mod base;
 mod build;
 mod building;
+mod castle;
 mod model;
 mod oasis;
 mod output;

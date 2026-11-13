@@ -209,7 +209,8 @@ fn every_site(count: u64) -> impl Iterator<Item = Site> {
         .flat_map(move |kind| (0..count).map(move |n| Site::new(kind, Seed::new(n * 7919 + 13))))
 }
 
-/// Every walkable cell can be reached from wherever you arrive, and
+/// Every walkable cell can be reached from wherever you arrive (above the
+/// ground, from the stairs up to it), and
 /// every staircase leads to a level with a staircase back on the same
 /// spot (buildings) or at least one back (caves).
 #[test]
@@ -226,8 +227,14 @@ fn every_level_is_connected_and_stairs_match() {
                 site_level.arrival(Exit::Level(index as u32 - 1))
             }
             .unwrap_or_else(|| panic!("{:?} level {index}: no arrival", site.kind()));
+            // (A castle's towers stand apart from its keep above the ground,
+            // each reached by its own stairs from below.)
+            let from_below = (site_level.stairs.iter())
+                .filter(|s| index > 0 && s.to == Exit::Level(index as u32 - 1))
+                .map(|s| (s.x, s.y));
+            let starts: Vec<(i64, i64)> = std::iter::once(start).chain(from_below).collect();
             let mut reach = Reach::new(level);
-            reach.spread(level, &[start]);
+            reach.spread(level, &starts);
             let (min_x, min_y, width, height) = level.bounds();
             for y in min_y..min_y + height {
                 for x in min_x..min_x + width {
@@ -297,10 +304,30 @@ fn buildings_have_doors_and_thin_walls() {
                     .count();
                 assert!(entrances >= 1, "{:?}: no way in", site.kind());
             }
+            // (Above a castle's ground floor, between its keep and towers
+            // is wall: only the keep's cells and the towers' are looked at.)
+            let towers: Vec<Rect> = match (site.kind(), index) {
+                (PoiKind::Castle, 1..) => (tower_spots(site.level(0).walls[0].rect).iter())
+                    .filter(|spot| level.is_walkable(spot.x, spot.y))
+                    .map(|spot| spot.rect())
+                    .collect(),
+                _ => Vec::new(),
+            };
+            let in_tower = |x: i64, y: i64| towers.iter().any(|t| t.contains(x, y));
+            let keep = cells().filter(|&(x, y)| level.is_walkable(x, y) && !in_tower(x, y));
+            let (kx0, ky0, kx1, ky1) = keep.fold(
+                (i64::MAX, i64::MAX, i64::MIN, i64::MIN),
+                |(x0, y0, x1, y1), (x, y)| (x0.min(x), y0.min(y), x1.max(x), y1.max(y)),
+            );
+            let in_part = |x: i64, y: i64| {
+                towers.is_empty()
+                    || in_tower(x, y)
+                    || ((kx0..=kx1).contains(&x) && (ky0..=ky1).contains(&y))
+            };
             // Inside the building: the cells with walkable cells
             // somewhere on both sides along a row or column.
             for (x, y) in cells() {
-                if level.cell(x, y) != Cell::Wall {
+                if level.cell(x, y) != Cell::Wall || !in_part(x, y) {
                     continue;
                 }
                 let inside = [(1, 0), (0, 1)].iter().any(|&(dx, dy)| {
@@ -483,7 +510,7 @@ fn golden_levels() {
 }
 
 const GOLDEN_LEVELS: [u64; 3] = [
-    18086710199301873350,
+    10753682426908746752,
     4540973389226848185,
     16348176066830501790,
 ];

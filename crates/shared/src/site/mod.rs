@@ -25,7 +25,10 @@ pub use ruin::MAX_RUIN;
 mod town;
 mod wall;
 
-pub use building::{BuildingOptions, Outline};
+pub use building::{
+    BuildingOptions, CastleOptions, GATE_TOWER_SIZE, Outline, PoiCastle, TOWER_SIZE, TowerSpot,
+    tower_spots,
+};
 pub use cave::{CaveEntrance, CaveOptions};
 pub use dev_area::{DEV_AREA_KIND, DEV_AREA_SIZES, DevArea, DevLayout, DevMobs, MOST_DEV_MOBS};
 pub use farm::{FarmOptions, FieldLook};

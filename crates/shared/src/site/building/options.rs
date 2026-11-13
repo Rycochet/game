@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::super::wall::WallOptions;
+use super::CastleOptions;
 
 /// The shape of a building seen from above.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -57,4 +58,7 @@ pub struct BuildingOptions {
     pub stilts: bool,
     /// A wall round it, if it may have one (forts).
     pub wall: Option<WallOptions>,
+    /// A castle round it, its keep (castles): its size then comes from the
+    /// castle's, not `width` and `height`.
+    pub castle: Option<CastleOptions>,
 }

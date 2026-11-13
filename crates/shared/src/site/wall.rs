@@ -9,12 +9,14 @@
 
 // Split into files (`cargo xtask lint` keeps files small).
 mod build;
+mod gaps;
 mod look;
 mod material;
 mod options;
 mod poi_wall;
 
 pub(super) use build::build_wall;
+pub(super) use gaps::ruin_gaps;
 pub use look::{Gate, WallLook};
 pub use material::WallMaterial;
 pub use options::WallOptions;

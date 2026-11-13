@@ -518,6 +518,13 @@ fn every_message() -> (Vec<ClientMessage>, Vec<ServerMessage>) {
                 y: 30,
                 runs_east_west: true,
             }],
+            towers: vec![crate::site::Rect {
+                x: -7,
+                y: -8,
+                width: 7,
+                height: 7,
+            }],
+            gaps: vec![(3, -5)],
         }]),
         ServerMessage::LevelCells(LevelChunk {
             chunk: (-1, 2),

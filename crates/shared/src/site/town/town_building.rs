@@ -13,6 +13,13 @@ pub struct Rect {
     pub height: i64,
 }
 
+impl Rect {
+    /// Whether `(x, y)` is one of its cells.
+    pub fn contains(&self, x: i64, y: i64) -> bool {
+        (self.x..self.x + self.width).contains(&x) && (self.y..self.y + self.height).contains(&y)
+    }
+}
+
 /// What anyone can see of a building (players know a town's layout at once).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildingLook {

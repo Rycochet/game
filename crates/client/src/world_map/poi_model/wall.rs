@@ -18,24 +18,31 @@ const MERLON_SPACING: f32 = 0.7;
 const LOG_SPACING: f32 = 0.45;
 
 /// The model's scale for a building `width` × `height` cells with this wall
-/// round it, in grid points a cell: the whole walled ground fits as a building
+/// round it, and `beyond` cells more outside it on every side (a castle's
+/// towers and moat), in grid points a cell: the whole of it fits as a building
 /// that size would.
-pub(super) fn scale(width: u16, height: u16, wall: &PoiWall) -> f32 {
-    let wide = f32::from(width) + f32::from(wall.west) + f32::from(wall.east) + 2.0;
-    let tall = f32::from(height) + f32::from(wall.north) + f32::from(wall.south) + 2.0;
+pub(super) fn scale(width: u16, height: u16, wall: &PoiWall, beyond: f32) -> f32 {
+    let wide = f32::from(width) + f32::from(wall.west) + f32::from(wall.east) + 2.0 + 2.0 * beyond;
+    let tall =
+        f32::from(height) + f32::from(wall.north) + f32::from(wall.south) + 2.0 + 2.0 * beyond;
     let most = wide.max(tall);
     2.0 * half_size(most as u16) / most
+}
+
+/// A material's colour, the wall's height, and whether it has merlons.
+pub(super) fn build_of(material: WallMaterial) -> (Rgb, f32, bool) {
+    match material {
+        WallMaterial::Log => (LOG, 1.2, false),
+        WallMaterial::Plank => (WOOD, 1.1, false),
+        WallMaterial::Stone => (STONE, 1.3, true),
+        WallMaterial::Block => (DRESSED, 1.5, true),
+    }
 }
 
 /// The wall round a building `half` (in grid points) at the origin, `per_cell`
 /// grid points a cell.
 pub(super) fn wall(model: &mut PoiModel, half: Vec2, wall: &PoiWall, per_cell: f32) {
-    let (colour, height, merlons) = match wall.material {
-        WallMaterial::Log => (LOG, 1.2, false),
-        WallMaterial::Plank => (WOOD, 1.1, false),
-        WallMaterial::Stone => (STONE, 1.3, true),
-        WallMaterial::Block => (DRESSED, 1.5, true),
-    };
+    let (colour, height, merlons) = build_of(wall.material);
     let out = |cells: u8| (f32::from(cells) + 0.5) * per_cell;
     let (west, east) = (-half.x - out(wall.west), half.x + out(wall.east));
     let (north, south) = (-half.y - out(wall.north), half.y + out(wall.south));

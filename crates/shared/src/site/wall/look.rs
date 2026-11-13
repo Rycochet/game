@@ -32,11 +32,25 @@ pub struct WallLook {
     pub rect: Rect,
     pub material: WallMaterial,
     pub gates: Vec<Gate>,
+    /// Towers standing on it (a castle's): the wall stops at each and goes on
+    /// past it, so none of their cells are the wall's.
+    pub towers: Vec<Rect>,
+    /// Cells of it fallen down (a ruin's): ground, not wall.
+    pub gaps: Vec<(i64, i64)>,
 }
 
 impl WallLook {
-    /// Whether `(x, y)` is one of the wall's cells (its gates' too).
+    /// Whether `(x, y)` is one of the wall's cells (its gates' too), not in a
+    /// tower or a gap.
     pub fn has(&self, x: i64, y: i64) -> bool {
+        self.on_ring(x, y)
+            && !self.towers.iter().any(|tower| tower.contains(x, y))
+            && !self.gaps.contains(&(x, y))
+    }
+
+    /// Whether `(x, y)` is on the ring round its rectangle, towers and gaps
+    /// or not.
+    pub fn on_ring(&self, x: i64, y: i64) -> bool {
         let Rect {
             x: x0,
             y: y0,
@@ -69,6 +83,14 @@ impl WallLook {
                     ..*gate
                 })
                 .collect(),
+            towers: (self.towers.iter())
+                .map(|tower| Rect {
+                    x: tower.x + dx,
+                    y: tower.y + dy,
+                    ..*tower
+                })
+                .collect(),
+            gaps: self.gaps.iter().map(|&(x, y)| (x + dx, y + dy)).collect(),
         }
     }
 }

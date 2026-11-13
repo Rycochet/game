@@ -12,7 +12,7 @@ use super::super::SiteLevel;
 use super::super::farm::{Plot, surroundings};
 use super::super::grid::{chance, roll};
 use super::super::pond::{PondShape, dig_pond};
-use super::super::wall::{Gate, WallLook, WallMaterial, WallOptions, build_wall};
+use super::super::wall::{Gate, WallLook, WallMaterial, WallOptions, build_wall, ruin_gaps};
 use super::Shape;
 use crate::rng::Seed;
 
@@ -31,8 +31,13 @@ pub(in crate::site) struct Walled {
 
 impl Walled {
     /// The wall round `ground` (the ground floor's outline) that `options` and
-    /// the seed give, if it has one.
-    pub(super) fn plan(options: &WallOptions, seed: Seed, ground: &Shape) -> Option<Self> {
+    /// the seed give, if it has one, with gaps if it is a `ruin`.
+    pub(super) fn plan(
+        options: &WallOptions,
+        seed: Seed,
+        ground: &Shape,
+        ruin: u8,
+    ) -> Option<Self> {
         let mut rng = seed.derive("wall").rng();
         if !chance(&mut rng, options.percent) {
             return None;
@@ -84,11 +89,14 @@ impl Walled {
             y: y1,
             runs_east_west: true,
         };
-        let look = WallLook {
+        let mut look = WallLook {
             rect,
             material: WallMaterial::pick(seed, options.materials),
             gates: vec![gate],
+            towers: Vec::new(),
+            gaps: Vec::new(),
         };
+        look.gaps = ruin_gaps(&look, seed, ruin);
         Some(Self { look, pond })
     }
 

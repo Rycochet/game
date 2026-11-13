@@ -5,7 +5,7 @@
 /// to them), so anyone connecting starts again, as nothing is kept on a client.
 /// Every generator version goes up with it, so sites are made as new whatever
 /// else has changed. The world itself stays: it comes from its seed.
-pub const FORGET_BEFORE: u32 = 5;
+pub const FORGET_BEFORE: u32 = 6;
 
 /// The building generator's version: bump it when its output changes in a
 /// way that matters (not for looks), and keep the old one runnable while
