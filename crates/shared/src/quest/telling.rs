@@ -42,7 +42,8 @@ pub(super) fn tell_plan(world: &QuestWorld, town: &Poi, plan: &Plan, tale: Tale)
         let (kind, ruined) = if wilds {
             (PlaceKind::Wilds, false)
         } else {
-            let ruin = Generator::for_site(poi.kind, poi.seed, poi.desert).ruin();
+            // Not a town, so no roads' sides.
+            let ruin = Generator::for_site(poi.kind, poi.seed, poi.desert, [false; 4]).ruin();
             (PlaceKind::of_poi(poi.kind), ruin > 0)
         };
         Place {

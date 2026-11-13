@@ -2,19 +2,26 @@
 
 use bevy::prelude::*;
 use shared::poi::PoiKind;
-use shared::site::{Outline, PoiLook};
+use shared::site::{Outline, PoiLook, PoiWall};
 
 use super::{
     ADOBE, DARK_STONE, EARTH, FARMHOUSE_SHARE, GRASS, GREY_ROOF, MOSS, PLASTER, PoiModel, REACH,
-    RED_ROOF, STONE, THATCH, WOOD, building, circle, half_size, hashed, oasis, rectangle, ruined,
+    RED_ROOF, STONE, THATCH, WOOD, building, half_size, hashed, oasis, rectangle, ruined,
     underground,
 };
+
+/// How far a town's wall stands outside its ring of houses, and the grid
+/// points a cell its gaps (all 0) are measured in, so it stays within `REACH`.
+const TOWN_WALL_CLEAR: f32 = 1.0;
+/// The most a town's wall reaches out each way, so its corners fit.
+const TOWN_WALL_HALF: f32 = REACH * 0.8;
+const TOWN_WALL_PER_CELL: f32 = 0.5;
 
 /// The model of a poi. `variety` makes towns of the same size differ.
 pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
     let mut model = PoiModel::default();
     match look {
-        PoiLook::Town { buildings } => town(&mut model, buildings, variety),
+        PoiLook::Town { buildings, wall } => town(&mut model, buildings, wall, variety),
         PoiLook::Building {
             outline,
             width,
@@ -64,9 +71,10 @@ pub fn build(kind: PoiKind, look: PoiLook, variety: u64) -> PoiModel {
     model
 }
 
-/// More houses the bigger it is, packed in a disc; the biggest get walls and a
-/// keep. Spread by the golden angle, which fills a disc evenly.
-pub(super) fn town(model: &mut PoiModel, buildings: u16, variety: u64) {
+/// More houses the bigger it is, packed in a disc; the biggest get a keep, and
+/// a walled town its wall round them all. Spread by the golden angle, which
+/// fills a disc evenly.
+pub(super) fn town(model: &mut PoiModel, buildings: u16, wall: Option<PoiWall>, variety: u64) {
     const GOLDEN_ANGLE: f32 = 2.399_963;
     let count = 3 + (f32::from(buildings).sqrt() * 1.6) as usize;
     let big = buildings >= 26;
@@ -74,6 +82,12 @@ pub(super) fn town(model: &mut PoiModel, buildings: u16, variety: u64) {
         REACH * 0.8
     } else {
         3.2 + count as f32 * 0.3
+    };
+    // A wall's square corners reach further than the disc: houses closer in.
+    let radius = if wall.is_some() {
+        radius.min(TOWN_WALL_HALF - TOWN_WALL_CLEAR)
+    } else {
+        radius
     };
     let turn = (variety % 8) as f32 * 0.7;
     for i in 0..count {
@@ -91,10 +105,10 @@ pub(super) fn town(model: &mut PoiModel, buildings: u16, variety: u64) {
         model.prism(Vec2::ZERO, &keep, (0.0, 4.5), DARK_STONE);
         model.battlements(Vec2::ZERO, &keep, 4.5, DARK_STONE);
     }
-    if buildings >= 61 {
-        for corner in circle(Vec2::splat(REACH * 0.92), 8) {
-            model.block(corner, Vec2::splat(0.6), 2.6, STONE);
-        }
+    if let Some(wall) = &wall {
+        // Clear of the houses' corners, its gates where the main roads leave.
+        let half = Vec2::splat(radius + TOWN_WALL_CLEAR);
+        super::wall::wall(model, half, wall, TOWN_WALL_PER_CELL);
     }
 }
 

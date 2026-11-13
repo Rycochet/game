@@ -281,8 +281,9 @@ fn a_cutout_is_its_sites_first_level_in_a_clearing() {
         for y in by..by + bh {
             for x in bx..bx + bw {
                 if cutout.contains(x, y) {
-                    let generator =
-                        crate::site::Generator::for_site(poi.kind, poi.seed, poi.desert);
+                    let generator = crate::site::Generator::for_site(
+                        poi.kind, poi.seed, poi.desert, [false; 4],
+                    );
                     if generator.ruin() == 0 {
                         assert_eq!(level.cell(x, y), first.cell(x - ox, y - oy));
                     }

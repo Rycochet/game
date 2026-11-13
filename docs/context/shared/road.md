@@ -4,7 +4,7 @@ Roads on the world map between towns, from the world alone, so the order anythin
 
 ## Files
 
-- `crates/shared/src/road.rs`: `Road`, `RoadLink`, `Roads`, constants. In `road/`: `kind.rs` (`RoadKind`, `FASTEST_PERCENT`), `network.rs` (which towns are joined), `route.rs` (the A* the road follows), `steps.rs` (`RoadSteps`).
+- `crates/shared/src/road.rs`: `Road`, `RoadLink`, `Roads`, constants. In `road/`: `kind.rs` (`RoadKind`, `FASTEST_PERCENT`), `network.rs` (which towns are joined: `joined`, the one rule), `sides.rs` (`town_sides`), `route.rs` (the A* the road follows), `steps.rs` (`RoadSteps`).
 
 ## Public API
 
@@ -12,6 +12,7 @@ Roads on the world map between towns, from the world alone, so the order anythin
 - `RoadKind`: `Path`, `Track`, `Road`, `Highway`, ordered smallest first (`max` is the larger); `ALL`, `of_town`, `between` (the smaller town decides), `speed_percent` (125, 150, 175, 200: owner's figures), `slope_percent` (100, 93, 87, 85). `FASTEST_PERCENT` (200: what route searches must allow for).
 - `RoadSteps::new(world_width)` (`Default`: no wrapping, for tests), `.add(&road)` (the larger kind wins a shared step), `.kind_of(from, to)` (only a step between consecutive points of a road, either way round, on any copy of the planet; crossing a road doesn't count), `.is_empty()`.
 - `RoadLink { a, b }`: the two towns' chunks, smaller first (`new` sorts). `Road { link, kind, points }`: grid points one step apart from town `a`'s poi to `b`'s, `x` not wrapped; `bounds()`.
+- `town_sides(pois, town) -> [bool; 4]`: the sides (north, east, south, west) of a town facing each town the network joins it to, by the straight bearing (further across than up or down is east or west); from links alone (a link cut by water still counts), never routed roads, so a town's layout never waits on the road thread; nothing for anything but a town. The server (`sites::site_generator`, `seen_poi`) and the wilderness (`ChunkPlan::with_new_site`) pass it to `Generator::for_site` and `PoiLook::of`; a town's main roads and wall gates face these sides.
 - `Roads::new(&WorldParams)`, `.links_in_area(pois, min, max) -> Vec<(RoadLink, RoadKind)>` (every link whose road may pass through the area, sorted), `.road(pois, link) -> Option<Road>` (`None` with water between).
 
 ## Depends on
@@ -20,7 +21,7 @@ Roads on the world map between towns, from the world alone, so the order anythin
 
 ## Used by
 
-- `shared::movement` (`world_step_cost`), `shared::pathfinding` (`find_world_path`), `server` (`roads`: the road thread, saves, `connections::send_roads`, `ServerWorld::road_steps`), `shared::protocol` (`ServerMessage::Road`), client `common` (`KnownRoads`), `world_map` (drawing, clearing woods), `minimap` (lines on the maps).
+- `shared::site` and `shared::wilderness` (`town_sides`), `shared::movement` (`world_step_cost`), `shared::pathfinding` (`find_world_path`), `server` (`roads`: the road thread, saves, `connections::send_roads`, `ServerWorld::road_steps`), `shared::protocol` (`ServerMessage::Road`), client `common` (`KnownRoads`), `world_map` (drawing, clearing woods), `minimap` (lines on the maps).
 
 ## Notes
 

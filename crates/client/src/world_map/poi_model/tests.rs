@@ -6,9 +6,14 @@ use shared::site::{Outline, PoiLook};
 use super::*;
 
 fn looks() -> impl Iterator<Item = (PoiKind, PoiLook)> {
-    PoiKind::ALL
-        .into_iter()
-        .flat_map(|kind| (0..8).map(move |seed| (kind, PoiLook::of(kind, Seed::new(seed), false))))
+    PoiKind::ALL.into_iter().flat_map(|kind| {
+        (0..8).map(move |seed| {
+            (
+                kind,
+                PoiLook::of(kind, Seed::new(seed), false, [true, false, true, false]),
+            )
+        })
+    })
 }
 
 #[test]
@@ -55,9 +60,16 @@ fn more_floors_stand_taller() {
 #[test]
 fn bigger_towns_have_more_to_them() {
     let triangles = |buildings| {
-        build(PoiKind::Town, PoiLook::Town { buildings }, 0)
-            .corners
-            .len()
+        build(
+            PoiKind::Town,
+            PoiLook::Town {
+                buildings,
+                wall: None,
+            },
+            0,
+        )
+        .corners
+        .len()
     };
     assert!(triangles(5) < triangles(20));
     assert!(triangles(20) < triangles(40));

@@ -1,15 +1,15 @@
 use shared::poi::Poi;
 use shared::protocol::{ClientMessage, ServerMessage};
 use shared::shop::sells;
-use shared::site::{Generator, Site};
+use shared::site::Site;
 
 use super::tests::{chunk_near_start, position};
 use crate::connections::tests::TestClient;
 use crate::storage::SiteId;
 
 /// Whether a poi's town has a shop.
-fn has_shop(poi: &Poi) -> bool {
-    let generator = Generator::for_site(poi.kind, poi.seed, poi.desert);
+fn has_shop(test: &TestClient, poi: &Poi) -> bool {
+    let generator = crate::sites::site_generator(&test.world, poi);
     let site = Site::with_generator(poi.kind, poi.seed, generator.version(), generator);
     let first = site.expect("a site").level(0);
     let mut town = first.buildings.iter();
@@ -26,7 +26,9 @@ fn stock_in(answers: &[ServerMessage]) -> Option<usize> {
 #[test]
 fn a_town_set_into_the_wilderness_trades_with_its_own_keepers() {
     let mut test = TestClient::new();
-    let plan = chunk_near_start(&test, |c| c.poi().kind.is_town() && has_shop(c.poi()));
+    let plan = chunk_near_start(&test, |c| {
+        c.poi().kind.is_town() && has_shop(&test, c.poi())
+    });
     let poi = *plan.cutout().unwrap().poi();
     test.client.character.world_position = (poi.x, poi.y);
     let answers = test.send(&[ClientMessage::Down]);

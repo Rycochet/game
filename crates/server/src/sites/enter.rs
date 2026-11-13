@@ -153,7 +153,7 @@ pub(super) fn make_site(world: &mut ServerWorld, poi: &Poi, id: SiteId) -> Optio
     let generator = match id {
         SiteId::Dev { ruin, .. } => Generator::for_poi(poi.kind).with_ruin(ruin),
         SiteId::DevArea(area) => Generator::DevArea(area),
-        SiteId::Poi(_) | SiteId::Wilderness => Generator::for_site(poi.kind, poi.seed, poi.desert),
+        SiteId::Poi(_) | SiteId::Wilderness => super::site_generator(world, poi),
     };
     let version = world.site(id).version;
     let site = Site::with_generator(poi.kind, poi.seed, version, generator);

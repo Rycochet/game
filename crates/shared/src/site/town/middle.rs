@@ -1,6 +1,6 @@
 //! Laying out the middle of a town: its main roads and square.
 
-use super::super::grid::{chance, roll};
+use super::super::grid::roll;
 use super::{BORDER, Block, ROADS, Road, SQUARE_CERTAIN, SQUARE_POSSIBLE, Town};
 
 impl Town {
@@ -29,7 +29,7 @@ impl Town {
 
         // The roads through the middle: which arms it has (north, east,
         // south, west). They run to the edge, where they lead out.
-        let arms = self.choose_arms();
+        let arms = self.arms;
         self.middle = (mid_x + main / 2, mid_y + main / 2);
         // A square over the middle, in the main road's surface: buildings
         // stand along its edges as along roads, and start there.
@@ -85,27 +85,6 @@ impl Town {
         }
         self.grow();
         (arms, (mid_x, mid_y), main)
-    }
-
-    /// Which arms the middle of the town has: small towns are mostly one
-    /// straight road, big ones mostly crossroads.
-    fn choose_arms(&mut self) -> [bool; 4] {
-        let straight = (60 - self.target).max(10) as u32;
-        let t_junction = 40;
-        let shape = roll(&mut self.rng, 0, 99) as u32;
-        let shape = if self.target < 6 { 0 } else { shape };
-        if shape < straight {
-            if chance(&mut self.rng, 50) {
-                [true, false, true, false]
-            } else {
-                [false, true, false, true]
-            }
-        } else if shape < straight + t_junction {
-            let missing = roll(&mut self.rng, 0, 3) as usize;
-            std::array::from_fn(|i| i != missing)
-        } else {
-            [true; 4]
-        }
     }
 
     /// A square centred near `(x, y)`, if this town has one: the chance grows

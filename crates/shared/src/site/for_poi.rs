@@ -6,7 +6,7 @@ use super::cave::{CaveEntrance, CaveOptions};
 use super::farm::FarmOptions;
 use super::herbalist::HerbalistOptions;
 use super::oasis::OasisOptions;
-use super::town::TownOptions;
+use super::town::{CITY_WALLS, HAMLET_WALLS, TOWN_WALLS, TownOptions, VILLAGE_WALLS};
 use super::wall::{WallMaterial, WallOptions};
 use crate::poi::PoiKind;
 
@@ -83,7 +83,16 @@ impl Generator {
                 lava_percent,
             })
         };
-        let town = |buildings| Self::Town(TownOptions { buildings });
+        // Owner, 2026-11-13: the smaller, the likelier a wall. Main roads
+        // follow the road network's sides once `for_site` knows them.
+        let town = |buildings, wall_percent, wall_materials| {
+            Self::Town(TownOptions {
+                buildings,
+                sides: [false; 4],
+                wall_percent,
+                wall_materials,
+            })
+        };
         let at_least_three_floors = |generator| match generator {
             Self::Building(options) => Self::Building(BuildingOptions {
                 min_floors: 3,
@@ -92,10 +101,10 @@ impl Generator {
             other => other,
         };
         match kind {
-            Hamlet => town((3, 8)),
-            Village => town((9, 25)),
-            Town => town((26, 60)),
-            City => town((61, 150)),
+            Hamlet => town((3, 8), 60, HAMLET_WALLS),
+            Village => town((9, 25), 45, VILLAGE_WALLS),
+            Town => town((26, 60), 30, TOWN_WALLS),
+            City => town((61, 150), 15, CITY_WALLS),
             Farm => Self::Farm(FarmOptions {
                 house: BuildingOptions {
                     width: (13, 19),

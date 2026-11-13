@@ -80,7 +80,10 @@ fn learned_names_are_kept_by_chunk_until_sent_without() {
     let chunk = ChunkPos { x: 0, y: 1 };
     let poi = SeenPoi {
         kind: PoiKind::Village,
-        look: shared::site::PoiLook::Town { buildings: 9 },
+        look: shared::site::PoiLook::Town {
+            buildings: 9,
+            wall: None,
+        },
         chunk,
         x: 10,
         y: 70,

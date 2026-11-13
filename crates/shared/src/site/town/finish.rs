@@ -2,7 +2,8 @@
 
 use super::super::SiteLevel;
 use super::super::grid::{Reach, STEPS};
-use super::{BORDER, Placed, ROADS, Rect, Town};
+use super::wall::WALLED_BORDER;
+use super::{BORDER, Block, Placed, ROADS, Rect, Town};
 use crate::dungeon::{Cell, Level};
 
 impl Town {
@@ -35,17 +36,44 @@ impl Town {
                 }
             }
         }
-        let (x0, y0) = (x0 - BORDER, y0 - BORDER);
-        let (x1, y1) = (x1 + BORDER, y1 + BORDER);
+        let mut built = Block { x0, y0, x1, y1 };
+        let border = if self.wall.is_some() {
+            built = self.wall_box(built);
+            WALLED_BORDER
+        } else {
+            BORDER
+        };
+        let Block { x0, y0, x1, y1 } = built;
+        let (x0, y0) = (x0 - border, y0 - border);
+        let (x1, y1) = (x1 + border, y1 + border);
         let mut level = Level::new(x0, y0, x1 - x0, y1 - y0);
         for y in y0..y1 {
             for x in x0..x1 {
-                level.set(x, y, self.level.cell(x, y));
+                // A wall's room may reach past the area grown in.
+                let cell = if self.level.contains(x, y) {
+                    self.level.cell(x, y)
+                } else {
+                    Cell::Ground
+                };
+                level.set(x, y, cell);
             }
         }
-        let entrance = (entry.0.clamp(x0, x1 - 1), entry.1.clamp(y0, y1 - 1));
+        // On the level's edge, which a walled town's may reach past `entry`.
+        let entrance = if arms[2] {
+            (entry.0, y1 - 1)
+        } else if arms[1] {
+            (x1 - 1, entry.1)
+        } else if arms[3] {
+            (x0, entry.1)
+        } else {
+            (entry.0, y0)
+        };
         self.level = level;
-        self.roads_to_the_edge();
+        self.roads_to_the_edge(border);
+        let walls = match self.wall {
+            Some(material) => vec![self.build_town_wall(built, material)],
+            None => Vec::new(),
+        };
 
         let kinds = self.choose_kinds();
         let mut buildings = Vec::new();
@@ -60,13 +88,14 @@ impl Town {
             entrance: Some(entrance),
             buildings,
             fields: Vec::new(),
-            walls: Vec::new(),
+            walls,
         }
     }
 
-    /// Any road reaching the town's border carries on through it to the edge
-    /// of the level, like the main roads, unless something is in the way.
-    fn roads_to_the_edge(&mut self) {
+    /// Any road reaching the town's border (`border` wide: past a wall's
+    /// rectangle, if it has one) carries on through it to the edge of the
+    /// level, like the main roads, unless something is in the way.
+    fn roads_to_the_edge(&mut self, border: i64) {
         let (x0, y0, width, height) = self.level.bounds();
         for road in self.roads.clone() {
             let (first, last) = if road.east_west {
@@ -76,12 +105,12 @@ impl Town {
             };
             // Each way, out from its end, until the edge or another road.
             let outwards: [Vec<i64>; 2] = [
-                if road.along.0 <= first + BORDER {
+                if road.along.0 <= first + border {
                     (first..road.along.0).rev().collect()
                 } else {
                     Vec::new()
                 },
-                if road.along.1 >= last - BORDER {
+                if road.along.1 >= last - border {
                     (road.along.1..last).collect()
                 } else {
                     Vec::new()

@@ -26,25 +26,34 @@ pub(super) fn links_in_area(
     let mut links = BTreeMap::new();
     for (i, a) in towns.iter().enumerate() {
         for b in &towns[i + 1..] {
-            let apart = distance_squared(a, b);
-            if apart > RANGE * RANGE || !crosses(a, b, min, max) {
+            if !crosses(a, b, min, max) {
                 continue;
             }
-            // A third town nearer both than they are to each other makes this
-            // road the long way round: theirs go through it instead.
-            let nearer = towns
-                .iter()
-                .any(|c| distance_squared(a, c) < apart && distance_squared(b, c) < apart);
-            if nearer || a.chunk == b.chunk {
-                continue;
+            if let Some(kind) = joined(a, b, &towns) {
+                links.insert(RoadLink::new(a.chunk, b.chunk), kind);
             }
-            let Some(kind) = RoadKind::between(a.kind, b.kind) else {
-                continue;
-            };
-            links.insert(RoadLink::new(a.chunk, b.chunk), kind);
         }
     }
     links.into_iter().collect()
+}
+
+/// The road joining towns `a` and `b`, if they are joined: within `RANGE`,
+/// with no third of `towns` nearer both than they are to each other, and both
+/// building roads. `towns` must hold every town within `RANGE` of `a`.
+pub(super) fn joined(a: &Poi, b: &Poi, towns: &[Poi]) -> Option<RoadKind> {
+    let apart = distance_squared(a, b);
+    if apart > RANGE * RANGE || a.chunk == b.chunk {
+        return None;
+    }
+    // A third town nearer both than they are to each other makes this road
+    // the long way round: theirs go through it instead.
+    let nearer = towns
+        .iter()
+        .any(|c| distance_squared(a, c) < apart && distance_squared(b, c) < apart);
+    if nearer {
+        return None;
+    }
+    RoadKind::between(a.kind, b.kind)
 }
 
 /// Whether the box round two towns, `MARGIN` wider, meets the area.

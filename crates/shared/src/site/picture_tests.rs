@@ -80,7 +80,7 @@ fn print_sites() {
 fn about_a_third_of_sturdy_buildings_are_ruined_at_every_level() {
     let mut counts = [0; 6];
     for seed in 0..3000 {
-        let look = PoiLook::of(PoiKind::Castle, Seed::new(seed), false);
+        let look = PoiLook::of(PoiKind::Castle, Seed::new(seed), false, [false; 4]);
         let PoiLook::Building { ruin, .. } = look else {
             panic!("a castle is a building");
         };
@@ -94,9 +94,9 @@ fn about_a_third_of_sturdy_buildings_are_ruined_at_every_level() {
 
 #[test]
 fn tents_are_never_ruined() {
-    assert!(
-        (0..300).all(|seed| !PoiLook::of(PoiKind::RedTent, Seed::new(seed), false).is_ruined())
-    );
+    assert!((0..300).all(|seed| {
+        !PoiLook::of(PoiKind::RedTent, Seed::new(seed), false, [false; 4]).is_ruined()
+    }));
 }
 
 fn floors_of(kind: PoiKind) -> impl Iterator<Item = Site> {

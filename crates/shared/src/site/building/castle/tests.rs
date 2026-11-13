@@ -129,7 +129,7 @@ fn a_courtyard_pond_and_sometimes_a_moat() {
             wall: Some(look),
             castle: Some(castle),
             ..
-        } = PoiLook::of(PoiKind::Castle, seed, false)
+        } = PoiLook::of(PoiKind::Castle, seed, false, [false; 4])
         else {
             panic!("the world map shows the castle");
         };

@@ -60,7 +60,7 @@ fn a_forts_wall_rings_it_with_a_gate_south() {
         assert!((1..=9).contains(&water), "{water} cells of pond");
         let PoiLook::Building {
             wall: Some(look), ..
-        } = PoiLook::of(PoiKind::Fort, seed, false)
+        } = PoiLook::of(PoiKind::Fort, seed, false, [false; 4])
         else {
             panic!("the world map shows the wall");
         };
