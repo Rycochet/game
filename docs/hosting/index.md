@@ -49,7 +49,7 @@ Change the `environment` and `ports` of the example:
 | Setup | Environment | Ports |
 | ----- | ----------- | ----- |
 | Let's Encrypt | `HOW_LETS_ENCRYPT_DOMAIN: game.example.com`, which accepts Let's Encrypt's terms | `"443:24691"` |
-| Your own certificate | `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`, the paths of your PEM files as the container sees them, which must be readable by its `hall` user | `"24691:24691"` |
+| Your own certificate | `HOW_TLS_CERTIFICATE` and `HOW_TLS_KEY`, the paths of your PEM files as the container sees them, which must be readable by its [user](#user-and-group) | `"24691:24691"` |
 | Behind a reverse proxy, unencrypted between it and this server | `HOW_BEHIND_PROXY: "true"` and `HOW_DISABLE_SSL: "true"` | `"24690:24690"` alone |
 | Behind a reverse proxy, encrypted between it and this server | Any certificate above or the self-signed one, with `HOW_BEHIND_PROXY: "true"` if it should be able to use port 24690 too | `"24691:24691"`, and `"24690:24690"` if used |
 
@@ -60,6 +60,15 @@ Change the `environment` and `ports` of the example:
 These can't be mixed: settings that disagree stop the server from starting, and it says why.
 
 With none of these behind a proxy, `HOW_UPNP: "true"` asks your router to forward the port for you (UPnP), if it allows that: 443 with Let's Encrypt, otherwise 24691. The log says whether it worked. In Docker this only works with `network_mode: host` in place of `ports`, as the router's answers can't reach a container on Docker's own network. Behind a proxy it is ignored, with a warning, as the proxy's port is the one to forward.
+
+## User and group
+
+The server runs as user and group 1000 in the container, which is usually the first user on a Linux computer, so a folder of yours mounted at `/data` just works. To run it as someone else, there are two ways:
+
+- **`PUID` and `PGID`:** set these in `environment` to the user and group numbers you want (`id` on Linux shows yours). Each time the container starts, it first gives that user anything in `/data` that isn't theirs already, then starts the server as them. Saves from an older image are put right the same way, with nothing for you to do.
+- **Docker's `user:`:** set `user: "1001:1001"` on the service (or `--user` with `docker run`), and the container never runs anything as root. It then leaves `/data` alone, so it must already belong to that user (`chown -R 1001:1001` on the folder). If it can't be written, the server doesn't start, and its log says why.
+
+Files the server only reads, such as your own certificate or a secret's file, must be readable by the same user.
 
 ## Connecting a native client
 
@@ -112,7 +121,7 @@ secrets:
     file: ./google_client_secret.txt
 ```
 
-The file must be readable by the container's `hall` user (`chmod 644` on it does that). If the service has `read_only: true`, Compose only allows secrets from a `file:`, as above, as it can't write `environment:` ones into the container; set `HOW_OIDC_GOOGLE_CLIENT_SECRET` itself instead if you'd rather keep them in the environment.
+The file must be readable by the server's [user](#user-and-group) (`chmod 644` on it does that). If the service has `read_only: true`, Compose only allows secrets from a `file:`, as above, as it can't write `environment:` ones into the container; set `HOW_OIDC_GOOGLE_CLIENT_SECRET` itself instead if you'd rather keep them in the environment.
 
 The server only asks Google for the player's email address, and only one Google has checked. It keeps a key made from the address with a secret of its own, never the address itself, and forgets everything else Google says. The secret is made on the first run and kept in the data folder (`login-secret.txt`); servers that share players must be given the same one with `HOW_LOGIN_SECRET`.
 
