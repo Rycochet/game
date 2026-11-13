@@ -28,7 +28,7 @@ Quests' stories: who is in them (households, pets, named bosses), where they wen
 
 ## Used by
 
-- Nothing yet: the Quest system (its PR 2) builds `Request`s and sends `Story`s; the client renders them.
+- `shared::quest` (`telling.rs`: builds each quest's `Request` and tells it); later the server sends `Story`s and the client renders them.
 
 ## Notes
 

@@ -1,6 +1,6 @@
 # Quests (plan)
 
-The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins) and PR 1 (this note) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
+The plan for the quest system, in 12 PRs (0 to 11), planned with the owner on 2026-11-11 and 2026-11-12. PR 0 (coins), PR 1 (this note) and PR 2 (`shared::quest`, see `shared/quest.md`) are built; the rest is not. **Owner** marks the owner's decisions; **Claude** marks Claude's proposals the owner accepted as they were. Quests' text is a plan of its own: `story-text.md`.
 
 ## Goal
 
@@ -9,7 +9,7 @@ Quests from talking to the people of a town, sending a character to nearby place
 ## How it works
 
 - **Generated, deterministic, by the server.** A town's quests come from its poi's map seed (`Seed::derive("quests")`, drawing nothing from the site generator's sequences), identical for everyone (**owner**). Only the server works them out, as the pois seed is secret (as with place names and shop stock); clients are sent offers, their log, markers and progress, and the server checks everything.
-- **`shared::quest`**, plain Rust: the model, the generator, the step graph and poi hooks.
+- **`shared::quest`**, plain Rust: the model, the generator, the step graph and poi hooks (built: `shared/quest.md`, with the figures Claude chose: slots, radii, chain lengths, rewards).
 - **The owner's own notes (Questing):** quests come from townspeople and shopkeepers, more in bigger towns; targets are a nearby poi or actions in the wilderness; **a poi may serve several quests, but they must not overlap or interfere**; the whole quest, text and targets come from its seed, placed by its town.
 - **Not interfering (Claude):** each poi has fixed hooks (a boss place, an item place, counted kills per mob kind); each hook belongs to one quest only, by a hash, so two towns' quests never claim the same boss or item spot. Counted kills may be shared (top-ups per quester, below).
 - **Text is not `shared::quest`'s (owner, agreed with the Flavour text chat):** quest names, step words, descriptions, reasons and NPC names come from `shared::story` (Flavour text PR 3) and its names (PR 2). The server sends a language-neutral `Story`; the client writes it. Townsfolk's gender is `shared::gender::Gender`. Details: `story-text.md`.
@@ -113,7 +113,7 @@ Future skill-tree nodes quests will use through alternatives and skill requireme
 | -- | ---- | ----- | ----- |
 | 0 | **Coin items** (built, #447): Copper, Silver, Gold kinds turning into the next, mob spawns by copper amount, saved coins as copper | | independent of 1, 2 |
 | 1 | **This design note** (built), decisions.md entries, CLAUDE.md row | | |
-| 2 | `shared::quest`: model, generator (givers, slots, nearby pois, templates, roles), step graph, poi hooks, room for alignment requirements and changes; names and text through `shared::story`; golden tests and a print-to-text test | 1, Flavour text PR 3 | |
+| 2 | **`shared::quest`** (built): model, generator (givers, slots, nearby pois, templates, roles), step graph, poi hooks, room for alignment requirements and changes; names and text through `shared::story`; golden tests and a print-to-text test | 1, Flavour text PR 3 | |
 | 3 | Server: offers by door, accept, abandon, fail (an hour before retaking), turn in (all-or-nothing coin rewards), progress events, per-planet lists and cap, standing, character saves, protocol messages | 0, 2 | |
 | 4 | Client: talk panel (markup), door markers ("!", "?", grey "!", colours), poi markers, Hall gate markers | 3 | |
 | 5 | Quest Log panel (L) with the planet dropdown and history; Close Doors to O as Open/Close Doors | 4 | independent |
