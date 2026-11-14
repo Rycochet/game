@@ -34,7 +34,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   # Registry image names must be lowercase.
-  IMAGE: ghcr.io/rycochet/hall-of-worlds
+  IMAGE: ghcr.io/reigningcoo/hall-of-worlds
   # How many earlier nightlies' builds the web client gets deltas from: a week.
   PAST_NIGHTLIES: 7
 
