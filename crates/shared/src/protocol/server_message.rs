@@ -188,16 +188,16 @@ pub enum ServerMessage {
     /// move `step`: the client adds what it did since, and moves the player
     /// there if it shows them elsewhere. Sent once a tick, when any arrived.
     Position { map: u32, step: u32, x: i64, y: i64 },
-    /// Everything the character carries, as the server has it: after Welcome,
-    /// and whenever it is asked to change, so a move it refused is put right.
+    /// All it carries, as the server has it: after Welcome and any ask to change it.
     Inventory(Inventory),
-    /// What the character is like, for them to see: after `Welcome`, and when it
-    /// changes. Nobody else is told this.
+    /// What the character is like, for them alone: after `Welcome`, and when it changes.
     Sheet(Sheet),
-    /// Someone's Health and Mana as they are now: `who` is `None` for the
-    /// player's own (after `Sheet`, and whenever they change other than by
-    /// refilling), and later a party member's id. The client refills them
-    /// itself (`VitalNow::after`).
+    /// The player's attributes with every bonus (`Sheet::attributes_with`), what
+    /// rules go by: after `Sheet` on joining, and whenever they change.
+    Attributes(crate::sheet::Attributes),
+    /// Someone's Health and Mana now: `who` is `None` for the player's own (after
+    /// `Sheet`, and whenever they change other than by refilling), and later a
+    /// party member's id. The client refills them itself (`VitalNow::after`).
     Vitals {
         who: Option<Id>,
         health: VitalNow,

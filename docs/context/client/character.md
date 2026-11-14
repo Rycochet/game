@@ -4,14 +4,16 @@ What the character is like: the Character panel's Character tab, which `inventor
 
 ## Files
 
-- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `describe` (what the panel says; unit tested).
+- `crates/client/src/character/mod.rs`: `CharacterPlugin`, `CharacterSheet`, `WithBonuses`, `describe` (what the panel says; unit tested).
+- `crates/client/src/character/attribute_lines.rs`: the nine attributes a row to a line, each with what bonuses make of it: "Agility 95 (-5)", from the server's `Attributes` (as they are until it has said).
 - `crates/client/src/character/listed.rs`: `describe_listed(ListedCharacter)`: what the tab would say of a character offered to choose from, as far as their save tells (gender, kind, attributes, carrying, difficulty, looks; no Health, Mana or speed), for `character_select`.
-- `crates/client/src/character/vitals_lines.rs`: "Health 31 (Toughness 26, +5 bonuses)": the most from the last `Vitals`, its parts from the sheet with its effects' bonuses (`Sheet::totals`, no worn items yet); playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or effects do, so the parts stay right.
+- `crates/client/src/character/vitals_lines.rs`: "Health 31 (Toughness 26, +5 bonuses)": the most from the last `Vitals`, its parts from the sheet with what is worn and its effects' bonuses (`Sheet::totals`); playtime isn't sent, so its part ("play") is what the others leave. The server sends `Sheet` again when practice or effects do, so the parts stay right.
 
 ## Public API
 
 - `CharacterPlugin`.
 - `CharacterSheet(Sheet)` (resource): what the server last said.
+- `WithBonuses(Option<Attributes>)` (resource): the attributes with every bonus, as the server last said (`ServerMessage::Attributes`).
 - `describe_listed(&ListedCharacter) -> String`.
 
 ## Depends on

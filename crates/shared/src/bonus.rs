@@ -17,7 +17,7 @@ mod totals;
 
 pub use effect::{Cancel, Effect, EndsOn, Source};
 pub use effects::Effects;
-pub use food::{APPLE_RESTORE, APPLE_TICKS, food_effect};
+pub use food::{APPLE_RESTORE, APPLE_TICKS, food_effect, is_food};
 pub use item::{AGILITY_PER_KG, MANA_PER_KG, TOUGHNESS_PER_KG, item_bonuses, quality_factor};
 pub use material::{MaterialFactors, material_factors};
 pub use stat::{Amount, Bonus, PER_CENT, Stat};

@@ -1,7 +1,7 @@
 //! A player's Health and Mana (`shared::vitals`): telling the client when they
 //! change, and the dev tools that change them.
 
-use shared::bonus::Effect;
+use shared::bonus::{Cancel, Effect};
 use shared::protocol::{DEV_BONUS, DEV_BONUS_TICKS, DevVitals, ServerMessage};
 use shared::sheet::Situation;
 use shared::vitals::{Limits, Points, Vital};
@@ -15,11 +15,11 @@ impl Client {
         self.sheet.limits(self.situation(), now)
     }
 
-    /// What its sheet's limits go by besides the sheet. Worn items' bonuses
-    /// aren't applied yet: only effects' (`shared::bonus`).
-    pub(super) fn situation(&self) -> Situation<'static> {
+    /// What its sheet's limits go by besides the sheet: what it wears as last
+    /// taken in (`bonuses.rs`), its playtime and difficulty.
+    pub(super) fn situation(&self) -> Situation<'_> {
         Situation {
-            worn: &[],
+            worn: &self.bonused.wearing,
             playtime: self.activity.played,
             refill: self.playing_on().refill_ticks(),
         }
@@ -38,18 +38,23 @@ impl Client {
         })
     }
 
-    /// Every tick: forgets effects that have ended (sending the sheet again),
-    /// and tells the client if how much there can be has changed (refilling
-    /// it works out itself).
-    /// `false` if it has gone.
+    /// Every tick: takes in a change to what it wears, forgets effects that
+    /// have ended (sending the sheet again), and tells the client if its
+    /// attributes or how much there can be have changed (refilling it works
+    /// out itself). `false` if it has gone.
     pub(super) fn keep_vitals(&mut self, now: u64) -> bool {
-        let situation = self.situation();
-        if self.sheet.forget_ended(situation, now) {
+        self.keep_worn(now);
+        let (sheet, situation) = self.sheet_and_situation();
+        if sheet.forget_ended(situation, now) {
             self.unsaved = true;
             // Its Character panel shows the changes.
             if !self.link.send(&ServerMessage::Sheet(self.sheet.as_sent())) {
                 return false;
             }
+        }
+        self.refresh_attributes(now);
+        if !self.tell_attributes() {
+            return false;
         }
         if self.vitals_told == Some(self.limits(now)) {
             return true;
@@ -59,10 +64,14 @@ impl Client {
 
     /// Dev tools: harms, spends, fills or raises them as asked, and says so.
     pub(super) fn dev_vitals(&mut self, what: DevVitals, now: u64) -> bool {
+        if let DevVitals::Hurt(_) = what {
+            // Being hurt ends what it ends, restoring counted up to the harm.
+            self.cancel_effects(Cancel::Hurt, now);
+        }
         let limits = self.limits(now);
-        let situation = self.situation();
         let played = self.activity.played;
-        let vitals = &mut self.sheet.vitals;
+        let (sheet, situation) = self.sheet_and_situation();
+        let vitals = &mut sheet.vitals;
         match what {
             DevVitals::Hurt(amount) => vitals.hurt(Points::whole(amount), limits, now, played),
             DevVitals::SpendMana(amount) => {
@@ -71,7 +80,7 @@ impl Client {
             DevVitals::Fill => vitals.fill(),
             DevVitals::Bonus => {
                 let bonus = Effect::dev_bonus(DEV_BONUS, now, now + DEV_BONUS_TICKS);
-                self.sheet.add_effect(bonus, situation, now);
+                sheet.add_effect(bonus, situation, now);
             }
         }
         self.unsaved = true;

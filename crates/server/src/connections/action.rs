@@ -40,6 +40,10 @@ pub(super) enum Action {
         target: Option<Id>,
     },
     Door(shared::protocol::DoorAsk),
+    /// Eating one of this (`consume.rs`).
+    Consume {
+        item: Id,
+    },
 }
 
 impl super::Client {

@@ -534,3 +534,21 @@ fn counted_kinds_are_plain() {
         );
     }
 }
+
+#[test]
+fn taking_one_takes_a_stacks_top_or_all_of_one_alone() {
+    let mut inventory = Inventory::default();
+    let apples = stack(1, ItemKind::Apple, 3);
+    inventory
+        .add(apples, Holder::Inventory, 0, 0, Rotation::None)
+        .unwrap();
+    let mut new_id = || id(9);
+    let top = inventory.take_one(id(1), &mut new_id).unwrap();
+    assert_eq!((top.id, top.count()), (id(3), 1), "its top, on its own");
+    assert_eq!(inventory.find(id(1)).unwrap().count(), 2);
+    inventory.take_one(id(1), &mut new_id).unwrap();
+    let last = inventory.take_one(id(1), &mut new_id).unwrap();
+    assert_eq!(last.id, id(1));
+    assert!(inventory.find(id(1)).is_none());
+    assert!(inventory.take_one(id(1), &mut new_id).is_none());
+}

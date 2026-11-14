@@ -112,12 +112,14 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
                 client.last_step = Some(number);
                 let taken = step_taken(client, world, step);
                 client.moved_from(from, map);
+                client.walked(from, tick);
                 taken
             }
             Action::Move { number, to } => {
                 client.last_step = Some(number);
                 let taken = move_taken(client, world, to);
                 client.moved_from(from, map);
+                client.walked(from, tick);
                 taken
             }
             Action::EnterSite { chunk } => (sites::enter_poi(client, world, chunk), 0),
@@ -133,6 +135,7 @@ pub(super) fn act(client: &mut Client, world: &mut ServerWorld) -> bool {
             Action::Quest(ask) => (crate::quests::answer_quest(client, world, ask), 0),
             Action::Ground(action) => ground::act(client, world, action),
             Action::Door(ask) => sites::door_act(client, world, ask),
+            Action::Consume { item } => super::consume::consume(client, world, item),
             Action::UseAbility { ability, target } => {
                 super::combat::start_ability(client, world, ability, target)
             }

@@ -61,6 +61,7 @@ impl Client {
             ground_told: GroundTold::default(),
             activity: super::playtime::Activity::default(),
             vitals_told: None,
+            bonused: Default::default(),
             energy: Energy::default(),
             speed: NORMAL_SPEED,
             waiting: VecDeque::new(),
@@ -123,9 +124,11 @@ impl Client {
     }
 
     /// What it carries has changed, which can change how fast it goes.
+    /// Or what it wears, and so its bonuses (`keep_worn`).
     pub(crate) fn update_speed(&mut self, tick: u64) {
         self.energy.settle(tick, self.speed);
         self.speed = self.sheet.speed(&self.inventory);
+        self.keep_worn(tick);
     }
 
     /// Tells the client what it carries, as far as it knows.

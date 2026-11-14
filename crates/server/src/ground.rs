@@ -13,10 +13,12 @@ use crate::connections::Client;
 use crate::ids::new_id;
 
 mod bags;
+mod eat;
 mod tell;
 
 pub(crate) use bags::{drop_at, put_down};
 use bags::{leave_on_ground, lying, standing_at, take_up};
+pub(crate) use eat::take_food;
 use tell::InReach;
 pub(crate) use tell::sync;
 

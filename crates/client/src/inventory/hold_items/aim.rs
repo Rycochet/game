@@ -1,6 +1,7 @@
 //! What letting go of what is held, where it is, would do.
 
 use bevy::prelude::*;
+use shared::bonus::is_food;
 use shared::item::StackLimits;
 
 use super::super::hold::{Held, Target};
@@ -81,6 +82,10 @@ pub(super) fn aim_at(
         if from_ground && on_bin {
             return Target::Bin;
         }
+        if from_ground && on_body && is_food(item.top().kind) {
+            // Its top one is eaten (`eat`).
+            return Target::Body { allowed: true };
+        }
         if from_ground && on_body {
             // Only the top of a stack goes on.
             let tried = try_wearing(&carried.0, (held.id, Some(item)), god.0, stacks.0);
@@ -119,6 +124,10 @@ pub(super) fn aim_at(
         // On it already: nothing happens, whatever it is over.
         if carried.0.is_worn(held.id) {
             return Target::Nowhere;
+        }
+        if super::eat::carried_food(&carried.0, holding, held.id).is_some() {
+            // Its top one is eaten (`eat`).
+            return Target::Body { allowed: true };
         }
         // What is in its way comes off (owner, 2026-11-07).
         let tried = try_wearing(&carried.0, (held.id, None), god.0, stacks.0);

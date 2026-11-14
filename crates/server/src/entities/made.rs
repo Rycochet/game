@@ -31,6 +31,8 @@ impl Mob {
             gender: spawn.gender,
             ..Sheet::new(spawn.kind)
         };
+        // Dressed, as players are: mobs don't change clothes, so once.
+        let bonuses = sheet.totals(&carrying.worn, 0);
         Mob {
             id,
             kind: spawn.kind,
@@ -52,7 +54,8 @@ impl Mob {
             speed: sheet.speed(carrying),
             shown: carrying.shown(),
             scent: scent_strength(carrying),
-            attributes: spawn.attributes,
+            attributes: bonuses.attributes(&spawn.attributes),
+            bonuses,
             vitals: Default::default(),
             wielded: shared::combat::Wielded::of(carrying),
             fight: Default::default(),
@@ -62,6 +65,11 @@ impl Mob {
             kept_in: None,
             escort: None,
         }
+    }
+
+    /// The most Health and Mana it can have, with its bonuses.
+    pub(super) fn limits(&self) -> shared::vitals::Limits {
+        (self.vitals).limits_with(&self.attributes, &self.bonuses, 0, None)
     }
 
     /// The site whose save keeps it, for a mob on a level of `here`: its own

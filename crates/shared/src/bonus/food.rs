@@ -32,3 +32,8 @@ pub fn food_effect(kind: ItemKind, now: u64) -> Option<Effect> {
         _ => None,
     }
 }
+
+/// Whether eating one does anything: what can be eaten.
+pub fn is_food(kind: ItemKind) -> bool {
+    food_effect(kind, 0).is_some()
+}

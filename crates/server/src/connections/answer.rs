@@ -248,6 +248,10 @@ pub(crate) fn answer(
             client.waiting.push_back(Action::Door(ask));
             true
         }
+        ClientMessage::Consume { item } => {
+            client.waiting.push_back(Action::Consume { item });
+            true
+        }
         ClientMessage::DevTeleport { .. }
         | ClientMessage::DevBackToStart
         | ClientMessage::DevToHall { .. }

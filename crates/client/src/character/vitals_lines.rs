@@ -1,12 +1,18 @@
 //! The Character panel's lines on Health and Mana: how much there can be of
 //! each, and where it comes from.
 
+use shared::item::Item;
 use shared::sheet::Sheet;
 use shared::vitals::{Vital, VitalNow};
 
-/// A line for each, once the server has said how much there can be. The
-/// client isn't told the playtime, so its part is what the rest leaves.
-pub(super) fn vitals_lines(sheet: &Sheet, most: Option<(VitalNow, VitalNow)>) -> Vec<String> {
+/// A line for each, once the server has said how much there can be, with what
+/// is `worn`. The client isn't told the playtime, so its part is what the rest
+/// leaves (and anything about worn items it doesn't know).
+pub(super) fn vitals_lines(
+    sheet: &Sheet,
+    worn: &[Item],
+    most: Option<(VitalNow, VitalNow)>,
+) -> Vec<String> {
     let Some((health, mana)) = most else {
         return Vec::new();
     };
@@ -14,7 +20,7 @@ pub(super) fn vitals_lines(sheet: &Sheet, most: Option<(VitalNow, VitalNow)>) ->
         .into_iter()
         .map(|(vital, told)| {
             // Effects the server still keeps all count: it drops ended ones.
-            let totals = sheet.totals(&[], 0);
+            let totals = sheet.totals(worn, 0);
             let attributes = totals.attributes(&sheet.attributes);
             let parts = sheet.vitals.most(vital, &attributes, &totals, 0);
             let rest =
