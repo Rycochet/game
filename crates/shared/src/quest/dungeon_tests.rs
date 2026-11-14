@@ -145,3 +145,62 @@ fn bigger_towns_have_bigger_cellars() {
         assert!(most(small).is_none_or(|levels| levels == 1));
     }
 }
+
+#[test]
+fn deeper_dungeons_have_locked_stages_with_keys_on_the_near_side() {
+    use crate::door::reach_without;
+    use crate::site::Exit;
+    use std::collections::BTreeSet;
+    let (mut stages, mut levels) = (0, 0);
+    for (_, quest) in dungeons() {
+        let dungeon = quest.dungeon.unwrap();
+        let site = Site::with_generator(
+            dungeon.poi.kind,
+            dungeon.poi.seed,
+            CAVE_VERSION,
+            dungeon.generator(),
+        )
+        .unwrap();
+        for index in 0..site.levels() {
+            let level = site.level(index);
+            let door = dungeon.stage_door(index, &level);
+            if index + 1 == site.levels() {
+                assert_eq!(door, None);
+                continue;
+            }
+            levels += 1;
+            let Some(door) = door else {
+                continue;
+            };
+            stages += 1;
+            let down = level
+                .stairs
+                .iter()
+                .find(|s| s.to == Exit::Level(index + 1))
+                .unwrap();
+            let from = if index == 0 {
+                Exit::WorldMap
+            } else {
+                Exit::Level(index - 1)
+            };
+            let start = [level.arrive(from)];
+            let open = reach_without(&level.level, &start, &BTreeSet::new());
+            let shut = reach_without(&level.level, &start, &BTreeSet::from([door]));
+            assert!(open.contains(&(down.x, down.y)));
+            assert!(!shut.contains(&(down.x, down.y)));
+            let stairs: Vec<_> = level.stairs.iter().map(|s| (s.x, s.y)).collect();
+            let holders: Vec<_> = (dungeon.spawns(index, &level.level, &stairs).iter())
+                .map(|s| (s.number, s.position))
+                .collect();
+            if let Some(holder) = dungeon.key_holder(index, &level, door, &holders) {
+                let at = holders.iter().find(|h| h.0 == holder).unwrap().1;
+                assert!(shut.contains(&at));
+            }
+        }
+    }
+    assert!(
+        stages > 0 && levels > 0,
+        "{stages} stages of {levels} levels"
+    );
+    eprintln!("{stages} stages of {levels} levels");
+}

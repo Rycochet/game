@@ -49,6 +49,21 @@ impl Visit {
     }
 }
 
+impl Visit {
+    /// The level as generated, for quests' rules on it (a quest dungeon's
+    /// stage door, `quests::stage_door`).
+    pub(crate) fn site_level(&self) -> &shared::site::SiteLevel {
+        &self.level
+    }
+
+    /// Whether the door at `at` is locked now.
+    pub(crate) fn is_locked(&self, at: (i64, i64)) -> bool {
+        self.doors
+            .get(&at)
+            .is_some_and(|door| door.door.is_locked())
+    }
+}
+
 /// Whether the player stands beside the door of building `building` of the
 /// town in `town` (`shop::beside_door`), on its own level or where it is set
 /// into the wilderness.

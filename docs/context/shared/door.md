@@ -28,6 +28,6 @@ Doors as more than a cell (owner's design, 2026-11-09): every `Cell::Door` and `
 
 - Starting chances (`start.rs`): 70% of doors inside start closed, 90% of those leading outside; herbalists' huts 85% and 95%. A ruin's doors are 30% broken, and half as many of the rest closed. Secret doors always start closed. Quality is always Common and material Wood for now (better doors and other materials are for future generators).
 - Gates (owner, 2026-11-13): the server starts both leaves as the first one (`gate_first_leaf`) and opens and closes them together (`server sites/doors/gate.rs`; a mob opening one opens both); breaking one leaves the other. The client hinges each leaf at the gate's outer side so they meet in the middle (`dungeon_map` `walls/gate_leaf.rs`).
-- Locks are placed by the server the first time a level is used (`sites/doors/locks.rs`), keys going to its mobs.
+- Locks are placed by the server the first time a level is used (`sites/doors/locks.rs`), keys going to its mobs. In a quest's own dungeon only its stage door is locked, with a key of the quest's (`quest::QuestDungeon::stage_door`, server `sites/doors/stage.rs`).
 - Doors take damage from kicks (`damage`, thousandths of a point); at their `toughness` they break: `Broken` away from the kicker, any lock left unlocked on it (server `sites/doors/kick.rs`).
 - Not built yet: lock picking (with item durability, later), showing damage. (Leaves swing on the client: `dungeon_map/door_swing.rs`.)

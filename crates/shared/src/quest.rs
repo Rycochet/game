@@ -26,6 +26,7 @@ mod remains;
 mod requirement;
 mod reward;
 mod slot;
+mod stage;
 mod step;
 mod telling;
 mod template;

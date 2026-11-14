@@ -37,6 +37,10 @@ pub(in crate::sites) fn ensure_locks(
     let site = DoorSite { id, index, poi };
     let bounds = level.bounds();
     let doors = set_doors(world, &site, &mut level, bounds, (0, 0));
+    // A quest's own dungeon: only its stage door, with a key of the quest's.
+    if let SiteId::Quest { quest, .. } = id {
+        return super::stage::lock_stage(world, (id, quest), index, site_level, &doors);
+    }
     let stairs: Vec<(i64, i64)> = site_level.stairs.iter().map(|s| (s.x, s.y)).collect();
     let mut starts = stairs.clone();
     if index == 0 {
