@@ -66,6 +66,7 @@ fn remains_drop_only_for_the_quester_from_its_kind_at_its_poi_until_the_count() 
         at: NOW,
         counts: vec![0; quest.steps.len()],
         ready: false,
+        escort: None,
     };
     test.client
         .character

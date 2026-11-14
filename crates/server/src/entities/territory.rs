@@ -16,7 +16,8 @@ pub(super) const TERRITORY: i64 = 6;
 pub(super) const LEASH: i64 = 8;
 
 pub(super) fn is_territorial(mob: &Mob) -> bool {
-    mob.kind.temper() == Temper::Territorial
+    // Someone escorted keeps no territory: it follows its quester.
+    mob.kind.temper() == Temper::Territorial && mob.escort.is_none()
 }
 
 /// Remembers anyone it can see inside its territory, unless it likes them, and

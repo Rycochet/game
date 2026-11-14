@@ -31,6 +31,10 @@ struct DotsFrom {
     progress: Vec<(QuestId, Vec<u32>)>,
     /// Where the quest boss in sight is, if one is.
     boss: Option<(i64, i64)>,
+    /// Where escortees are, as their quests' progress keeps them, and the
+    /// first on a level in use (they move).
+    escorts: Vec<(QuestId, Option<crate::storage::EscortAt>)>,
+    escortee: Option<shared::spot::Spot>,
 }
 
 /// Sends the dots if they have changed. `false` if the client has gone.
@@ -41,6 +45,14 @@ pub(super) fn tell_dots(client: &mut Client, world: &mut ServerWorld) -> bool {
             .map(|(id, progress)| (*id, progress.counts.clone()))
             .collect(),
         boss: boss_cell(client, world),
+        escorts: (client.character.quests.taken.iter())
+            .filter(|(_, progress)| progress.escort.is_some())
+            .map(|(id, progress)| (*id, progress.escort))
+            .collect(),
+        escortee: (client.character.quests.taken.iter())
+            .filter(|(_, progress)| progress.escort.is_some())
+            .find_map(|(id, _)| world.escortee_at(super::escortee::escortee_id(client, *id)))
+            .map(|(_, spot)| spot),
     };
     if client.quest_seen.dots.from.as_ref() == Some(&from) {
         return true;
@@ -116,6 +128,12 @@ fn step_cells(
             return super::dungeon_dots::dungeon_cells(client, visit, world, quest, hook);
         }
     };
+    // Someone escorted, once met (`escort_dots`).
+    if hook == Some(Hook::Escortee)
+        && let Some(cells) = super::escort_dots::escort_cells(client, visit, world, quest)
+    {
+        return cells;
+    }
     if visit.is_wilderness() {
         let poi = world.pois.in_chunk(chunk);
         return poi
@@ -158,7 +176,7 @@ fn step_cells(
 pub(super) fn goal_level(visit: &Visit, hook: Hook) -> Option<u32> {
     let levels = visit.site()?.levels();
     match hook {
-        Hook::Explore | Hook::Boss | Hook::Item => Some(levels.saturating_sub(1)),
+        Hook::Explore | Hook::Boss | Hook::Item | Hook::Escortee => Some(levels.saturating_sub(1)),
         _ => None,
     }
 }

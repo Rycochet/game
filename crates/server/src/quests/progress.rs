@@ -1,7 +1,8 @@
 //! Steps moving on: kills of a step's kind at its poi, and arriving at a
 //! step's poi (visiting it, reaching its deepest level, or a town its parcel
-//! is delivered to). Only open steps count (`Quest::open_steps`). Bosses, quest items,
-//! escorts and gathering count once those exist (later Quest system PRs).
+//! is delivered to). Only open steps count (`Quest::open_steps`). Bosses and
+//! quest items count in `boss_kill` and `finds`, escorts in `escort`
+//! (`escorted_home`).
 
 use shared::creature::CreatureKind;
 use shared::poi::ChunkPos;
@@ -115,6 +116,29 @@ pub(crate) fn moved_on(
         client.send_inventory();
     }
     moved
+}
+
+/// Someone escorted is home (`escort`): step `step` of quest `id` is done.
+/// `false` if the client has gone.
+pub(super) fn escorted_home(
+    client: &mut Client,
+    world: &mut ServerWorld,
+    id: QuestId,
+    step: usize,
+) -> bool {
+    let Some(quest) = cache::quest(world, id) else {
+        return true;
+    };
+    let Some(progress) = client.character.quests.taken.get_mut(&id) else {
+        return true;
+    };
+    progress.counts.resize(quest.steps.len(), 0);
+    progress.counts[step] = 1;
+    progress.ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
+    client.unsaved = true;
+    bevy::log::info!("{} saw quest {id:?}'s escort home", client.in_log());
+    let now = super::unix_now();
+    log::tell_changed(client, world, id) && tell_markers(client, world, id.town, now)
 }
 
 /// Sets one step of a quest taken as done (the debug API). Whether it was taken.

@@ -56,6 +56,7 @@ pub(crate) fn accept(
             at: now,
             counts,
             ready: false,
+            escort: None,
         },
     );
     client.unsaved = true;

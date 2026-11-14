@@ -62,6 +62,24 @@ pub struct Progress {
     /// can show it without making the quest again on another planet.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ready: bool,
+    /// Where the one its Escort step sees home is, once it has been come
+    /// across (`quests::escort`); `None` before, and after it is home.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escort: Option<EscortAt>,
+}
+
+/// Where someone escorted is (`Progress::escort`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EscortAt {
+    /// With the character, wherever they go: on the world map too.
+    With,
+    /// Waiting on a site's level where the character lost them (or first came
+    /// across them), at this spot, until they come back for them.
+    Waiting {
+        site: super::SiteId,
+        level: u32,
+        spot: shared::spot::Spot,
+    },
 }
 
 /// A quest failed or given up.

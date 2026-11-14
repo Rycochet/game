@@ -37,6 +37,22 @@ impl Default for PlayerSpeed {
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PlayerGait(pub shared::movement::Gait);
 
+impl PlayerGait {
+    /// The gait world map steps go at: the player's, or with someone escorted
+    /// beside them, the slower's (owner), as the server charges them.
+    pub fn on_world_map(self, escort: &EscortGait) -> shared::movement::Gait {
+        match escort.0 {
+            Some(theirs) => self.0.slower(theirs),
+            None => self.0,
+        }
+    }
+}
+
+/// The gait of someone the player escorts who is with them
+/// (`QuestNews::Escort`), which `quests` keeps: `None` when nobody is.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EscortGait(pub Option<shared::movement::Gait>);
+
 /// How big the player is, by their kind (`shared::creature::Size`), which
 /// `character` keeps up to date: their circle on levels and their token's base.
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq)]

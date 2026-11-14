@@ -104,6 +104,10 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                 seen.push((look, someone.speed));
             }
         }
+        // Someone they escort, on the world map with them: for them alone.
+        if let Some(escortee) = crate::quests::escort_on_world_map(client, world) {
+            seen.push(escortee);
+        }
         if let (Some(level), Some(visit)) = (here, &mut client.visit)
             && let Some(population) = world.populations.0.get(&level)
         {
@@ -120,7 +124,7 @@ pub(crate) fn sync(clients: &mut [Client], world: &mut ServerWorld, in_hall: &[S
                         id: mob.id,
                         kind: mob.kind,
                         gender: mob.gender,
-                        name: None,
+                        name: mob.escort.as_ref().map(|escort| escort.name.clone()),
                         appearance: mob.appearance.clone(),
                         feeling: mob.feeling(my_kind, client.character_id.as_ref()),
                         x,

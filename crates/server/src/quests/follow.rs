@@ -37,6 +37,10 @@ pub(crate) struct Seen {
     pub(super) bosses: Vec<shared::protocol::BossMark>,
     /// The sign over the player's quest item in sight, as last sent.
     pub(super) finds: Vec<shared::protocol::FindMark>,
+    /// The gait of someone escorted with them, as last sent (`None`: not yet).
+    pub(super) escort_gait: Option<Option<shared::movement::Gait>>,
+    /// Where they were on the world map, for someone escorted a step behind.
+    pub(super) trail: super::escort_look::Trail,
 }
 
 impl Seen {
@@ -86,9 +90,11 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
     client.quest_seen.hall = in_hall;
     let place: Option<QuestPlace> = client.visit.as_ref().and_then(|visit| visit.quest_place());
     let key = place.map(|place| (place.poi.chunk, place.level, place.dungeon));
-    if key != client.quest_seen.place {
+    let arrived = key != client.quest_seen.place;
+    if arrived {
         arrive(client, world, place, now);
     }
+    super::escort::keep_escorts(client, world, arrived);
     tell_dots(client, world);
     super::boss_signs::tell_bosses(client, world);
     super::finds::tell_finds(client, world);

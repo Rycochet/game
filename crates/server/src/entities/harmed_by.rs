@@ -52,6 +52,8 @@ pub(crate) struct Kill {
     pub provoked: Vec<Id>,
     /// It was its site's quest boss.
     pub boss: bool,
+    /// Someone escorted: their quester and quest, which fails.
+    pub escort: Option<(Id, shared::quest::QuestId)>,
 }
 
 impl Kill {
@@ -71,6 +73,9 @@ impl Kill {
 pub(super) fn credit_kills(clients: &mut [Client], world: &mut ServerWorld) {
     let now = world.action_clock.ticks();
     for kill in std::mem::take(&mut world.kills) {
+        if let Some(escort) = kill.escort {
+            crate::quests::escortee_killed(clients, world, escort);
+        }
         for who in kill.by.credited(now) {
             let Some(client) = clients.iter_mut().find(|c| c.entity_id() == who) else {
                 continue;
@@ -78,7 +83,10 @@ pub(super) fn credit_kills(clients: &mut [Client], world: &mut ServerWorld) {
             let here = client.visit.as_ref().map(|visit| visit.population());
             if here == Some(kill.place) {
                 client.sheet.foes.defeated(kill.kind);
-                crate::quests::killed(client, world, kill.kind, kill.place.0, kill.boss);
+                // Killing someone escorted counts for no quest.
+                if kill.escort.is_none() {
+                    crate::quests::killed(client, world, kill.kind, kill.place.0, kill.boss);
+                }
                 if let (Some(deed), Some(alignment)) =
                     (kill.deed_for(who), client.sheet.alignment.as_mut())
                 {

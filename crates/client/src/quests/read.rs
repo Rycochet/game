@@ -13,7 +13,11 @@ pub(super) fn read_server(
     mut gates: ResMut<GateQuests>,
     mut planets: ResMut<QuestPlanets>,
     mut dots: ResMut<LevelDots>,
-    (mut bosses, mut finds): (ResMut<BossMarks>, ResMut<FindMarks>),
+    (mut bosses, mut finds, mut escort): (
+        ResMut<BossMarks>,
+        ResMut<FindMarks>,
+        ResMut<crate::common::EscortGait>,
+    ),
 ) {
     for FromServer(message) in from_server.read() {
         match message {
@@ -26,6 +30,10 @@ pub(super) fn read_server(
                 *dots = LevelDots::default();
                 *bosses = BossMarks::default();
                 *finds = FindMarks::default();
+                *escort = crate::common::EscortGait::default();
+            }
+            ServerMessage::Quest(QuestNews::Escort(gait)) => {
+                escort.set_if_neq(crate::common::EscortGait(*gait));
             }
             ServerMessage::Quest(QuestNews::Finds(told)) => finds.0.clone_from(told),
             ServerMessage::Quest(QuestNews::Bosses(told)) => {

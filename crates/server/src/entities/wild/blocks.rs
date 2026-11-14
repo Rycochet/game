@@ -104,7 +104,8 @@ pub(super) fn close(world: &mut ServerWorld, area: u32) {
 fn keep(world: &mut ServerWorld, mobs: Vec<Mob>) {
     let now = Instant::now();
     let maps = &mut world.wilderness;
-    for mob in mobs {
+    // Someone escorted isn't kept: it comes back by its quester (`escortee`).
+    for mob in mobs.into_iter().filter(|mob| mob.escort.is_none()) {
         let block = maps.wild.block_of(mob.position.0, mob.position.1);
         let kept = maps
             .areas

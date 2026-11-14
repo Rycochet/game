@@ -63,7 +63,7 @@ pub static MOVEMENT_SKILLS: LazyLock<MovementSkills> = LazyLock::new(|| Movement
 
 /// How well a creature climbs, runs, swims and jumps: each skill's value up to
 /// `FULL`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Gait {
     climbing: u32,
     running: u32,
@@ -91,6 +91,19 @@ impl Gait {
             swimming: skills.value(MOVEMENT_SKILLS.swimming).min(FULL),
             jumping: skills.value(MOVEMENT_SKILLS.jumping).min(FULL),
             pioneering: Terrain::ALL.map(|terrain| skills.value(terrain.skill()).min(FULL)),
+        }
+    }
+
+    /// Two creatures going together, at the pace of the slower: each skill the
+    /// lesser of the two (owner: an escort's skill bonuses don't count unless
+    /// the one escorted has them too).
+    pub fn slower(self, other: Self) -> Self {
+        Self {
+            climbing: self.climbing.min(other.climbing),
+            running: self.running.min(other.running),
+            swimming: self.swimming.min(other.swimming),
+            jumping: self.jumping.min(other.jumping),
+            pioneering: std::array::from_fn(|i| self.pioneering[i].min(other.pioneering[i])),
         }
     }
 

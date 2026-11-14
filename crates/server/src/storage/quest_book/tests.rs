@@ -23,6 +23,7 @@ fn a_book_comes_back_from_ron_as_it_was() {
             at: 100,
             counts: vec![2, 0],
             ready: true,
+            escort: None,
         },
     );
     book.done.insert(
