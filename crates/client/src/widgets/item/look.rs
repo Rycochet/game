@@ -23,14 +23,27 @@ pub struct ItemTip {
     pub at: Vec2,
 }
 
-/// On an item's cells and label for its name to show when the pointer is on it,
-/// for items whose owner has nothing more to say about them.
+/// On an item's cells and label for its popup to open when the pointer rests
+/// on it (`PointedItem`), for items whose owner has nothing more to say about
+/// them. The whole of it: a stack is named by its top, weighed whole.
 #[derive(Component, Clone)]
 #[require(crate::dom::Solid)]
-pub struct ItemName {
-    pub words: String,
-    pub quality: Option<Quality>,
-    pub set: bool,
+pub struct ItemName(pub Item);
+
+/// The item the pointer is on this frame, if any, for its popup
+/// (`item_popup`): set in `Update` (or `PostUpdate`, before the popup reads
+/// it) by whoever knows what the pointer is on, first come first served, and
+/// emptied once read. Not while something is held.
+#[derive(Resource, Default)]
+pub struct PointedItem(pub Option<Pointed>);
+
+pub struct Pointed {
+    /// The whole of it, as the client's copy knows it.
+    pub item: Item,
+    /// More about it where it is ("(under Gambeson)"), or nothing.
+    pub notes: String,
+    /// Where the pointer is, in the interface's pixels (`UiPointer`'s).
+    pub at: Vec2,
 }
 
 /// What an item looks like.

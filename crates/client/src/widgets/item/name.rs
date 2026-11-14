@@ -5,9 +5,7 @@ use bevy::window::PrimaryWindow;
 
 use super::super::set_edge::{SetEdge, set_edge};
 use super::super::spawn_tooltip;
-use super::{
-    ItemName, ItemTip, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText, TOOLTIP_OFFSET,
-};
+use super::{ItemName, ItemTooltip, NAME_EDGE, NameBox, NameEdge, NameText, Pointed, PointedItem};
 use crate::common::{NO_QUALITY_NAME, interface_area, quality_colour};
 use crate::dom::Hit;
 
@@ -38,23 +36,24 @@ pub(in crate::widgets) fn spawn_name_box(mut commands: Commands) {
         });
 }
 
-/// Asks for the name of the `ItemName` in front at the pointer (`dom::Hit`:
-/// the thing in front, or the nearest thing it is in), unless a name has been
-/// asked for already.
+/// Says the `ItemName` in front at the pointer (`dom::Hit`: the thing in
+/// front, or the nearest thing it is in) is pointed at, for its popup, unless
+/// something else has been named or pointed at already.
 pub(in crate::widgets) fn name_item_at_pointer(
     hit: Res<Hit>,
     names: Query<&ItemName>,
-    mut tooltip: ResMut<ItemTooltip>,
+    tooltip: Res<ItemTooltip>,
+    mut pointed: ResMut<PointedItem>,
 ) {
-    let Some(at) = hit.at.filter(|_| tooltip.0.is_none()) else {
+    let free = tooltip.0.is_none() && pointed.0.is_none();
+    let Some(at) = hit.at.filter(|_| free) else {
         return;
     };
-    if let Some(name) = hit.first(|entity| names.get(entity).ok()) {
-        tooltip.0 = Some(ItemTip {
-            words: name.words.clone(),
-            quality: name.quality,
-            set: name.set,
-            at: at + TOOLTIP_OFFSET,
+    if let Some(ItemName(item)) = hit.first(|entity| names.get(entity).ok()) {
+        pointed.0 = Some(Pointed {
+            item: item.clone(),
+            notes: String::new(),
+            at,
         });
     }
 }

@@ -23,6 +23,7 @@ mod hall_view;
 mod hover;
 mod inventory;
 mod item_art;
+mod item_popup;
 mod item_text;
 mod lightning;
 mod loading_screen;
@@ -146,6 +147,7 @@ fn main() {
     app.add_plugins(quest_log::QuestLogPlugin);
     app.add_plugins(tracked_quest::TrackedQuestPlugin);
     app.add_plugins(app_icon::AppIconPlugin);
+    app.add_plugins(item_popup::ItemPopupPlugin);
 
     // Native only: developer tools. (The embedded single-player server is
     // started by `connection`.)

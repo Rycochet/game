@@ -48,7 +48,13 @@ pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, Thing
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
 pub use parts::{AlwaysBars, Opaque, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
-pub use popup::ClosePopups;
+pub use popup::{ClosePopups, KeptOpen};
+
+/// Where documents spawned this frame are built and changes by id applied
+/// (`PostUpdate`): a system spawning one to be built this frame goes
+/// `.before` it.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct BuildDocuments;
 pub use strip::{bottom_strip, top_strip};
 pub use template::Template;
 // What screens will use as they become markup: not all of it is yet.
@@ -100,10 +106,14 @@ impl Plugin for DomPlugin {
                     // (First: a panel whose document went this frame is gone
                     // before one built in its place, with the same ids, is
                     // changed by them.)
-                    surfaces::clear_surfaces,
-                    build::build_documents,
-                    change::apply_changes,
-                    surfaces::tidy_surfaces,
+                    (
+                        surfaces::clear_surfaces,
+                        build::build_documents,
+                        change::apply_changes,
+                        surfaces::tidy_surfaces,
+                    )
+                        .chain()
+                        .in_set(BuildDocuments),
                     (
                         restyle::restyle,
                         controls::follow_elements,

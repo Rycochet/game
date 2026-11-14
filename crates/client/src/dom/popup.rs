@@ -3,9 +3,14 @@
 //! else, unless the padlock at its top right is locked: then it stays, as a
 //! box of details to keep open, and can be dragged by its top (`drag`). Esc
 //! closes it either way. Closing is told by its id
-//! (`UiValue::Closed`); its owner then despawns its document.
+//! (`UiValue::Closed`); its owner then despawns its document. A `hover` one
+//! also closes once the pointer has left both it and what it is about
+//! (`hover`).
 
 mod drag;
+mod hover;
+
+pub use hover::KeptOpen;
 
 use bevy::prelude::*;
 use bevy::ui::UiGlobalTransform;
@@ -29,10 +34,12 @@ const LOCKED_ICON: &str = "icons/delapouite/plain-padlock.png";
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ClosePopups;
 
-/// On a popup's box: whether it is locked open.
+/// On a popup's box: whether it is locked open, and whether it is about
+/// what the pointer rests on (`hover`), closing when the pointer goes.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Popup {
     pub locked: bool,
+    pub hover: bool,
 }
 
 /// On a popup's padlock: the popup it locks.
@@ -41,14 +48,21 @@ pub(super) struct PopupLock(Entity);
 
 /// A popup's box, with its padlock: in front of the panels, taking presses,
 /// and placed by `follow_surfaces` as its element's `left` and `top` say.
-pub(super) fn spawn_popup(commands: &mut Commands, assets: &AssetServer) -> Entity {
+pub(super) fn spawn_popup(commands: &mut Commands, assets: &AssetServer, hover: bool) -> Entity {
     let node = Node {
         position_type: PositionType::Absolute,
         ..default()
     };
     let front = GlobalZIndex(HELD_ITEM_Z - 1);
     let popup = commands
-        .spawn((Popup::default(), tooltip_box(node), front))
+        .spawn((
+            Popup {
+                locked: false,
+                hover,
+            },
+            tooltip_box(node),
+            front,
+        ))
         .id();
     commands.entity(popup).insert(super::Opaque);
     let corner = Node {
@@ -133,10 +147,11 @@ pub(super) fn add(app: &mut App) {
     // A press that takes hold of a popup isn't one elsewhere.
     .add_systems(
         PreUpdate,
-        (drag::drag_popups, close_popups)
+        (drag::drag_popups, close_popups, hover::close_hovers)
             .chain()
             .in_set(ClosePopups),
     )
+    .init_resource::<KeptOpen>()
     .add_systems(Update, press_locks);
 }
 

@@ -95,7 +95,8 @@ impl Builder<'_, '_, '_> {
                 (dialog.layer, dialog.content, Some(dialog.buttons))
             }
             Tag::Popup => {
-                let popup = crate::dom::popup::spawn_popup(self.commands, self.assets);
+                let hover = attrs.has("hover");
+                let popup = crate::dom::popup::spawn_popup(self.commands, self.assets, hover);
                 (popup, popup, None)
             }
             _ => {

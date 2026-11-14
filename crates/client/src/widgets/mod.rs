@@ -69,8 +69,9 @@ pub use hold_button::HoldButton;
 pub use hover_tip::{HoverTip, Pinned, PinnedTip};
 pub use item::{
     CELL, HELD_ITEM_Z, ITEM_LABEL_FONT, ItemLook, ItemName, ItemTip, ItemTooltip,
-    PICTURE_PIXELS_PER_CELL, at_cell, covering, item_colour, item_edge, item_edge_width,
-    item_label, item_picture, logical_rect, picture_in_square, shown_at, spawn_item_cells,
+    PICTURE_PIXELS_PER_CELL, Pointed, PointedItem, at_cell, covering, item_colour, item_edge,
+    item_edge_width, item_label, item_picture, logical_rect, picture_in_square, shown_at,
+    spawn_item_cells,
 };
 pub use item_text::{ItemText, item_text};
 pub use key_box::{KeyBox, KeyChosen, spawn_key_box};
@@ -137,6 +138,11 @@ const CHECK_PIXELS: f32 = 18.0;
 const STROKE_THICKNESS: f32 = 2.0;
 const CHECK_GAP: f32 = 8.0;
 
+/// Where the item the pointer is on is said (`PointedItem`, `PostUpdate`):
+/// whoever reads it goes `.after` this.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ItemsPointed;
+
 pub struct WidgetsPlugin;
 
 impl Plugin for WidgetsPlugin {
@@ -158,6 +164,7 @@ impl Plugin for WidgetsPlugin {
             .init_resource::<PinnedTip>()
             .init_resource::<TextFocus>()
             .init_resource::<ItemTooltip>()
+            .init_resource::<PointedItem>()
             .init_resource::<crate::common::BandShift>()
             .init_resource::<aura::Auras>()
             .add_plugins(UiMaterialPlugin::<aura::AuraMaterial>::default())
@@ -196,7 +203,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(
                 PostUpdate,
                 (
-                    item::name_item_at_pointer,
+                    item::name_item_at_pointer.in_set(ItemsPointed),
                     hover_tip::show_hover_tips,
                     item::show_item_tooltip,
                 )

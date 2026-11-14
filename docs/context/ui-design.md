@@ -41,7 +41,7 @@ Status: **have**, **later** (build when a screen needs it), **no** (no use in th
 | Piece | Status | Here |
 | --- | --- | --- |
 | Text | have | `p`, `h1`, `h2`, `small`, `label`: each a `TextSize`. |
-| Tooltip | have | `title` on any element. One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on items or what is under the pointer. A finger held down shows a row's. A labelled row with a tip (`span.labelled` with a `title`, or a `HoverTip` set from code) shows a small round "?" after its label, so a player can see which settings say more: pointing at it shows the tip, and a click or tap pins it beside the "?" until the next press or key. Never the only way to learn something: fingers have no hover. |
+| Tooltip | have | `title` on any element. One dark look. A delay on buttons and on `HoverTip` rows (Settings: what a setting does, its cost and why it is disabled), none on what is under the pointer. A finger held down shows a row's. A labelled row with a tip (`span.labelled` with a `title`, or a `HoverTip` set from code) shows a small round "?" after its label, so a player can see which settings say more: pointing at it shows the tip, and a click or tap pins it beside the "?" until the next press or key. Never the only way to learn something: fingers have no hover. |
 | Icon | have | `img`: `icon:<name>`, `picture:<name>` (drawn in code) or an asset. |
 | Scroll area | have | `scroll`. Wheel, finger or bar. The bar shows only with more than fits, unless the area asks for it always, or the player turns on Always Show Scroll Bars (Settings, Interface: for accessibility, and for seeing what can scroll). |
 | List | have | Rows of buttons in the debug menu and open dropdowns. |
@@ -59,6 +59,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Dialog | have | `dialog`, its buttons in a `footer`: title, content, buttons. The quit question uses it. `modal` makes it a full-screen layer. |
 | Darkening | have | What is outside a layer; each layer's adds up. |
 | Progress bar | have | `progress` with a `value`. From the loading screen. A progress widget for actions that take a while (changing clothes under other things, later others) is to be designed (owner, 2026-11-09); for now `entities` shows the gold wind-up bar under the player's token. |
+| Hover popup | have | `popup hover`: a popup about what the pointer rests on, opening after a short rest (0.15 s) with no click, staying while the pointer is on that or on the popup, and going 0.3 s after it has left both. Its padlock locks it open (then it drags by its top and closes as locked popups do). By finger: held on the thing, it opens and stays after lifting, until a press elsewhere. Items everywhere (`item_popup`): the name in its quality's colour, a line per bonus ("+40 Toughness", "−8 Agility", "Restores 1 Health a second for 30 s; stops on moving or being hurt"), the weight at the bottom. |
 | Snackbar | have | `notices` (markup over the view): a parchment strip at the top middle, under the status text, for a few seconds, taking no clicks ("Found: Fort"). |
 | Alert | later | Likely soon: "Saved", "Connection lost". |
 | Spinner | have | `progress` with no `value`. A ring with a gap, turning on the real clock, for something under way that can't say how far it has got (Connect checking an address). Small, beside or in what it is about. |
@@ -100,7 +101,7 @@ Rules:
 | Details | Hover | Tap | Y / Triangle |
 | Open a bag | Double press | Double tap | |
 
-A simple tap shows an item's name, and later the item info boxes that will replace it. A quick slide stays free for scrolling.
+Resting the pointer on an item (or holding a finger on it) opens its popup: name, bonuses and weight. A quick slide stays free for scrolling.
 
 ## Quick chooser
 
