@@ -1,6 +1,6 @@
 # Builds the server image (game server + web client on port 24690).
 # master (after every merge): build and publish to the GitHub Container
-# Registry as ghcr.io/rycochet/hall-of-worlds:latest (plus a commit tag).
+# Registry as ghcr.io/reigningcoo/hall-of-worlds:latest (plus a commit tag).
 # Run by hand on another branch, it publishes only the commit tag.
 #
 # The server and the web client are compiled here on the runner, where
@@ -26,7 +26,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   # Registry image names must be lowercase.
-  IMAGE: ghcr.io/rycochet/hall-of-worlds
+  IMAGE: ghcr.io/reigningcoo/hall-of-worlds
 
 jobs:
   docker:

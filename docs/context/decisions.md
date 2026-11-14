@@ -94,7 +94,7 @@ Domains (not live yet): `hallofworlds.com` landing page / adverts / email, `hall
 
 ## 2026-10-28: Docker image published to GHCR on every merge
 
-A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 24690 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/rycochet/hall-of-worlds:latest` on every push to `master` (no PR builds), from `Dockerfile.github` since 2026-11-05 (below). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts; the Nightly workflow does the same daily and tags the image `:nightly`.
+A multi-stage `Dockerfile` builds an x86-64 image (ARM can be added under the same tags later) containing the game server and the web client, served on port 24690 (now by the game server itself, below; at first by static-web-server alongside it). The Docker workflow builds and publishes `ghcr.io/reigningcoo/hall-of-worlds:latest` on every push to `master` (no PR builds), from `Dockerfile.github` since 2026-11-05 (below). The Build workflow, run manually, keeps native (client + server, three OSes) and web release builds as artifacts; the Nightly workflow does the same daily and tags the image `:nightly`.
 
 ## 2026-10-28: Licence: CC BY-NC 4.0
 

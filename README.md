@@ -55,7 +55,7 @@ docker run -p 24691:24691 -p 24690:24690 -v hall-of-worlds:/data hall-of-worlds
 
 It works behind an HTTPS proxy (such as Cloudflare) that passes WebSockets: nothing but that one port is needed.
 
-Every merge to `master` publishes it as `ghcr.io/rycochet/hall-of-worlds:latest`.
+Every merge to `master` publishes it as `ghcr.io/reigningcoo/hall-of-worlds:latest`.
 
 ## Overview
 

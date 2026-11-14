@@ -11,7 +11,7 @@ plugins:
 color_scheme: dark
 search_enabled: true
 aux_links:
-  GitHub: https://github.com/Rycochet/game
+  GitHub: https://github.com/ReigningCoo/hall-of-worlds
 
 # Notes for Claude, not for players.
 exclude:
