@@ -50,6 +50,7 @@ pub(crate) use escort_look::world_look as escort_on_world_map;
 pub(crate) use finds::{Find, find_here, picked_up};
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
+pub(crate) use standing::{gave, traded};
 
 use shared::poi::ChunkPos;
 use shared::protocol::{QuestNews, ServerMessage};
@@ -93,6 +94,8 @@ fn send_markers(client: &mut Client, world: &mut ServerWorld, town: ChunkPos, no
 
 #[cfg(test)]
 mod boss_tests;
+#[cfg(test)]
+mod chain_tests;
 #[cfg(test)]
 mod dots_tests;
 #[cfg(test)]

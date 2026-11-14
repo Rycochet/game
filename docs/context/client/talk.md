@@ -14,7 +14,7 @@ Talking at town doors (owner: no one is inside yet, so the door is the person). 
 - `talk/input.rs`: `read_events`: tabs, a row of the list, Accept and Complete (each followed by asking `Talk` again), Enter (`QuestAsk::Enter`: the panel closes with the new level), Decline and Back.
 - `talk/quests_page.rs`: `show_pages` (when dirty or the quest book changes: tab bar and pages, the title "Name, occupation" from the first offer's giver, the refusal, then the list or a detail), `Ids`, `story_of`.
 - `talk/detail.rs`: `Detail`, `detail_of` (on offer: story, steps from its asks, return, reward, Accept / Decline, and the player's "I've already dealt with it" (`talk-dealt-with`) when its boss is dead, or "I've already found it" (`talk-found`) when its item was picked up; taken: steps with counts and "(done)", Complete once ready, and while under way with a cellar of the giver's own (not a hidden way down, gone into from the world map) the Enter button with its words (`talk-enter-cellar`, "Enter Cellar"; accepting one goes straight in, owner); handed in: the ending and reward).
-- `talk/words.rs`: `giver_title` (`occupation-<kind>` from `talk.ftl`, none for houses), `hint_text`, `refusal`; `plain` and `or_partly` are `quests`' (shared with the Quest Log).
+- `talk/words.rs`: `giver_title` (`occupation-<kind>` from `talk.ftl`, none for houses), `hint_text`, `heard_text` ("I heard you helped Mara Tull, the baker", first of an offer's paragraphs), `refusal`; `plain` and `or_partly` are `quests`' (shared with the Quest Log).
 - `talk/close.rs`: `close_on_escape`, `close_when_left`.
 
 ## Public API

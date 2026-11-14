@@ -49,6 +49,11 @@ impl TownQuests {
     pub(super) fn roads(&self) -> &Roads {
         &self.roads
     }
+
+    /// A town's quests, if they have been worked out already.
+    pub(super) fn kept(&self, chunk: ChunkPos) -> Option<&Town> {
+        self.towns.get(&chunk)
+    }
 }
 
 /// The town in `chunk`, with its quests, or `None` if there is no town there.
@@ -61,6 +66,7 @@ pub(crate) fn town(world: &mut ServerWorld, chunk: ChunkPos) -> Option<Town> {
         .in_chunk(chunk)
         .filter(|poi| poi.kind.is_town())?;
     let buildings = town_buildings(world, &poi);
+    let moons = world.moon_count();
     let ServerWorld {
         pois,
         ground,
@@ -73,6 +79,7 @@ pub(crate) fn town(world: &mut ServerWorld, chunk: ChunkPos) -> Option<Town> {
         pois,
         roads: &quests.roads,
         name_of: &name_of,
+        moons,
     };
     let made = Town {
         poi,
@@ -98,6 +105,7 @@ pub(crate) fn daily(
         return found.clone();
     }
     let town = town(world, chunk)?;
+    let moons = world.moon_count();
     let ServerWorld {
         pois,
         ground,
@@ -110,6 +118,7 @@ pub(crate) fn daily(
         pois,
         roads: &quests.roads,
         name_of: &name_of,
+        moons,
     };
     let made = daily_quest(&quest_world, &town.poi, &town.buildings, building, day).map(Arc::new);
     if quests.dailies.len() >= MOST_TOWNS {

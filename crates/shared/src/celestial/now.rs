@@ -14,6 +14,16 @@ impl Celestial {
             .collect()
     }
 
+    /// How many suns there are: in `bodies` and `at`, the moons come after.
+    pub fn sun_count(&self) -> usize {
+        self.suns.len()
+    }
+
+    /// How many moons there are.
+    pub fn moon_count(&self) -> usize {
+        self.moons.len()
+    }
+
     /// Where every sun and moon is at a time, in (fractional) game hours, and
     /// the light it gives. Everything that wants to know about them should
     /// come through here, so what is said matches what is seen.

@@ -63,10 +63,10 @@ pub(super) fn make(
 }
 
 /// What finishing it does to alignment: rescuing someone, seeing a pet home,
-/// or helping. Dark quests' deeds are left to the Quest system's PR 10.
+/// or helping; a dark quest's work weighs against them instead.
 fn deeds(plan: &Plan, dark: bool) -> Vec<Deed> {
     if dark {
-        return Vec::new();
+        return vec![Deed::DarkQuest];
     }
     let escort = plan.steps.iter().any(|step| step.goal == Goal::Escort);
     vec![match (escort, plan.pet.is_some()) {

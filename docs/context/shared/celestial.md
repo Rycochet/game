@@ -1,6 +1,6 @@
 # shared: celestial
 
-A world's suns and moons, and where they are at any time, from the public terrain seed. They make light, and the moons pull the tides: nothing draws them. Clients work this out themselves, as they do the weather, so there are no messages and no generator version. The server does too, for the tide (and later for quests such as "under the light of the blue moon").
+A world's suns and moons, and where they are at any time, from the public terrain seed. They make light, and the moons pull the tides: nothing draws them. Clients work this out themselves, as they do the weather, so there are no messages and no generator version. The server does too, for the tide and for quests that wait for a moon in the sky (`quest::Need::Moon`).
 
 ## Files
 
@@ -11,6 +11,7 @@ A world's suns and moons, and where they are at any time, from the public terrai
 - `Celestial::from_seed(terrain seed)`.
 - `bodies() -> Vec<Body>`: every sun, then every moon, whatever the time: `kind`, `colour` (linear RGB), `colour_name` (`Option<ColourName>`: `None` when too near white to have a name), `size`. Use this to ask what a world has.
 - `at(hours) -> Vec<BodyNow>`: the same order, at a time: `body`, `direction` (unit, `[east, up, south]`), `lit` (how much of a moon's face we see is lit), `waxing`, `along` (how far along its way across the sky: negative before its top, positive after, always rising, whichever way that goes on the world), `phase()` (`MoonPhase`: for later, as nothing else reads the name yet), `light` (linear RGB, faded near the horizon, zero below it), `is_up()`, `flat_light()`. Everything goes through this, so what is said matches what is seen.
+- `sun_count()`, `moon_count()`: how many of each (in `bodies` and `at` the moons come after the suns); the quests' moon needs go by them. `ColourName` is serde, for quest hints.
 - `period(number) -> Option<f64>`: hours one of `bodies` takes to go round (a sun's day, a moon's orbit); `client::planet_view` places moons by it.
 - `set_colour(number, colour)`, `sun_strength(number)`, `set_sun_strength(number, strength)`, `colour_along(kind, 0..=1)`: for the debug menu's panel.
 - `tide_pull(hours) -> f64`: how far the moons pull the sea, `-1..=1` (0 with no moons), for `WorldParams::tide`.

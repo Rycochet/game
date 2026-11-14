@@ -9,7 +9,7 @@ use crate::story::RewardPart;
 /// Chunks `0..SIDE` squared hold a few dozen towns of every size.
 const SIDE: i64 = 24;
 
-fn every_town(world: &TestWorld) -> Vec<(Poi, Vec<Quest>)> {
+pub(super) fn every_town(world: &TestWorld) -> Vec<(Poi, Vec<Quest>)> {
     (world.towns(SIDE).into_iter())
         .map(|town| {
             let quests = town_quests(&world.view(), &town, &buildings(&town));

@@ -1,9 +1,11 @@
 //! Names for the colours of suns and moons.
 
+use serde::{Deserialize, Serialize};
+
 use super::PALEST_NAMED;
 
 /// A colour by name, for words such as "under the light of the blue moon".
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColourName {
     Red,
     Orange,

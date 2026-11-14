@@ -1,6 +1,6 @@
 //! What moves an alignment: deeds, each worth a whole number, with no
-//! randomness. Only killing is done now; the rest are ready for quests (the
-//! Quest system's escorts and chains). Every number is *to balance*.
+//! randomness. Killing, and quests' rescues, escorts, help and
+//! dark work. Every number is *to balance*.
 
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +19,8 @@ pub const ESCORTED: i32 = 15;
 pub const HELPED: i32 = 5;
 /// What failing someone one promised to save or see safely somewhere costs.
 pub const BETRAYED_QUEST: i32 = -30;
+/// What a dark quest done costs: a murder, a theft, a framing, a silencing.
+pub const DARK_QUEST: i32 = -20;
 
 /// Something done that moves its doer's alignment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,6 +37,8 @@ pub enum Deed {
     Helped,
     /// Failed someone they had promised to save or escort.
     BetrayedQuest,
+    /// Did a dark quest's work (Quest system PR 10).
+    DarkQuest,
 }
 
 impl Deed {
@@ -56,6 +60,7 @@ impl Deed {
             Self::Escorted => ESCORTED,
             Self::Helped => HELPED,
             Self::BetrayedQuest => BETRAYED_QUEST,
+            Self::DarkQuest => DARK_QUEST,
         }
     }
 }

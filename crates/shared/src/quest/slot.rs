@@ -88,12 +88,14 @@ pub(super) fn slot_quests(
                 chain,
             },
         };
+        let mut requirements = requirements(town, id, plan, dark, &mut rng);
+        requirements.extend(super::moon::moon_need(town, id, world.moons));
         let making = Making {
             id,
             kind: QuestKind::Normal,
             building,
             member: u32::from(slot),
-            requirements: requirements(town, id, plan, dark, &mut rng),
+            requirements,
             chain,
             earlier: quests.last().map(|q| &q.story),
             dark,

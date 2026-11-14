@@ -12,7 +12,7 @@ A creature's hidden alignment: how good or evil it has shown itself to be, from 
 
 - `Alignment` (serde; `Default` 0): `NEUTRAL`, `new(i32)` (clamped to `MOST_EVIL` −1000 and `MOST_GOOD` 1000), `value`, `band`, `shifted(by)`, `after(deed)`, `rolled(kind, hash)` (a mob's: within `ROLLED_SPREAD` (250) of its kind's leaning; `None` for an animal).
 - `Band::{Evil, Neutral, Good}` (`name`): Evil at or below `EVIL_FROM` (−300), Good at or above `GOOD_FROM` (300). Quests and later effects go by the band, never the number.
-- `Deed::{Killed { victim, provoked }, Rescued, Escorted, Helped, BetrayedQuest}`, `shift()`: whole numbers, no randomness (all *to balance*). Killing someone Neutral −10 (`KILLED_NEUTRAL`), someone Good from −10 to −60 (`KILLED_BEST`) by how good; someone Evil, or anyone in self-defence (`provoked`), nothing. Rescued +20, Escorted +15, Helped +5, BetrayedQuest −30. Only `Killed` is used yet; the rest are for the Quest system (escorts, chains).
+- `Deed::{Killed { victim, provoked }, Rescued, Escorted, Helped, BetrayedQuest, DarkQuest}`, `shift()`: whole numbers, no randomness (all *to balance*). Killing someone Neutral −10 (`KILLED_NEUTRAL`), someone Good from −10 to −60 (`KILLED_BEST`) by how good; someone Evil, or anyone in self-defence (`provoked`), nothing. Rescued +20, Escorted +15, Helped +5, BetrayedQuest −30, DarkQuest −20 (a dark quest handed in). Quests carry theirs in `Quest::deeds`, applied on handing in.
 - `CreatureKind::alignment_leaning() -> Option<i16>`: hostile kinds −400, halflings and beggars +150, other peoples 0, animals (cattle, chickens, horses, wolves) `None`.
 
 ## Depends on

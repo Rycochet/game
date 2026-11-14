@@ -106,6 +106,7 @@ fn offered(client: &Client, world: &ServerWorld, quest: &Quest, now: i64) -> Opt
                 story: Box::new(quest.story.clone()),
                 reward: quest.reward.clone(),
                 ahead,
+                heard: super::needs::heard(quest, world),
             },
         }
     };

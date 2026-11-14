@@ -50,6 +50,7 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
             story,
             reward: pays,
             ahead,
+            heard,
         } => {
             let steps =
                 (0..story.facts.asks.len()).map(|ask| or_partly(story.step_text(lang, ask, 0)));
@@ -58,6 +59,12 @@ pub(super) fn detail_of(talk: &OpenTalk, book: &QuestBook, lang: &Lang) -> Optio
                 turn_in: false,
                 ..about(story, steps.collect(), pays, lang)
             };
+            // Who put in a good word for them (owner: "I heard you helped X").
+            if let Some(heard) = heard {
+                detail
+                    .paragraphs
+                    .insert(0, super::words::heard_text(lang, heard));
+            }
             // Its boss is already dead, or its item found: the player says so
             // (owner).
             match ahead {
