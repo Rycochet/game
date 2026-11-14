@@ -7,7 +7,7 @@ nav_order: 9
 
 Who made Hall of Worlds, and what it is made with. The game's own Credits, in the system menu, are grouped the same way.
 
-Artwork, fonts and models by other people keep their own licences. The [attribution file](https://github.com/Rycochet/game/blob/master/crates/client/assets/ATTRIBUTION.md) has the sources and any changes made.
+Artwork, fonts and models by other people keep their own licences. The [attribution file](https://github.com/ReigningCoo/hall-of-worlds/blob/master/crates/client/assets/ATTRIBUTION.md) has the sources and any changes made.
 
 ## Made by
 
@@ -36,4 +36,4 @@ Artwork, fonts and models by other people keep their own licences. The [attribut
 
 ## Licence
 
-Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See the [licence](https://github.com/Rycochet/game/blob/master/LICENSE) for the legal text.
+Hall of Worlds is licensed under [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/) (CC BY-NC 4.0): you may share and adapt it with attribution, but not for commercial purposes. See the [licence](https://github.com/ReigningCoo/hall-of-worlds/blob/master/LICENSE) for the legal text.

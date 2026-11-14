@@ -1,7 +1,7 @@
 # Hall of Worlds server, with a self-signed certificate: https://<this computer>:24691
 services:
   hall-of-worlds:
-    image: ghcr.io/rycochet/hall-of-worlds:latest
+    image: ghcr.io/reigningcoo/hall-of-worlds:latest
     restart: unless-stopped
     ports:
       - "24691:24691" # The game and the web client, over HTTPS.
