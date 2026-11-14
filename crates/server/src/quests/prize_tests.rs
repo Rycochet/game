@@ -176,7 +176,15 @@ fn handing_in_the_line_pays_its_prize() {
         escort: None,
     };
     (test.client.character.quests.taken).insert(last.id, progress);
-    finish(&mut test, &last, NOW);
+    // The prize's kind is rolled from a new item id at each try, and a long
+    // weapon (a spear, a polearm, some longswords) never fits a new
+    // character's packs: the giver keeps it and the player tries again.
+    for _ in 0..50 {
+        finish(&mut test, &last, NOW);
+        if !test.client.character.quests.taken.contains_key(&last.id) {
+            break;
+        }
+    }
     let book = &test.client.character.quests;
     assert!(book.done.contains_key(&last.id));
     let carried = &test.client.inventory.items;
