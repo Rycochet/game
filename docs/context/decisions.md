@@ -1300,7 +1300,7 @@ Claude's choices in it:
 - **The login corner's words are never given to `dom`.** Only its place is markup. What `dom` holds is written back by the debug API's `client.ui.html`, and the corner shows the account's email address, which must never be in a debug API answer.
 - **The floor buttons' looks** are set on the built buttons (`ButtonState::Active` for the player's own floor), as the movement pad's toggle is, so no new look was needed.
 
-Left as code, for the owner to decide: the full map's darkening (markup had no see-through dark over the window: a new look; since 2026-11-14 a `dark` panel, below), and the maps' own search for what the pointer is on, which works from the window's size and gives fingers extra reach, so moving it to `dom::Hit` changes how the maps feel and wants playing.
+Left as code, for the owner to decide: the full map's darkening (markup had no see-through dark over the window: a new look; since 2026-11-14 a `dark` panel, below), and the maps' own search for what the pointer is on, which worked from the window's size and gave fingers extra reach (since 2026-11-14 `dom`'s search, below).
 
 ## 2026-11-12: The old widgets' press rules go: one search, and presses stop on the interface
 
@@ -1320,7 +1320,7 @@ The end of the plan begun 2026-11-10 (`docs/context/html-interface.md`, all 11 P
 
 Claude's choice: `widgets` is not folded into `dom`, as the 2026-11-11 controls entry once expected. It stays as the toolkit underneath: the widget inside each control and surface, item and ability pictures, the shader looks, tooltips, the interface size and `UiId`. Moving its files into `dom` would change no behaviour and make `dom` too large for one context file; `widgets.md` now describes only that toolkit.
 
-Left, recorded rather than decided: the full map's darkening and `leaves_presses` (also used by the Skills page and View Planet), and the maps' own search for what the pointer is on, were left for the owner (decided 2026-11-14: the darkening a `dark` panel, below). Kept on purpose: control `spawn_*` calls in code that fills canvases, and the login corner's words outside `dom` (they hold the email address, and the debug API writes back what `dom` holds).
+Left, recorded rather than decided: the full map's darkening and `leaves_presses` (also used by the Skills page and View Planet), and the maps' own search for what the pointer is on, were left for the owner (decided 2026-11-14: the darkening a `dark` panel, and the maps' search `dom`'s, below). Kept on purpose: control `spawn_*` calls in code that fills canvases, and the login corner's words outside `dom` (they hold the email address, and the debug API writes back what `dom` holds).
 
 ## 2026-11-12: Smooth 3D ground (replaces the raised-block wilderness)
 
@@ -1555,3 +1555,9 @@ Item bonuses PR 3 of 3 (owner's plan above). Owner: a popup with an item's name,
 Owner: the full map's darkening "should probably become part of the theming as a tag on the panel or similar". So a `panel` where written may be `dark` (with an optional `depth`, the layer, as a dialog's): `dom` spawns the window-wide darkening behind it (`widgets::darkening`, a root of its own gone with the document) and shows it while the panel shows; its document goes at `layer_z(depth) + 1`. The full map's parchment is one, and `minimap` no longer spawns or shows a darkening itself.
 
 Claude's choices: what reads the mouse itself is marked `dom::OwnPointer` (the `dark` panel's darkening, the Skills page's canvas, View Planet's black layer), replacing `widgets::leaves_presses`: a press there hides what is under it but stays in the input for the owner, and `take_presses` treats it as it treated `PanelPart::LeftForOwner`. Only the Skills page's canvas carries it now, not every node of its tree, as the page hit-tests its nodes itself and the press finds the canvas round them. View Planet's layer stays code (black, not dark, with a bar filled by code), only marked. No markup attribute for `OwnPointer` yet: nothing written in markup wants one.
+
+## 2026-11-14: The maps' pointer search is `dom`'s
+
+Owner: the maps' own search for what the pointer is on "should be centralised – they still need their own code to translate screen / widget positions to their real coords". So the maps' markup is no longer `inert`, and `dom::Hit` (or `dom::Finder`, for a finger) says whether the pointer is on the minimap's face, the full map's parchment or its picture (`minimap`'s `MapPart`, given by `bind_maps`); the maps keep only turning a place on their picture into one on the land. The floor buttons are pressed as any button (`ButtonPressed`, so `client.ui.press` works on them).
+
+Claude's choices: `dom` gained two things the plan foresaw ("a canvas saying a point isn't on it"): `dom::Round`, pointed at only inside the circle its box holds (the minimap's face, a `div` over its picture, which stays `inert` so the suns and moons round it are clicked through), and `dom::Reach`, pointed at a little outside its box where what is found there is behind it, keeping the fingers' extra reach round the close and floor buttons (10 px each way; the floor buttons' gap now goes to the lower one, not half each). A left press on an element in something marked `OwnPointer` is left in the mouse's input (`send_events`), as `take_presses` already did, so the maps still read their own drags. Both are code components, like `OwnPointer`: no markup attribute yet. The suns and moons are named only when nothing of the interface is in front (`Hit` has no target).

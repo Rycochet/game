@@ -6,17 +6,18 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use super::{CORNER_GAP, FullMap, Room, full_map_area, full_map_picture_corner};
-use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels};
+use crate::common::{CurrentDungeon, FirstFloor, GameView, OtherLevels, SmoothPosition};
 use crate::dom::Dom;
-use crate::widgets::{ButtonState, UiId};
+use crate::player::Player;
+use crate::widgets::{ButtonPressed, ButtonState, UiId};
 
 /// A button's height and width (all the same, with room for "-10"), and the
 /// gap between two.
 pub(super) const BUTTON: f32 = 26.0;
 pub(super) const BUTTON_WIDTH: f32 = 36.0;
 pub(super) const BUTTON_GAP: f32 = 4.0;
-/// How far either side of a button still counts as on it.
-const SIDE_REACH: f32 = 10.0;
+/// How far round a button still counts as on it, for fingers (`dom::Reach`).
+pub(super) const SIDE_REACH: f32 = 10.0;
 
 /// The floors to show buttons for, as they read from the top: a building's
 /// go up, a cave's go down. None unless the full map is open in a site, and
@@ -59,17 +60,43 @@ pub(super) fn column(window: &Room, count: usize) -> (Vec2, Vec2) {
     )
 }
 
-/// Which button, counted from the top, is at a point on the window.
-pub(super) fn under(window: &Room, at: Vec2, count: usize) -> Option<usize> {
-    let (corner, size) = column(window, count);
-    // Half the gap each way belongs to the nearest button, and a little to the
-    // sides, for fingers.
-    let from = at - corner + Vec2::new(SIDE_REACH, BUTTON_GAP / 2.0);
-    let reach = size + Vec2::new(2.0 * SIDE_REACH, BUTTON_GAP);
-    if count == 0 || from.x < 0.0 || from.y < 0.0 || from.x >= reach.x || from.y >= reach.y {
-        return None;
-    }
-    Some(((from.y / (BUTTON + BUTTON_GAP)) as usize).min(count - 1))
+/// A floor's button pressed (`dom` finds it, reaching a little round it for
+/// fingers): that floor, round the player's place. The map stays as far from
+/// the player's place as it was dragged, so floors can be compared by going
+/// up and down.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn go_to_pressed(
+    mut pressed: MessageReader<ButtonPressed>,
+    ids: Query<&UiId>,
+    view: Res<State<GameView>>,
+    dungeon: Res<CurrentDungeon>,
+    mut levels: ResMut<OtherLevels>,
+    player: Single<&SmoothPosition, With<Player>>,
+    mut full: ResMut<FullMap>,
+) {
+    let floors = buttons(*view.get(), full.open, &dungeon, &levels);
+    let row = |said: &ButtonPressed| {
+        let id = ids.get(said.0).ok()?;
+        (id.parts() == ("full_map", "go"))
+            .then(|| id.index())
+            .flatten()
+    };
+    let Some(floor) = pressed
+        .read()
+        .filter_map(row)
+        .last()
+        .and_then(|at| floors.get(at))
+    else {
+        return;
+    };
+    let from = levels.spot(&dungeon, (player.x, player.y));
+    levels.show(*floor);
+    let to = levels.spot(&dungeon, (player.x, player.y));
+    full.centre = full
+        .centre
+        .map(|at| (at.0 - from.0 + to.0, at.1 - from.1 + to.1));
+    full.kept_on = Some(*floor);
+    full.drag_from = None;
 }
 
 /// The corner minimap always shows the player's floor, so closing the full

@@ -6,22 +6,24 @@ use bevy::window::PrimaryWindow;
 use shared::protocol::LevelKind;
 
 use super::{
-    CORNER_GAP, FullMap, KEEP_KNOWN_INSIDE, MAX_ZOOM, MIN_ZOOM, OverFullMap, PIXELS_PER_NOTCH,
-    Room, ZOOM_PER_NOTCH, full_map_area, full_map_picture_corner, minimap_across,
-    minimap_picture_size, over_full_map, shows_known, units_per_pixel,
+    FullMap, KEEP_KNOWN_INSIDE, MAX_ZOOM, MIN_ZOOM, MapPart, PIXELS_PER_NOTCH, Room,
+    ZOOM_PER_NOTCH, full_map_area, full_map_picture_corner, shows_known, units_per_pixel,
 };
 use crate::common::{
     Action, CurrentDungeon, CurrentWorld, GameView, OtherLevels, Preferences, SmoothPosition,
-    TouchGesture, UiPointer, in_interface,
+    TouchGesture, in_interface,
 };
+use crate::dom::{Finder, Hit};
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
 /// The maps get the input first, in `PreUpdate`: what they use is taken away
-/// before the game's systems look. Full Map's key (M) or clicking the minimap opens the full
-/// map; M, Esc, its close button or clicking outside it closes it. While it is
-/// open the mouse and fingers are the map's: dragging moves it, and the wheel
-/// or a pinch zooms it.
+/// before the game's systems look. Full Map's key (M) opens and closes the
+/// full map (clicking the minimap is `hold_minimap`'s, its close and floor
+/// buttons `dom`'s); Esc or clicking outside it closes it. While it is open
+/// the mouse and fingers are the map's: dragging moves it, and the wheel or a
+/// pinch zooms it. What the pointer is on is `dom`'s search (`Hit`): this
+/// only turns a place on the map into one on the land.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn take_input(
     mut keys: ResMut<ButtonInput<KeyCode>>,
@@ -34,10 +36,10 @@ pub(super) fn take_input(
     camera: Single<&OrbitCamera>,
     world: Option<Res<CurrentWorld>>,
     dungeon: Res<CurrentDungeon>,
-    mut levels: ResMut<OtherLevels>,
+    levels: Res<OtherLevels>,
     player: Single<&SmoothPosition, With<Player>>,
     mut full: ResMut<FullMap>,
-    pointer: Res<UiPointer>,
+    (hit, finder, parts): (Res<Hit>, Finder, Query<&MapPart>),
     mut gesture: ResMut<TouchGesture>,
 ) {
     let window = Room::of(&window, &ui_scale);
@@ -49,43 +51,10 @@ pub(super) fn take_input(
         let open = !full.open;
         full.set_open(open);
     }
-    let cursor = pointer.0;
-    // A floor's button: that floor, round the player's place.
-    let buttons = super::floors::buttons(view, full.open, &dungeon, &levels);
-    let button = cursor.and_then(|at| super::floors::under(&window, at, buttons.len()));
-    // A right click on the maps isn't one on the map behind (`target`).
-    if button.is_some() {
-        mouse.clear_just_pressed(MouseButton::Right);
-    }
-    if let Some(row) = button
-        && mouse.clear_just_pressed(MouseButton::Left)
-    {
-        // The map stays as far from the player's place as it was dragged, so
-        // floors can be compared by going up and down.
-        let from = levels.spot(&dungeon, (player.x, player.y));
-        levels.show(buttons[row]);
-        let to = levels.spot(&dungeon, (player.x, player.y));
-        full.centre = full
-            .centre
-            .map(|at| (at.0 - from.0 + to.0, at.1 - from.1 + to.1));
-        full.kept_on = Some(buttons[row]);
-        full.drag_from = None;
-        return;
-    }
+    let cursor = hit.at;
     let spot = levels.spot(&dungeon, (player.x, player.y));
     let shown = levels.shown(&dungeon);
     if !full.open {
-        let middle = Vec2::new(
-            window.width() - CORNER_GAP - minimap_picture_size(&window) / 2.0,
-            CORNER_GAP + minimap_picture_size(&window) / 2.0,
-        );
-        let over_minimap =
-            cursor.is_some_and(|at| at.distance(middle) <= minimap_across(&window) / 2.0);
-        // A left press there is `hold::hold_minimap`'s, opening the map on
-        // letting go.
-        if over_minimap {
-            mouse.clear_just_pressed(MouseButton::Right);
-        }
         return;
     }
     if keys.clear_just_pressed(KeyCode::Escape) {
@@ -105,16 +74,14 @@ pub(super) fn take_input(
         preferences.controls.release(&mut keys, action);
     }
 
-    // A press anywhere is the map's.
-    if mouse.clear_just_pressed(MouseButton::Left) {
-        match cursor.map(|at| over_full_map(&window, at)) {
-            Some(OverFullMap::Outside | OverFullMap::CloseButton) => {
-                full.set_open(false);
-                return;
-            }
-            Some(OverFullMap::Parchment) => full.drag_from = cursor,
-            None => {}
+    // A press anywhere is the map's: on the parchment it drags, and
+    // anywhere else (the darkening round it) it closes the map.
+    if cursor.is_some() && mouse.clear_just_pressed(MouseButton::Left) {
+        if !MapPart::Parchment.holds(&hit.chain, &parts) {
+            full.set_open(false);
+            return;
         }
+        full.drag_from = cursor;
     }
     if !mouse.pressed(MouseButton::Left) {
         full.drag_from = None;
@@ -137,13 +104,13 @@ pub(super) fn take_input(
         let area = full_map_area(&window);
         let middle = full_map_picture_corner(&window) + area / 2.0;
         let towards = if touch.pinch != 1.0 {
-            Some(in_interface(touch.centre, &ui_scale))
+            let between = in_interface(touch.centre, &ui_scale);
+            let on = MapPart::Picture.holds(&finder.chain_at(between), &parts);
+            on.then_some(between)
         } else {
-            cursor
+            cursor.filter(|_| MapPart::Picture.holds(&hit.chain, &parts))
         };
-        let over_map = towards.map(|at| at - middle).filter(|from_middle| {
-            from_middle.x.abs() <= area.x / 2.0 && from_middle.y.abs() <= area.y / 2.0
-        });
+        let over_map = towards.map(|at| at - middle);
         if let Some(from_middle) = over_map
             && before != after
         {

@@ -4,9 +4,10 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use shared::protocol::ClientMessage;
 
-use super::{FullMap, ICON_PIXELS, Room, hovered_poi, spot_on_full_map};
-use crate::common::{ClickMode, CurrentWorld, GameView, SmoothPosition, UiPointer};
+use super::{FullMap, ICON_PIXELS, MapPart, Room, hovered_poi, spot_on_full_map};
+use crate::common::{ClickMode, CurrentWorld, GameView, SmoothPosition};
 use crate::connection::ToServer;
+use crate::dom::Hit;
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
@@ -25,7 +26,7 @@ pub(super) fn go_into_clicked_poi(
     world: Option<Res<CurrentWorld>>,
     mut full: ResMut<FullMap>,
     mut to_server: MessageWriter<ToServer>,
-    pointer: Res<UiPointer>,
+    (hit, parts): (Res<Hit>, Query<&MapPart>),
 ) {
     let window = Room::of(&window, &ui_scale);
     let view = *view.get();
@@ -38,8 +39,10 @@ pub(super) fn go_into_clicked_poi(
         return;
     }
     let centre = (player.x, player.y);
-    let poi = pointer
-        .0
+    let on_picture = MapPart::Picture.holds(&hit.chain, &parts);
+    let poi = hit
+        .at
+        .filter(|_| on_picture)
         .and_then(|cursor| spot_on_full_map(&window, cursor, view, &camera, &full, centre))
         .and_then(|(spot, units_per_pixel)| {
             let reach = ICON_PIXELS * full.zoom / 2.0;

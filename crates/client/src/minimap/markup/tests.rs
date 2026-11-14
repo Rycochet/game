@@ -20,8 +20,9 @@ fn the_minimap_is_good_markup_in_its_corner() {
     assert!(has(MINIMAP.source, "map", "right", CORNER_GAP));
 }
 
-/// The code that finds what the pointer is on works from these constants,
-/// so the markup has to place things by them (less the parchment's edge).
+/// The code that turns a place on the picture into one on the land works
+/// from these constants, so the markup has to place things by them (less
+/// the parchment's edge).
 #[test]
 fn the_full_map_is_good_markup_placed_by_the_constants() {
     FULL_MAP.assert_good();
@@ -33,7 +34,7 @@ fn the_full_map_is_good_markup_placed_by_the_constants() {
     assert!(has(source, "code", "height", RUNES_HEIGHT));
 }
 
-/// `floors::under` finds a floor's button by these sizes.
+/// `floors::column` places the buttons by these sizes.
 #[test]
 fn the_floor_buttons_are_the_size_the_search_expects() {
     let source = FULL_MAP.source;

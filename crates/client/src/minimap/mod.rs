@@ -56,12 +56,12 @@ pub use full_map::FullMap;
 use hover::{find_hovered_body, name_what_is_hovered, spot_on_full_map};
 use input::take_input;
 use layout::{
-    OverFullMap, full_map_area, full_map_corner, full_map_picture_corner, full_map_side,
-    minimap_across, minimap_picture_size, minimap_trim, over_full_map,
+    full_map_area, full_map_corner, full_map_picture_corner, full_map_side, minimap_across,
+    minimap_picture_size, minimap_trim,
 };
 use marks::{full_map_compass, minimap_border, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title};
-use parts::{HoverRunesPicture, MapPictures};
+use parts::{HoverRunesPicture, MapPart, MapPictures};
 pub use place::MinimapArea;
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};
@@ -110,7 +110,8 @@ const OTHER_FLOOR_SIZE: f32 = 0.8;
 const FULL_MAP_OF_WINDOW: f32 = 0.9;
 const FULL_MAP_MARGIN: f32 = 20.0;
 const TITLE_HEIGHT: f32 = 34.0;
-/// How far round the close button still counts as on it, for fingers.
+/// How far round the close button still counts as on it, for fingers
+/// (`dom::Reach`).
 const CLOSE_REACH: f32 = 10.0;
 /// How far the box naming what is under the mouse sits above the margin.
 const HOVER_LIFT: f32 = 12.0;
@@ -192,6 +193,7 @@ impl Plugin for MinimapPlugin {
                 Update,
                 (
                     close::close_on_button,
+                    floors::go_to_pressed,
                     name_what_is_hovered,
                     find_hovered_body,
                     floors::show_buttons,

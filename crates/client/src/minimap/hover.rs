@@ -14,9 +14,8 @@ use super::{
 };
 use crate::common::{
     CurrentDungeon, CurrentWorld, GameView, HoveredInSky, OtherLevels, SkyNow, SmoothPosition,
-    UiPointer,
 };
-use crate::dom::Dom;
+use crate::dom::{Dom, Hit};
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
 
@@ -33,7 +32,7 @@ pub(super) fn name_what_is_hovered(
     dungeon: Res<CurrentDungeon>,
     levels: Res<OtherLevels>,
     full: Res<FullMap>,
-    pointer: Res<UiPointer>,
+    (hit, parts): (Res<Hit>, Query<&super::MapPart>),
     mut dom: Dom,
     mut runes: RunesBox,
     mut was: Local<Named>,
@@ -41,7 +40,8 @@ pub(super) fn name_what_is_hovered(
     let window = Room::of(&window, &ui_scale);
     let view = *view.get();
     let mut gate = None;
-    let name = pointer.0.filter(|_| full.open).and_then(|cursor| {
+    let on_picture = full.open && super::MapPart::Picture.holds(&hit.chain, &parts);
+    let name = hit.at.filter(|_| on_picture).and_then(|cursor| {
         let centre = levels.spot(&dungeon, (player.x, player.y));
         let (spot, units_per_pixel) =
             spot_on_full_map(&window, cursor, view, &camera, &full, centre)?;
@@ -161,19 +161,22 @@ pub(super) fn hovered_body(
 }
 
 /// Names the sun or moon by the minimap that the pointer is on, for the hover
-/// box (`hover`). The full map covers them when open.
+/// box (`hover`). The full map covers them when open; anything of the
+/// interface in front of them hides them from the pointer (`dom::Hit`), and
+/// the picture they are drawn on is `inert`, so a click on one reaches
+/// whatever is under it.
 pub(super) fn find_hovered_body(
     view: Res<State<GameView>>,
     full: Res<FullMap>,
-    (sky_now, dungeon, pointer): (Res<SkyNow>, Res<CurrentDungeon>, Res<UiPointer>),
+    (sky_now, dungeon, hit): (Res<SkyNow>, Res<CurrentDungeon>, Res<Hit>),
     window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
     mut hovered: ResMut<HoveredInSky>,
 ) {
     let window = Room::of(&window, &ui_scale);
-    let body = pointer
-        .0
-        .filter(|_| !full.open)
+    let body = hit
+        .at
+        .filter(|_| !full.open && hit.target.is_none())
         .and_then(|at| hovered_body(*view.get(), &dungeon, &sky_now, &window, at));
     if hovered.0 != body {
         hovered.0 = body;
