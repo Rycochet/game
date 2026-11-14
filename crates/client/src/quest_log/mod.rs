@@ -7,8 +7,10 @@
 use bevy::prelude::*;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod button;
 mod detail;
 mod entries;
+mod icon;
 mod input;
 mod markup;
 mod open;
@@ -23,18 +25,21 @@ pub struct QuestLogPlugin;
 
 impl Plugin for QuestLogPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<state::LogPanel>().add_systems(
-            Update,
-            (
-                open::notice_closed,
-                open::toggle_log,
-                open::open_on_quest,
-                read::read_server,
-                input::read_events,
-                show::show_log,
-            )
-                .chain(),
-        );
+        app.init_resource::<state::LogPanel>()
+            .add_systems(Startup, button::spawn_button)
+            .add_systems(Update, (button::bind_button, button::show_button))
+            .add_systems(
+                Update,
+                (
+                    open::notice_closed,
+                    open::toggle_log,
+                    open::open_on_quest,
+                    read::read_server,
+                    input::read_events,
+                    show::show_log,
+                )
+                    .chain(),
+            );
     }
 }
 

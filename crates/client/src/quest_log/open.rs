@@ -1,20 +1,24 @@
-//! Opening and closing the Quest Log: its key (L) opens it or closes it, and
-//! so does its close button; leaving the game closes it. Opening asks the
+//! Opening and closing the Quest Log: its key (L) or its button opens it or
+//! closes it, and so does its close button; leaving the game closes it. Opening asks the
 //! server which planets the character has quest history on. Asked to open on
 //! a quest (`quests::OpenQuestLog`), it opens there.
 
 use bevy::prelude::*;
 use shared::protocol::{ClientMessage, QuestAsk};
 
+use super::button::LogButton;
 use super::markup::QUEST_LOG;
 use super::state::LogPanel;
 use crate::common::{Action, GameView, Preferences, Session};
 use crate::connection::ToServer;
 use crate::dom::{UiEvent, UiValue, document, top_strip};
 use crate::quests::OpenQuestLog;
-use crate::widgets::UiId;
+use crate::widgets::{ButtonPressed, UiId};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn toggle_log(
+    mut pressed: MessageReader<ButtonPressed>,
+    button: Query<(), With<LogButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     preferences: Res<Preferences>,
     view: Res<State<GameView>>,
@@ -22,9 +26,9 @@ pub(super) fn toggle_log(
     mut to_server: MessageWriter<ToServer>,
     mut commands: Commands,
 ) {
-    if *view.get() == GameView::Connecting
-        || !preferences.controls.just_pressed(&keys, Action::QuestLog)
-    {
+    let by_button = pressed.read().any(|press| button.contains(press.0));
+    let by_key = preferences.controls.just_pressed(&keys, Action::QuestLog);
+    if *view.get() == GameView::Connecting || !(by_button || by_key) {
         return;
     }
     if let Some(document) = panel.document.take() {
