@@ -24,6 +24,7 @@ use crate::player::PlayerSystems;
 use crate::view3d::View3dSystems;
 
 // Split into files (`cargo xtask lint` keeps files small).
+mod close;
 mod draw;
 mod forget;
 mod full_map;
@@ -190,6 +191,7 @@ impl Plugin for MinimapPlugin {
             .add_systems(
                 Update,
                 (
+                    close::close_on_button,
                     name_what_is_hovered,
                     find_hovered_body,
                     floors::show_buttons,

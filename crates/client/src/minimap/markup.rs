@@ -9,7 +9,7 @@ use super::spawn::{marks_layer, new_picture};
 use super::{FULL_MAP_LAYER, HoverRunesPicture, MapPictures};
 use crate::dom::{Dom, Template, document, top_strip};
 use crate::html;
-use crate::widgets::{UiId, layer_z, spawn_close_button};
+use crate::widgets::{Pressable, UiId, layer_z, spawn_close_button};
 
 /// The minimap: a place its picture is painted into, in the window's top
 /// right corner (`CORNER_GAP`), hidden until there is a map. The pointer is
@@ -28,7 +28,8 @@ pub(super) static MINIMAP: Template = html!(
 /// (`PANEL_EDGE`, 3), so each is that much less than the constant it comes
 /// from. `place_maps` keeps its place and sizes. The pointer is never on it
 /// (`inert`), as `take_input` does its own search; the close button is
-/// beside it, not in it, so it is still pointed at as a button. Over it is
+/// beside it, not in it, so it is still pointed at as a button, and its
+/// place is `Pressable` (`bind_maps`). Over it is
 /// the column of a site's known floors (`floors`): a button for each is a
 /// copy of the template, `BUTTON_WIDTH` by `BUTTON` and `BUTTON_GAP` apart
 /// (`div class="tight"`), found by `take_input`'s own search too.
@@ -95,7 +96,9 @@ pub(super) fn bind_maps(
             ("full_map", "code") => {
                 place.insert((HoverRunesPicture, ImageNode::default()));
             }
+            // A press on the X is one on its place (`close::close_on_button`).
             ("full_map", "close") => {
+                place.insert(Pressable);
                 place.with_children(|place| {
                     spawn_close_button(place, Node::default());
                 });

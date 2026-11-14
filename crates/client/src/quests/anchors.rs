@@ -3,6 +3,7 @@
 //! world map with a step to do there.
 
 use bevy::prelude::*;
+use shared::dungeon::{CELL_UNITS, WALL_HALF_UNITS};
 use shared::hall::{GatePlace, LEVEL_ROWS, LEVEL_TOP};
 use shared::id::Id;
 use shared::poi::ChunkPos;
@@ -17,6 +18,10 @@ use crate::view3d::{TOKEN_DIAMETER, TokenView};
 /// How high over the ground at a door its marker floats, in cells: above the
 /// door, under the eaves.
 const OVER_DOOR: f32 = 1.35;
+/// How far a door is out from its cell's middle, in cells: the walls are
+/// thin, and a door is drawn on the outside of its wall's middle
+/// (`dungeon_map`'s `WALL_OUT`).
+const DOOR_OUT: f32 = WALL_HALF_UNITS as f32 / CELL_UNITS as f32;
 /// How high over a Hall gate's foot its marker floats, in cells: the tallest
 /// designs are about 1.6.
 const OVER_GATE: f32 = 1.9;
@@ -60,9 +65,9 @@ pub(super) fn door_anchors(
     (dungeon.buildings.iter())
         .filter_map(|building| {
             let marker = doors.markers.get(&building.id)?;
-            // On the door's outside face.
-            let x = building.door.0 as f32 + building.faces.0 as f32 * 0.5;
-            let y = building.door.1 as f32 + building.faces.1 as f32 * 0.5;
+            // Over the middle of the door, on its wall's outside face.
+            let x = building.door.0 as f32 + building.faces.0 as f32 * DOOR_OUT;
+            let y = building.door.1 as f32 + building.faces.1 as f32 * DOOR_OUT;
             let at = over_ground(ground, (x, y), OVER_DOOR);
             Some((MarkOver::Door(building.id), at, MarkLook::of(*marker)))
         })
