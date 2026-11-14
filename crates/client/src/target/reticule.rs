@@ -91,11 +91,14 @@ pub(super) fn place_reticule(
         return;
     };
     visibility.set_if_neq(Visibility::Inherited);
-    transform.translation = token.translation + Vec3::Y * TOKEN_HALF_THICKNESS;
-    if !preferences.graphics.reduce_motion {
-        let turn = time.elapsed_secs() / TURN_SECONDS * TAU;
-        transform.rotation = Quat::from_rotation_y(-turn);
-    }
+    // On the base's top, tilted with it where the ground slopes.
+    let tilt = view.map_or(Quat::IDENTITY, |(view, _, _)| view.tilt());
+    transform.translation = token.translation + tilt * Vec3::Y * TOKEN_HALF_THICKNESS;
+    let turn = match preferences.graphics.reduce_motion {
+        true => 0.0,
+        false => time.elapsed_secs() / TURN_SECONDS * TAU,
+    };
+    transform.rotation = tilt * Quat::from_rotation_y(-turn);
 }
 
 /// The reticule's flat shape, facing up, grown by `grow` all round.

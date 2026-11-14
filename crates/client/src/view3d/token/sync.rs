@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use super::super::camera::OrbitCamera;
 use super::{
     ICON_GAP_PIXELS, ICON_PIXEL, ICON_SHADOW_PIXELS, IconAnchor, ModelAnchor, TokenAssets,
-    TokenView, XrayMaterial, base_radius, outline_width, prism, raised_prism,
+    TokenBase, TokenView, XrayMaterial, base_radius, outline_width, prism, raised_prism,
 };
 use crate::common::{Icon, Token, TokenModel, TokenShape};
 
@@ -136,11 +136,17 @@ pub(super) fn spawn_view(
             Visibility::default(),
         ))
         .id();
+    // Tilted to the ground by `place_camera_and_tokens`.
+    let tilted = commands
+        .spawn((TokenBase, Transform::default(), Visibility::default()))
+        .add_children(&[body, outline, xray_body, xray_outline])
+        .id();
     // Starts at the origin; `place_camera_and_tokens` moves it to the owner.
     commands
         .spawn((
             TokenView {
                 owner,
+                base: tilted,
                 body,
                 outline,
                 xray_body,
@@ -148,11 +154,12 @@ pub(super) fn spawn_view(
                 anchor,
                 model,
                 radius: base_radius(token.base),
+                tilt: Quat::IDENTITY,
             },
             Transform::default(),
             Visibility::default(),
         ))
-        .add_children(&[body, outline, xray_body, xray_outline, anchor, model]);
+        .add_children(&[tilted, anchor, model]);
 }
 
 /// Shows each token owner's `Icon` on its anchor, unless a 3D model stands there
