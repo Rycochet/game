@@ -5,7 +5,7 @@ The Skills page: the Character panel's Skills tab (owner, 2026-11-07: it was a f
 ## Files
 
 - `crates/client/src/skills_page/mod.rs`: `SkillsPagePlugin`.
-- `skills_page/spawn.rs`: `fill_page` (each new `common::SkillsPage`): a row of buttons (`PageButton::{ZoomOut, ZoomIn, Fit}`), the `Canvas` (640 × 480, so the panel fits it; presses on it are left to the page), its `Origin` (the middle, which nodes are placed from) and the `Details` line. `FORM` (`skills`).
+- `skills_page/spawn.rs`: `fill_page` (each new `common::SkillsPage`): a row of buttons (`PageButton::{ZoomOut, ZoomIn, Fit}`), the `Canvas` (640 × 480, so the panel fits it; `dom::OwnPointer`, so presses on it and on the tree in it are left to the page), its `Origin` (the middle, which nodes are placed from) and the `Details` line. `FORM` (`skills`).
 - `skills_page/layout.rs`: `layout(skills)` (pure, unit tested): `Placed { id, at, from }` for each known skill, `RINGS`, `MAX_SLICE`, `SIZES` (each level's circle at zoom 1; 50% larger than at first, owner), `size_of`. `layout/rings.rs`: `radii`: each ring pushed out, inside out, until no two circles touch (`GAP` between them).
 - `skills_page/view.rs`: `SkillsView` (resource: pan, zoom, `max_zoom`, chosen and hovered skill, press and drag, `fit_wanted`, `shown`: the tab laid out, which the other systems wait for), `zoom_about`, `fit`, `on_page`. Unit tested.
 - `skills_page/build.rs`: `build_tree` (draws the nodes and lines again, while shown, only when which skills are known changes or the page is new: `Drawn`, unit tested), `SkillNode`, `SkillLine`, `RingOf` (a ring's skill), `ring_value`, `tenths`.
@@ -22,7 +22,7 @@ The Skills page: the Character panel's Skills tab (owner, 2026-11-07: it was a f
 ## Depends on
 
 - Assets: `icons/` (game-icons.net, drawn by `cargo xtask icons`).
-- `common` (`SkillsPage`, `Action`, `Preferences`, `UiPointer`, `TouchGesture`, `in_interface`, `GameView`), `character` (`CharacterSheet`), `debug_menu` (`DebugMenu`), `minimap` (`FullMap`), `system_menu` (`SystemMenu`): it leaves the input to those while they are open; `widgets`, `shared::skill`.
+- `common` (`SkillsPage`, `Action`, `Preferences`, `UiPointer`, `TouchGesture`, `in_interface`, `GameView`), `character` (`CharacterSheet`), `debug_menu` (`DebugMenu`), `minimap` (`FullMap`), `system_menu` (`SystemMenu`): it leaves the input to those while they are open; `dom` (`OwnPointer`), `widgets`, `shared::skill`.
 
 ## Used by
 

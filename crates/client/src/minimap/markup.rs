@@ -24,7 +24,8 @@ pub(super) static MINIMAP: Template = html!(
 /// The full map: a parchment with its title along the top, the picture
 /// under it (`FULL_MAP_MARGIN` in, and `TITLE_HEIGHT` down), and near its
 /// bottom the box naming what is pointed at, or a World Gate's code in
-/// runes. Places inside the parchment are measured from inside its edge
+/// runes. It is `dark`: the window behind it darkens while it shows, and a
+/// press there is left for `take_input`, which closes the map. Places inside the parchment are measured from inside its edge
 /// (`PANEL_EDGE`, 3), so each is that much less than the constant it comes
 /// from. `place_maps` keeps its place and sizes. The pointer is never on it
 /// (`inert`), as `take_input` does its own search; the close button is
@@ -36,7 +37,7 @@ pub(super) static MINIMAP: Template = html!(
 pub(super) static FULL_MAP: Template = html!(
     "full_map",
     r#"
-<panel id="parchment" form="full_map" top="0" left="0" width="1" height="1" inert hidden>
+<panel id="parchment" form="full_map" top="0" left="0" width="1" height="1" dark inert hidden>
   <h1 id="title" form="full_map" top="15" left="0" right="0" align="center"/>
   <canvas id="picture" form="full_map" top="51" left="17" width="1" height="1"/>
   <div id="hover" form="full_map" class="joined" bottom="29" left="0" right="0" align="center" hidden>

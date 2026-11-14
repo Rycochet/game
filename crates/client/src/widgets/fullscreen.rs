@@ -4,7 +4,6 @@
 
 use bevy::prelude::*;
 
-use super::moveable::PanelPart;
 use super::theme::DARKENING;
 use super::{PANEL_EDGE, Pressable, panel, panel_title};
 use crate::dom::Opaque;
@@ -35,8 +34,9 @@ pub fn layer_share(depth: i32) -> f32 {
     FIRST_SHARE - SHARE_PER_LAYER * depth as f32
 }
 
-/// A darkening across the window, for a panel that places itself. Add a way to
-/// take presses on it (`Pressable`, `leaves_presses`), and hide it to hide it.
+/// A darkening across the window, for a panel that places itself (a dialog's,
+/// a `dark` panel's in `dom`). Add a way to take presses on it (`Pressable`,
+/// `dom::OwnPointer`), and hide it to hide it.
 pub fn darkening(depth: i32) -> impl Bundle {
     (
         Node {
@@ -49,13 +49,6 @@ pub fn darkening(depth: i32) -> impl Bundle {
         GlobalZIndex(layer_z(depth)),
         Darkening,
     )
-}
-
-/// Put this on a node for presses on it, and on what is in front of it with no
-/// press taking of its own, to reach no widget under it and be left for whoever
-/// owns it to read from the mouse. `entity` is the node.
-pub fn leaves_presses(entity: Entity) -> impl Bundle {
-    PanelPart::LeftForOwner(entity)
 }
 
 /// A full-screen panel, hidden, as layer `depth`, centred. `content` lays out

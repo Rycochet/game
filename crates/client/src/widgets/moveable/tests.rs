@@ -192,11 +192,10 @@ fn a_button_under_another_panel_gets_nothing() {
 }
 
 #[test]
-fn a_part_left_for_its_owner_hides_what_is_under_it_and_keeps_the_press() {
+fn what_reads_the_pointer_itself_hides_what_is_under_it_and_keeps_the_press() {
     let mut test = test();
-    let root = test.root;
     test.app.world_mut().spawn((
-        PanelPart::LeftForOwner(root),
+        crate::dom::OwnPointer,
         laid_out(Vec2::ZERO, Vec2::new(800.0, 600.0), 5, 1.0),
     ));
     // On the button, and on the title bar, which would have started a drag.

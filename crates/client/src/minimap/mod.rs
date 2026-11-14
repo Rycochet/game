@@ -53,7 +53,6 @@ mod teleport;
 
 use draw::draw_maps;
 pub use full_map::FullMap;
-use full_map::show_darkening;
 use hover::{find_hovered_body, name_what_is_hovered, spot_on_full_map};
 use input::take_input;
 use layout::{
@@ -62,7 +61,7 @@ use layout::{
 };
 use marks::{full_map_compass, minimap_border, minimap_marks};
 use names::{hovered_name, hovered_poi, location_title};
-use parts::{FullMapDarkening, HoverRunesPicture, MapPictures};
+use parts::{HoverRunesPicture, MapPictures};
 pub use place::MinimapArea;
 pub(super) use room::Room;
 use scale::{shows_known, under_the_sky, units_per_pixel};
@@ -141,7 +140,8 @@ const FULL_MAP_BUDGET_MS: f64 = 10.0;
 /// without marking anything changed (`dungeon_map` adds to it).
 const REDRAW_SECONDS: f32 = 0.25;
 
-/// Which full-screen layer the full map is.
+/// Which full-screen layer the full map is: its parchment's `depth`, left
+/// out of the markup as it is 0.
 const FULL_MAP_LAYER: i32 = 0;
 
 pub struct MinimapPlugin;
@@ -155,7 +155,7 @@ impl Plugin for MinimapPlugin {
             .init_resource::<MapRivers>()
             .init_resource::<Sprites>()
             .init_resource::<overlay::MarksLayer>()
-            .add_systems(Startup, (markup::spawn_maps, spawn::spawn_darkening))
+            .add_systems(Startup, markup::spawn_maps)
             .add_systems(
                 Update,
                 forget::forget_world
@@ -195,7 +195,6 @@ impl Plugin for MinimapPlugin {
                     name_what_is_hovered,
                     find_hovered_body,
                     floors::show_buttons,
-                    show_darkening,
                 )
                     .run_if(not(in_state(GameView::Connecting))),
             );

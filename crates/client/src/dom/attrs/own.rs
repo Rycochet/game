@@ -20,7 +20,7 @@ pub(super) enum Kind {
     OneOf(&'static [&'static str]),
 }
 
-pub(super) const OWN: [(&str, Kind); 39] = [
+pub(super) const OWN: [(&str, Kind); 40] = [
     ("for", Kind::Text),
     ("src", Kind::Text),
     ("alt", Kind::Text),
@@ -50,6 +50,7 @@ pub(super) const OWN: [(&str, Kind); 39] = [
     ("moveable", Kind::Flag),
     ("grip", Kind::Flag),
     ("modal", Kind::Flag),
+    ("dark", Kind::Flag),
     ("closable", Kind::Flag),
     ("hover", Kind::Flag),
     ("auto", Kind::Flag),

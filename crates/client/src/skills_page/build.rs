@@ -10,11 +10,11 @@ use shared::skill::{SkillId, Skills, VALUE_SCALE};
 
 use super::icons::icon_path;
 use super::layout::{Placed, SIZES, layout, size_of};
-use super::spawn::{Canvas, FORM, Origin};
+use super::spawn::{FORM, Origin};
 use super::view::SkillsView;
 use crate::character::CharacterSheet;
 use crate::widgets::{
-    INK, Shade, SkillRing, UiId, attribute_colour, leaves_presses, skill_ring, spawn_outlined_icon,
+    INK, Shade, SkillRing, UiId, attribute_colour, skill_ring, spawn_outlined_icon,
 };
 
 const LINE_THICKNESS: f32 = 2.0;
@@ -69,12 +69,11 @@ pub(super) fn build_tree(
     view: Res<SkillsView>,
     sheet: Res<CharacterSheet>,
     origin: Option<Single<(Entity, Ref<Origin>)>>,
-    canvas: Option<Single<Entity, With<Canvas>>>,
     assets: Res<AssetServer>,
     mut drawn: Local<Drawn>,
     mut commands: Commands,
 ) {
-    let (Some(origin), Some(canvas)) = (origin, canvas) else {
+    let Some(origin) = origin else {
         return;
     };
     let (origin, mark) = *origin;
@@ -86,28 +85,26 @@ pub(super) fn build_tree(
         return;
     }
     let placed = layout(skills);
-    let canvas = *canvas;
     let mut origin = commands.entity(origin);
     origin.despawn_children();
     origin.with_children(|origin| {
         for one in &placed {
-            spawn_line(origin, one, canvas);
+            spawn_line(origin, one);
         }
-        spawn_middle(origin, canvas);
+        spawn_middle(origin);
         for one in &placed {
             let icon = icon_path(one.id).map(|path| assets.load(path));
-            spawn_skill(origin, one, ring_value(skills, one.id), icon, canvas);
+            spawn_skill(origin, one, ring_value(skills, one.id), icon);
         }
     });
 }
 
-fn spawn_line(origin: &mut ChildSpawnerCommands, one: &Placed, canvas: Entity) {
+fn spawn_line(origin: &mut ChildSpawnerCommands, one: &Placed) {
     origin.spawn((
         SkillLine {
             from: one.from,
             to: one.at,
         },
-        leaves_presses(canvas),
         Node {
             position_type: PositionType::Absolute,
             height: px(LINE_THICKNESS),
@@ -137,7 +134,7 @@ fn round(size: f32, fill: Color) -> impl Bundle {
 }
 
 /// The character in the middle: a plain circle (owner).
-fn spawn_middle(origin: &mut ChildSpawnerCommands, canvas: Entity) {
+fn spawn_middle(origin: &mut ChildSpawnerCommands) {
     let size = SIZES[0];
     origin.spawn((
         SkillNode {
@@ -146,7 +143,6 @@ fn spawn_middle(origin: &mut ChildSpawnerCommands, canvas: Entity) {
             size,
         },
         UiId::new(FORM, "you"),
-        leaves_presses(canvas),
         round(size, MIDDLE_FILL),
     ));
 }
@@ -159,7 +155,6 @@ fn spawn_skill(
     one: &Placed,
     value: f32,
     icon: Option<Handle<Image>>,
-    canvas: Entity,
 ) {
     let size = size_of(one.id);
     let fill = attribute_colour(one.id.leans(), Shade::Skill);
@@ -170,31 +165,23 @@ fn spawn_skill(
             size,
         },
         UiId::new(FORM, "node").at(usize::from(one.id.number())),
-        leaves_presses(canvas),
         round(size, fill),
     ));
     if let Some(icon) = icon {
         let inset = percent((1.0 - ICON_SHARE) / 2.0 * 100.0);
         node.with_children(|node| {
-            node.spawn((
-                leaves_presses(canvas),
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: inset,
-                    top: inset,
-                    width: percent(ICON_SHARE * 100.0),
-                    height: percent(ICON_SHARE * 100.0),
-                    ..default()
-                },
-            ))
-            .with_children(|holder| spawn_outlined_icon(holder, icon, Color::WHITE));
+            node.spawn((Node {
+                position_type: PositionType::Absolute,
+                left: inset,
+                top: inset,
+                width: percent(ICON_SHARE * 100.0),
+                height: percent(ICON_SHARE * 100.0),
+                ..default()
+            },))
+                .with_children(|holder| spawn_outlined_icon(holder, icon, Color::WHITE));
         });
     }
-    node.with_child((
-        skill_ring(SkillRing::of(value, false)),
-        RingOf(one.id),
-        leaves_presses(canvas),
-    ));
+    node.with_child((skill_ring(SkillRing::of(value, false)), RingOf(one.id)));
 }
 
 /// A skill's own value as its ring shows it.

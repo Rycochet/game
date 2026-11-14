@@ -57,7 +57,7 @@ Pick by how much it should interrupt: Snackbar least, Dialog most.
 | Piece | Status | Here |
 | --- | --- | --- |
 | Dialog | have | `dialog`, its buttons in a `footer`: title, content, buttons. The quit question uses it. `modal` makes it a full-screen layer. |
-| Darkening | have | What is outside a layer; each layer's adds up. |
+| Darkening | have | What is outside a layer; each layer's adds up. Behind a `dialog`, and behind a `panel dark` (the full map). |
 | Progress bar | have | `progress` with a `value`. From the loading screen. A progress widget for actions that take a while (changing clothes under other things, later others) is to be designed (owner, 2026-11-09); for now `entities` shows the gold wind-up bar under the player's token. |
 | Hover popup | have | `popup hover`: a popup about what the pointer rests on, opening after a short rest (0.15 s) with no click, staying while the pointer is on that or on the popup, and going 0.3 s after it has left both. Its padlock locks it open (then it drags by its top and closes as locked popups do). By finger: held on the thing, it opens and stays after lifting, until a press elsewhere. Items everywhere (`item_popup`): the name in its quality's colour, a line per bonus ("+40 Toughness", "−8 Agility", "Restores 1 Health a second for 30 s; stops on moving or being hurt"), the weight at the bottom. |
 | Snackbar | have | `notices` (markup over the view): a parchment strip at the top middle, under the status text, for a few seconds, taking no clicks ("Found: Fort"). |

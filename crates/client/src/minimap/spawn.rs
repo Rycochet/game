@@ -1,13 +1,9 @@
-//! The maps' pictures, and the darkening behind the full map. The maps
-//! themselves are markup (`markup.rs`).
+//! The maps' pictures. The maps themselves are markup (`markup.rs`).
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::ImageSampler;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-
-use super::{FULL_MAP_LAYER, FullMapDarkening};
-use crate::widgets::{darkening, leaves_presses};
 
 pub(super) fn new_picture() -> Image {
     let mut image = Image::new_fill(
@@ -38,16 +34,4 @@ pub(super) fn marks_layer(picture: &Handle<Image>) -> impl Bundle {
             ..default()
         },
     )
-}
-
-/// The darkening behind the full map, hidden until it opens.
-pub(super) fn spawn_darkening(mut commands: Commands) {
-    let behind = commands
-        .spawn((
-            darkening(FULL_MAP_LAYER),
-            FullMapDarkening,
-            Visibility::Hidden,
-        ))
-        .id();
-    commands.entity(behind).insert(leaves_presses(behind));
 }

@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use super::{Builder, Inside};
 use crate::dom::attrs::{Attrs, Length};
 use crate::dom::check::{Checked, CheckedNode};
-use crate::dom::parts::{AlwaysBars, Control, ControlOf, SurfaceOf};
+use crate::dom::parts::{AlwaysBars, Control, ControlOf, Darkened, SurfaceOf};
 use crate::dom::tag::Tag;
 use crate::widgets::{
     AutoScroll, PanelPlace, UiId, panel, panel_title, spawn_dialog, spawn_filling_scroll_area,
@@ -181,8 +181,15 @@ impl Builder<'_, '_, '_> {
     }
 
     /// A panel that stays where it is written: parchment, with its title.
+    /// A `dark` one darkens the window behind it (`dark.rs`).
     pub(super) fn fixed_panel(&mut self, entity: Entity, element: &Checked, inside: Inside) {
         self.commands.entity(entity).insert(panel());
+        if element.attrs.has("dark") {
+            let depth = element.attrs.number("depth").unwrap_or(0.0) as i32;
+            let hidden = element.attrs.hidden;
+            let darkening = crate::dom::dark::spawn(self.commands, depth, hidden, inside.document);
+            self.commands.entity(entity).insert(Darkened(darkening));
+        }
         if let Some(title) = element.attrs.title.as_deref() {
             self.commands.entity(entity).with_child(panel_title(title));
         }
