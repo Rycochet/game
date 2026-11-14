@@ -1,10 +1,13 @@
-//! What each cell of a level puts in a creature's way (owner, 2026-11-10:
-//! whole wall cells as now, plus thin blockers; playtest will tell).
+//! What each cell of a level puts in a creature's way: what is drawn there
+//! (owner, 2026-11-14: walls block only where they are drawn).
 //!
-//! - Walls, windows (natural ones' columns leave gaps far too narrow for
-//!   anyone) and closed doors fill their cell, less a notch at each corner
-//!   with no wall beside it, so two walls touching at a corner leave a
-//!   squeeze between them.
+//! - Walls (building doors, blind windows and closed secret doors too) are
+//!   thin bars through their cell, as `WallShape::reach` draws them: out to
+//!   the walls, doors and windows they join, otherwise a little past the
+//!   middle. Natural walls (crypts, caves, ice) are wider, as they are at the
+//!   foot. Windows and closed doors are a bar the width of their cell, along
+//!   their wall. None of these cells gives footing, so a creature's middle
+//!   still stops at the edge of a wall's cell.
 //! - An open (or broken) door leaves its frame: a post either side of the
 //!   doorway, which is `2 × DOOR_HALF_GAP` wide, as drawn. Its leaf doesn't
 //!   block (owner).
@@ -13,14 +16,16 @@
 //! - A tree is its trunk, round, at its cell's middle.
 
 use super::{Blocker, Shape};
-use crate::dungeon::{CELL_UNITS, Cell, Level, WallShape};
+use crate::dungeon::{CELL_UNITS, Cell, Level, WALL_HALF_UNITS, WallShape};
 use crate::spot::{CELL_SPAN, HALF_SPAN, Spot};
 
-/// How far a wall's free corner is notched, each way, in units: a quarter of a
-/// cell. Between two walls touching at a corner it leaves `CORNER_CUT / √2`
-/// (42 units) either side of the middle: a Medium creature squeezes through,
-/// a Large one can't.
-pub const CORNER_CUT: i64 = 60;
+/// Half a built wall's thickness, in units: 12, as drawn (45% to 55% of its
+/// cell).
+pub const WALL_HALF: i64 = WALL_HALF_UNITS * REACH_SCALE;
+
+/// Half a natural wall's thickness at its foot, in units: 0.2 of a cell, as
+/// `dungeon_map` draws it (its curve like a letter C is widest there).
+pub const NATURAL_WALL_FOOT: i64 = 48;
 
 /// Half a doorway's width, in units: 0.4 of a cell, as `dungeon_map` draws it,
 /// so the doorway is 192 units (0.8 cell) between its frame's posts.
@@ -40,8 +45,31 @@ pub fn cell_blockers(level: &Level, x: i64, y: i64, out: &mut Vec<Blocker>) {
     let middle = Spot::middle_of((x, y));
     let solid = |shape| Blocker { shape, fence: None };
     let cell = level.cell(x, y);
-    if fills(level, x, y) {
-        out.extend(notched(level, x, y).map(solid));
+    let half = if level.natural_walls() {
+        NATURAL_WALL_FOOT
+    } else {
+        WALL_HALF
+    };
+    if let Some(shape) = level.wall_shape(x, y) {
+        // Ends and sides reach as far past the narrowest wall as it is wider.
+        let reach = shape.reach().map(|r| {
+            let r = r * REACH_SCALE;
+            if r >= HALF_SPAN {
+                r
+            } else {
+                r + half - WALL_HALF
+            }
+        });
+        out.extend(bars(middle, reach, half).map(solid));
+    } else if cell == Cell::Window || level.is_shut(x, y) {
+        // Along its wall, the width of its cell.
+        let (h, t) = (HALF_SPAN, half);
+        let (low, high) = if level.opening_runs_east_west(x, y) {
+            ((-h, -t), (h, t))
+        } else {
+            ((-t, -h), (t, h))
+        };
+        out.push(solid(boxed(middle, low, high)));
     } else if level.is_opening(x, y) {
         // A doorway: its frame's posts, along its wall.
         let (h, g) = (HALF_SPAN, DOOR_HALF_GAP);
@@ -59,11 +87,9 @@ pub fn cell_blockers(level: &Level, x: i64, y: i64, out: &mut Vec<Blocker>) {
             south: joins(x, y + 1),
             west: joins(x - 1, y),
         };
-        let [north, east, south, west] = shape.reach().map(|r| r * REACH_SCALE);
-        let t = FENCE_HALF;
-        let bars = [((-west, -t), (east, t)), ((-t, -north), (t, south))];
-        out.extend(bars.map(|(low, high)| Blocker {
-            shape: boxed(middle, low, high),
+        let reach = shape.reach().map(|r| r * REACH_SCALE);
+        out.extend(bars(middle, reach, FENCE_HALF).map(|shape| Blocker {
+            shape,
             fence: Some((x, y)),
         }));
     } else if cell == Cell::Tree {
@@ -88,37 +114,12 @@ pub fn blockers_near(level: &Level, low: Spot, high: Spot, reach: i64) -> Vec<Bl
     out
 }
 
-/// Whether the cell is filled: a wall, a window or a closed door.
-fn fills(level: &Level, x: i64, y: i64) -> bool {
-    level.is_wall(x, y) || level.cell(x, y) == Cell::Window || level.is_shut(x, y)
-}
-
-/// Whether a corner beside this cell stays square: walls, windows and
-/// doorways run on into it.
-fn holds_corner(level: &Level, x: i64, y: i64) -> bool {
-    fills(level, x, y) || level.is_opening(x, y)
-}
-
-/// A filled cell as boxes: whole, or with its free corners notched.
-fn notched(level: &Level, x: i64, y: i64) -> impl Iterator<Item = Shape> {
-    let free = |dx, dy| !holds_corner(level, x + dx, y) && !holds_corner(level, x, y + dy);
-    let cut = |is_free: bool| if is_free { CORNER_CUT } else { 0 };
-    let (nw, ne, sw, se) = (free(-1, -1), free(1, -1), free(-1, 1), free(1, 1));
-    let middle = Spot::middle_of((x, y));
-    let (h, n) = (HALF_SPAN, CORNER_CUT);
-    let whole = !(nw || ne || sw || se);
-    let boxes = if whole {
-        vec![((-h, -h), (h, h))]
-    } else {
-        vec![
-            ((-h + n, -h), (h - n, h)),
-            ((-h, -h + cut(nw)), (-h + n, h - cut(sw))),
-            ((h - n, -h + cut(ne)), (h, h - cut(se))),
-        ]
-    };
-    boxes
-        .into_iter()
-        .map(move |(low, high)| boxed(middle, low, high))
+/// The two bars of a wall or fence, `half` thick each side of its middle line,
+/// reaching `[north, east, south, west]` from `middle`.
+fn bars(middle: Spot, [north, east, south, west]: [i64; 4], half: i64) -> [Shape; 2] {
+    let t = half;
+    [((-west, -t), (east, t)), ((-t, -north), (t, south))]
+        .map(|(low, high)| boxed(middle, low, high))
 }
 
 /// A box from offsets round `middle`.

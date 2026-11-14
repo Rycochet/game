@@ -5,14 +5,14 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 ## Files
 
 - `crates/shared/src/spot.rs`: `Spot`, `CELL_SPAN`, `HALF_SPAN`, `root`.
-- `crates/shared/src/clearance.rs` and `clearance/`: `blocker.rs` (`Blocker`, `Shape`, how close a move passes one), `cell_blockers.rs` (what each cell puts in the way; `blockers_near`), `footing.rs` (`has_footing`, `has_footing_by`), `segment.rs` (`check_segment`, `check_segment_by`, `Passage`, `segment_is_legal`, `segment_cost`, `JUMP_REACH`), `slide.rs` (`slide`, `slide_by`), `squeeze.rs`, `room_map.rs` (`RoomMap`), `crowd.rs` (`Crowding`, `Other`, `crowd_per_mille`, `check_among`, `crowded_at`; tests in `crowd_tests.rs`). Golden tests: radii, a one-cell corridor and a doorway by size, walls touching at a corner, trunks, jumps, fences, sliding, room maps.
+- `crates/shared/src/clearance.rs` and `clearance/`: `blocker.rs` (`Blocker`, `Shape`, how close a move passes one), `cell_blockers.rs` (what each cell puts in the way; `blockers_near`), `footing.rs` (`has_footing`, `has_footing_by`), `segment.rs` (`check_segment`, `check_segment_by`, `Passage`, `segment_is_legal`, `segment_cost`, `JUMP_REACH`), `slide.rs` (`slide`, `slide_by`), `squeeze.rs`, `room_map.rs` (`RoomMap`), `crowd.rs` (`Crowding`, `Other`, `crowd_per_mille`, `check_among`, `crowded_at`; tests in `crowd_tests.rs`). Golden tests: radii, a one-cell corridor and a doorway by size, walls touching at a corner, trunks, jumps, fences, sliding, walking along a wall, room maps, blockers' shapes.
 
 ## Public API
 
 - `Spot { x, y }` (serde, i64 units, `x` east, `y` south): `stands_on(cell)` (within `UNDERFOOT`, half a cell, of its middle: stairs underfoot), `middle_of(cell)` (cell `(x, y)`'s middle at `(x, y) × 240`, as `relief::Relief::at`), `cell()` (a spot on a cell's edge is in the cell east or south), `offset`, `distance_squared` (exact, `u128`), `distance` (rounded down), `towards(other, n, d)`. On the Hall's levels `x` is the Hall's own, unwrapped, as its cells are (`hall::wrap_x` brings a cell round). `root(n)`: whole-number square root.
 - `Size::radius()` (in `creature`): Tiny 20, Small 60, Medium 80 (today's token base, 2/3 cell across), Large 120, Huge 180, Giant 240. Drawn base = blocking circle.
 - `Blocker { shape, fence }`, `Shape::{Box { low, high }, Post { at, radius }}`, `.clearance(a, b)`: how far a move passes it (0 touching). `cell_blockers(level, x, y, &mut out)`, `blockers_near(level, low, high, reach)`:
-  - walls (and building doors, blind windows, closed secret doors), windows and closed doors fill the cell, less a `CORNER_CUT` (60) notch at each corner with no wall, window or doorway beside it on either side;
+  - walls (and building doors, blind windows, closed secret doors) are two bars where they are drawn (owner, 2026-11-14): `WallShape::reach` × 6, `WALL_HALF` (12) thick each side, or `NATURAL_WALL_FOOT` (48) on a level with natural walls (`Level::natural_walls`, from `PoiKind::natural_walls`), their ends reaching that much further, as drawn at the foot; windows and closed doors are one bar that thick, the width of their cell, along their wall. Their cells still give no footing, so a creature's middle stops at the cell's edge;
   - an open or broken door (an open secret door too) leaves two frame posts, the doorway `2 × DOOR_HALF_GAP` (192 units, 0.8 cell, as `dungeon_map` draws it) wide, the full cell deep; leaves don't block (owner);
   - a fence is two bars `FENCE_HALF` (12) thick, shaped as a wall's (`WallShape::reach` × 6), running to fences and field gates beside it, and can be jumped (`fence: Some(cell)`);
   - a tree is its trunk, a `TRUNK_RADIUS` (30) post at the middle.
@@ -26,8 +26,9 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 ## What sizes get through (measured by the tests)
 
 - Doorway (192): Tiny to Medium free; Large 1.56× slower; Huge 3.52× (it needs 0.75 cell, 180 units; the doorway is 0.8); Giant never (it needs a whole cell).
-- One-cell corridor: up to Large free; Huge 2.25×; Giant 4×.
-- Between two walls touching at a corner (42 units either side): Tiny free, Small 2.04×, Medium 3.63×, Large never.
+- One-cell corridor (228 units each side of the middle to the bars; natural 192): up to Huge free; Giant 1.11× (natural 1.56×).
+- Along a wall, the middle at its cell's edge (108 units clear): up to Medium free, Large 1.23×.
+- Between two walls touching at a corner (each a post; 152 units either side; natural 101): up to Large free, Huge 1.40×, Giant 2.49× (natural: Medium free, Large 1.41×, Huge 3.18×, Giant never).
 
 ## Depends on
 
@@ -42,4 +43,5 @@ Positions on a level in whole units (`Spot`, 240 a cell) and room to move for cr
 - Integers only; distances by `u128::isqrt`, rounded down, so both sides agree exactly.
 - Squeezing goes by clearance round the middle (half a gap's width when centred in it), so walking close beside one wall squeezes too: routes avoid it by cost, `slide` by never squeezing further.
 - Slopes, wading and terrain are priced by `movement::LevelWay`, not here: a passage gives only its squeeze. Mobs keep to the cell rule's World Gate check (`mob_step_sized`, `mob_can_stand`).
-- Natural windows' columns are drawn 0.04 cell apart, too narrow for anyone, so windows stay whole cells.
+- Natural windows' columns are drawn 0.04 cell apart, too narrow for anyone, so windows are one bar.
+- A creature's circle may overlap a wall's cell where nothing is drawn; only its middle is kept out (footing).

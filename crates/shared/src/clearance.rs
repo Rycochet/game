@@ -24,7 +24,8 @@ mod squeeze;
 
 pub use blocker::{Blocker, Shape};
 pub use cell_blockers::{
-    CORNER_CUT, DOOR_HALF_GAP, FENCE_HALF, TRUNK_RADIUS, blockers_near, cell_blockers,
+    DOOR_HALF_GAP, FENCE_HALF, NATURAL_WALL_FOOT, TRUNK_RADIUS, WALL_HALF, blockers_near,
+    cell_blockers,
 };
 pub use crowd::{Crowding, Other, check_among, crowd_per_mille, crowded_at};
 pub use footing::{has_footing, has_footing_by};

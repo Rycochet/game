@@ -9,7 +9,9 @@
 //! and the insides of solid rock stay dark. The floor stops at the wall's foot,
 //! and beside natural walls the wall's picture fades out across it.
 
+use shared::clearance::NATURAL_WALL_FOOT;
 use shared::dungeon::{CELL_UNITS, WALL_HALF_UNITS};
+use shared::spot::CELL_SPAN;
 
 use super::{CELL_SIZE, WALL_HEIGHT};
 
@@ -55,8 +57,9 @@ const HALF_CELL: f32 = CELL_SIZE / 2.0;
 const WALL_HALF: f32 = WALL_HALF_UNITS as f32 / CELL_UNITS as f32 * CELL_SIZE;
 
 /// Half a natural wall's thickness at the floor and at its top, where the
-/// curve like a letter C is widest.
-const NATURAL_WALL_HALF: f32 = CELL_SIZE * 0.2;
+/// curve like a letter C is widest: 0.2 of a cell, as wide as it blocks
+/// (`clearance::NATURAL_WALL_FOOT`).
+const NATURAL_WALL_HALF: f32 = NATURAL_WALL_FOOT as f32 / CELL_SPAN as f32 * CELL_SIZE;
 
 /// How finely a natural wall is cut up, for its curve and rough surface: up
 /// its height and (on faces long enough) along it.

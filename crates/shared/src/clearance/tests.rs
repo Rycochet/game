@@ -64,14 +64,21 @@ fn a_corridor_one_cell_wide() {
         level.set(x, 0, Cell::Floor);
     }
     let along = |size| squeeze(&level, size, m(-3, 0), m(3, 0));
+    // The walls are thin bars through the middles of the cells either side:
+    // 228 units of room each side of the middle, as drawn.
     assert_eq!(along(Size::Medium), Some(1000));
     assert_eq!(along(Size::Large), Some(1000));
-    assert_eq!(along(Size::Huge), Some(2250));
-    assert_eq!(along(Size::Giant), Some(4000));
+    assert_eq!(along(Size::Huge), Some(1000));
+    assert_eq!(along(Size::Giant), Some(1108));
     assert_eq!(
-        segment_cost(&level, Size::Huge, m(-3, 0), m(3, 0)),
-        Some(3240)
+        segment_cost(&level, Size::Giant, m(-3, 0), m(3, 0)),
+        Some(1595)
     );
+    // Natural walls are wider at the foot: 192 units each side.
+    level.set_natural_walls(true);
+    let along = |size| squeeze(&level, size, m(-3, 0), m(3, 0));
+    assert_eq!(along(Size::Huge), Some(1000));
+    assert_eq!(along(Size::Giant), Some(1562));
 }
 
 /// A wall running north–south at `x = 0` across a room, a door in it at
@@ -112,11 +119,22 @@ fn between_walls_touching_at_a_corner() {
     let mut level = room(3);
     level.set(1, 0, Cell::Wall);
     level.set(0, 1, Cell::Wall);
+    // Neither joins the other, so each is drawn as a short post at its
+    // middle, with a wide gap between them through the corner.
     let across = |size| squeeze(&level, size, m(0, 0), m(1, 1));
-    assert_eq!(across(Size::Tiny), Some(1000));
-    assert_eq!(across(Size::Small), Some(2040));
-    assert_eq!(across(Size::Medium), Some(3628));
-    assert_eq!(across(Size::Large), None);
+    assert_eq!(across(Size::Medium), Some(1000));
+    assert_eq!(across(Size::Large), Some(1000));
+    assert_eq!(across(Size::Huge), Some(1402));
+    assert_eq!(across(Size::Giant), Some(2493));
+    // Natural walls' wider feet leave less.
+    level.set_natural_walls(true);
+    let across = |size| squeeze(&level, size, m(0, 0), m(1, 1));
+    assert_eq!(across(Size::Medium), Some(1000));
+    assert_eq!(across(Size::Large), Some(1411));
+    assert_eq!(across(Size::Huge), Some(3176));
+    assert_eq!(across(Size::Giant), None);
+    // Never into either wall's cell, though most of it is undrawn.
+    assert!(!segment_is_legal(&level, Size::Tiny, m(0, 0), m(1, 0)));
 }
 
 #[test]
@@ -200,11 +218,10 @@ fn fences_are_thin_and_jumped() {
 #[test]
 fn sliding_along_a_wall() {
     let level = room(2);
-    // Up and to the east into the north wall: slides east along it, one
-    // radius off it.
+    // Up and to the east into the north wall: slides east along it, its
+    // middle stopped at the edge of the wall's cell, well clear of the wall.
     let end = slide(&level, Size::Medium, m(0, 1), m(2, -3));
-    assert_eq!(end.x, m(2, 0).x);
-    assert!((-522..=-518).contains(&end.y), "{end:?}");
+    assert_eq!(end, Spot::new(m(2, 0).x, -600));
     // A legal move goes all the way, squeezing if it must.
     assert_eq!(slide(&level, Size::Medium, m(0, 0), m(1, 1)), m(1, 1));
     // No room where it starts: it stays.
@@ -215,6 +232,43 @@ fn sliding_along_a_wall() {
     pool.set(1, 0, Cell::Water);
     let end = slide(&pool, Size::Medium, m(0, 0), m(2, 0));
     assert!(end.x < m(1, 0).x - 119, "{end:?}");
+}
+
+/// A Medium player hugging a wall walks along it freely: neither squeezed
+/// nor pushed out from it (owner, 2026-11-14: the bug that walls blocked
+/// their whole cell).
+#[test]
+fn walking_along_a_wall_is_free() {
+    let level = room(3);
+    // The north wall's cells end at y = -840; its bar is drawn 12 units
+    // either side of their middles, at -960.
+    let edge = -840;
+    let along = |x| Spot::new(x, edge);
+    assert_eq!(
+        squeeze(&level, Size::Medium, along(-600), along(600)),
+        Some(1000)
+    );
+    // Pushing north-east into it slides along the cell's edge, all the way.
+    let end = slide(
+        &level,
+        Size::Medium,
+        along(-600),
+        Spot::new(-500, edge - 200),
+    );
+    assert_eq!(end, Spot::new(-500, edge));
+    // And so on along it, never squeezed: the same from every spot.
+    let mut at = along(-600);
+    for _ in 0..12 {
+        let next = slide(&level, Size::Medium, at, at.offset(100, -50));
+        assert_eq!(next, at.offset(100, 0));
+        at = next;
+    }
+    // A Large one's middle there is 108 units clear of the bar, short of its
+    // 120: it squeezes a little, so its routes keep further off.
+    assert_eq!(
+        squeeze(&level, Size::Large, along(-600), along(600)),
+        Some(1234)
+    );
 }
 
 #[test]
@@ -237,12 +291,53 @@ fn blockers_of_cells() {
     cell_blockers(&level, 0, 0, &mut out);
     assert_eq!(out.len(), 2, "a door's frame: two posts");
     out.clear();
-    // The wall's end at the room's edge has its free corners notched.
+    // A wall joined north and south: a bar the length of its cell, 24 units
+    // thick, and a stub across it no longer than it is thick.
     cell_blockers(&level, 0, 3, &mut out);
-    assert_eq!(out.len(), 1, "joined below by the level's edge");
-    let mut lone = room(2);
-    lone.set(0, 0, Cell::Wall);
+    let bar = |middle: Spot, (lx, ly), (hx, hy)| Blocker {
+        shape: Shape::Box {
+            low: middle.offset(lx, ly),
+            high: middle.offset(hx, hy),
+        },
+        fence: None,
+    };
+    let middle = m(0, 3);
+    assert_eq!(
+        out,
+        [
+            bar(middle, (-12, -12), (12, 12)),
+            bar(middle, (-12, -120), (12, 120))
+        ]
+    );
+    // A closed door: a bar along its wall, the width of its cell.
     out.clear();
-    cell_blockers(&lone, 0, 0, &mut out);
-    assert_eq!(out.len(), 3, "a column: every corner notched");
+    let closed = doorway(Swing::Closed);
+    cell_blockers(&closed, 0, 0, &mut out);
+    assert_eq!(out, [bar(m(0, 0), (-12, -120), (12, 120))]);
+    // A wall joined on one side only goes 0.6 of the way across its cell.
+    let mut stub = room(2);
+    stub.set(0, -3, Cell::Wall);
+    stub.set(0, -2, Cell::Wall);
+    out.clear();
+    cell_blockers(&stub, 0, -2, &mut out);
+    let middle = m(0, -2);
+    assert_eq!(
+        out,
+        [
+            bar(middle, (-12, -12), (12, 12)),
+            bar(middle, (-12, -120), (12, 24))
+        ]
+    );
+    // Natural walls are 48 units each side at the foot, and their ends that
+    // much further.
+    stub.set_natural_walls(true);
+    out.clear();
+    cell_blockers(&stub, 0, -2, &mut out);
+    assert_eq!(
+        out,
+        [
+            bar(middle, (-48, -48), (48, 48)),
+            bar(middle, (-48, -120), (48, 60))
+        ]
+    );
 }

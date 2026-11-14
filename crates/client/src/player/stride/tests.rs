@@ -81,8 +81,12 @@ fn walking_straight_into_a_wall_gets_stuck() {
     let mut moves = Vec::new();
     let walked = stride.walk(&walker(&level), -DVec2::Y, 300.0, None, &mut moves);
     assert!(walked.stuck);
-    // Not pressed into it: the circle stays clear of the wall's face.
-    let face = -2 * 240 - 120;
+    // Its middle stops at the edge of the wall's cell, and the circle stays
+    // clear of the wall where it is drawn: 12 units each side of the cells'
+    // middles.
+    let edge = -2 * 240 - 120;
+    assert_eq!(stride.at.y, edge, "{:?}", stride.at);
+    let face = -3 * 240 + 12;
     assert!(stride.at.y - face >= 80, "{:?}", stride.at);
     moves.extend(stride.finish());
     check_chain(&level, start, &moves);
