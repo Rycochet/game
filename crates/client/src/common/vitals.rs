@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use shared::energy::ACTION_TICKS_PER_SECOND;
-use shared::vitals::VitalNow;
+use shared::vitals::{PER_POINT, VitalNow};
 
 /// The player's own Health and Mana (`ServerMessage::Vitals` with no `who`),
 /// and when they were told, by `Time` (which stops while single player is
@@ -42,12 +42,16 @@ impl OwnVitals {
     }
 }
 
-/// `VitalNow::after` with fractions.
+/// `VitalNow::after` with fractions: refilling, and what bonuses give back on
+/// top until they stop.
 fn refilled(told: VitalNow, ticks: f32) -> f32 {
     let most = told.most as f32;
-    let refilling = (ticks - told.refills_in as f32).max(0.0);
+    let refills_in = told.refills_in as f32;
+    let refilling = (ticks - refills_in).max(0.0);
+    let restoring = (ticks.min(told.restore_ends_in as f32) - refills_in).max(0.0);
     let refill = told.refill.max(1) as f32;
-    (told.value.as_f32().min(most) + refilling * most / refill).min(most)
+    let restore = told.restore as f32 / PER_POINT as f32 / ACTION_TICKS_PER_SECOND as f32;
+    (told.value.as_f32().min(most) + refilling * most / refill + restoring * restore).min(most)
 }
 
 /// How much of the window's bottom, in interface pixels, the interface keeps

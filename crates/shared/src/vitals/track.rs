@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::TICKS;
 use super::points::{PER_POINT, Points};
 
 /// How much of one there is, and its practice. Refills in a straight line,
@@ -80,8 +81,19 @@ impl From<Track> for TrackSave {
     }
 }
 
+/// How one comes back: refilling from nothing to `most` (whole points) in
+/// `refill` ticks, and `restore` thousandths of a point a second on top while
+/// refilling, until the tick `until` (or for good).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Rate {
+    pub most: u32,
+    pub refill: u64,
+    pub restore: u32,
+    pub until: Option<u64>,
+}
+
 /// What a client is told of one at a moment: it refills it itself from there
-/// with `refilled`.
+/// with `after`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VitalNow {
     pub value: Points,
@@ -91,17 +103,26 @@ pub struct VitalNow {
     pub refills_in: u32,
     /// Action ticks to refill from nothing to full (`Limits::refill`).
     pub refill: u32,
+    /// Thousandths of a point a second bonuses give back on top while refilling
+    /// (`Limits::restore`).
+    pub restore: u32,
+    /// Action ticks from now until that stops (`u32::MAX` for good).
+    pub restore_ends_in: u32,
 }
 
 impl VitalNow {
     /// How much there is this many action ticks after it was told.
     pub fn after(self, ticks: u64) -> Points {
+        let refills_in = u64::from(self.refills_in);
+        let restoring = ticks.min(self.restore_ends_in.into());
         refilled(
             self.value,
             self.most,
             self.refill.into(),
-            ticks.saturating_sub(self.refills_in.into()),
+            ticks.saturating_sub(refills_in),
         )
+        .plus(restored(self.restore, restoring.saturating_sub(refills_in)))
+        .min(Points::whole(self.most))
     }
 }
 
@@ -114,38 +135,64 @@ pub fn refilled(value: Points, most: u32, refill: u64, ticks: u64) -> Points {
     Points(value.saturating_add(gained).min(most) as u32)
 }
 
+/// What `restore` thousandths of a point a second give back in this many
+/// action ticks.
+fn restored(restore: u32, ticks: u64) -> Points {
+    let gained = ticks.saturating_mul(restore.into()) / TICKS;
+    Points(gained.min(u32::MAX.into()) as u32)
+}
+
 impl Track {
-    /// How much there is at this tick, out of `most` (whole points), refilling
-    /// from nothing to full in `refill` ticks.
-    pub fn at(&self, most: u32, refill: u64, now: u64) -> Points {
+    /// How much there is at this tick, coming back at `rate`.
+    pub fn at(&self, rate: Rate, now: u64) -> Points {
+        let restoring = rate.until.map_or(now, |until| now.min(until));
         refilled(
             Points(self.value),
-            most,
-            refill,
+            rate.most,
+            rate.refill,
             now.saturating_sub(self.since),
         )
+        .plus(restored(rate.restore, restoring.saturating_sub(self.since)))
+        .min(Points::whole(rate.most))
     }
 
     /// What a client is told of it at this tick.
-    pub fn told(&self, most: u32, refill: u64, now: u64) -> VitalNow {
+    pub fn told(&self, rate: Rate, now: u64) -> VitalNow {
+        let ticks = |tick: u64| tick.saturating_sub(now).min(u32::MAX.into()) as u32;
         VitalNow {
-            value: self.at(most, refill, now),
-            most,
-            refills_in: self.since.saturating_sub(now).min(u32::MAX.into()) as u32,
-            refill: refill.min(u32::MAX.into()) as u32,
+            value: self.at(rate, now),
+            most: rate.most,
+            refills_in: ticks(self.since),
+            refill: rate.refill.min(u32::MAX.into()) as u32,
+            restore: rate.restore,
+            restore_ends_in: rate.until.map_or(u32::MAX, ticks),
         }
     }
 
     /// Fixes it at what it is now; a wait for refilling stays. Full stays
-    /// full, whatever the most comes to be.
-    pub(super) fn settle(&mut self, most: u32, refill: u64, now: u64) {
-        let value = self.at(most, refill, now);
-        self.value = if value >= Points::whole(most) {
-            u32::MAX
-        } else {
-            value.milli()
-        };
+    /// full, whatever the most comes to be. A most of 0 (Mana under heavy
+    /// armour) keeps the value as it was, to come back with the most.
+    pub(super) fn settle(&mut self, rate: Rate, now: u64) {
+        if rate.most > 0 {
+            let value = self.at(rate, now);
+            self.value = if value >= Points::whole(rate.most) {
+                u32::MAX
+            } else {
+                value.milli()
+            };
+        }
         self.since = self.since.max(now);
+    }
+
+    /// Keeps its share (settled first) as its most goes from `old` to `new`,
+    /// rounding down. Full stays full, and to or from a most of 0 it stays as
+    /// it was (`settle`).
+    pub(super) fn rescale(&mut self, old: u32, new: u32) {
+        if self.value == u32::MAX || old == 0 || new == 0 {
+            return;
+        }
+        let value = u64::from(self.value.min(Points::whole(old).milli()));
+        self.value = (value * u64::from(new) / u64::from(old)) as u32;
     }
 
     /// Takes this much away (settled first) out of `most`, never below 0.

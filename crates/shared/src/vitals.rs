@@ -1,6 +1,6 @@
 //! Health and Mana: how much harm a creature can take and how much magic it has
-//! left. Each has a most, from an attribute, playtime, practice and changes
-//! laid on it, and refills by itself once out of combat. The same rules for
+//! left. Each has a most, from an attribute, playtime, practice and bonuses
+//! (`shared::bonus`), and refills by itself once out of combat. The same rules for
 //! players and, later, mobs. See `docs/context/shared/vitals.md`.
 //!
 //! Like `energy`, only a value and the tick it counts from are stored: the
@@ -9,19 +9,23 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::bonus::{Stat, Totals};
 use crate::energy::ACTION_TICKS_PER_SECOND;
 use crate::sheet::{Attribute, Attributes};
 
 mod limits;
+mod old_change;
 mod points;
+mod rebase;
 mod track;
 
-pub use limits::{Limits, MostParts};
+pub use limits::{Limits, MostParts, Restore};
+pub(crate) use old_change::Change;
 pub use points::{PER_POINT, Points};
-pub use track::{Track, VitalNow, refilled};
+pub use track::{Rate, Track, VitalNow, refilled};
 
 /// Action ticks in a second, as a whole number.
-const TICKS: u64 = ACTION_TICKS_PER_SECOND as u64;
+pub(crate) const TICKS: u64 = ACTION_TICKS_PER_SECOND as u64;
 
 /// Attribute points for each point of the most: a median 100 gives 20.
 pub const ATTRIBUTE_PER_POINT: u32 = 5;
@@ -40,7 +44,7 @@ pub const PRACTICE_PER_HOUR: u32 = 20;
 const PLAYTIME_HOUR: u64 = 60 * 60 * TICKS;
 
 /// One of the two.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Vital {
     Health,
     Mana,
@@ -65,23 +69,6 @@ impl Vital {
     }
 }
 
-/// Something raising or lowering the most of one, for a while or for good
-/// (potions, curses, blessings; for now only dev tools make them).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Change {
-    pub vital: Vital,
-    pub amount: i32,
-    /// The action tick it ends at, or `None` for good.
-    pub until: Option<u64>,
-}
-
-impl Change {
-    /// Whether it still counts at this tick.
-    pub fn lasts(&self, now: u64) -> bool {
-        self.until.is_none_or(|until| now < until)
-    }
-}
-
 /// One creature's Health and Mana. A new one (and one missing from an older
 /// save) is full.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -92,7 +79,9 @@ pub struct Vitals {
     /// The hour of playtime practice was last gained in, for
     /// `PRACTICE_PER_HOUR`.
     practice_hour: u64,
-    pub changes: Vec<Change>,
+    /// Older saves' changes to the most, which `Sheet::settled` turns into
+    /// effects (`bonus::Effect`): always empty after that.
+    pub(crate) changes: Vec<Change>,
 }
 
 impl Vitals {
@@ -112,21 +101,19 @@ impl Vitals {
 
     /// How much of it there is at this tick.
     pub fn at(&self, vital: Vital, limits: Limits, now: u64) -> Points {
-        self.track(vital).at(limits.get(vital), limits.refill, now)
+        self.track(vital).at(limits.rate(vital), now)
     }
 
     /// What the client is told of it at this tick.
     pub fn told(&self, vital: Vital, limits: Limits, now: u64) -> VitalNow {
-        self.track(vital)
-            .told(limits.get(vital), limits.refill, now)
+        self.track(vital).told(limits.rate(vital), now)
     }
 
     /// Fixes both at what they are now: before anything changes how much
     /// there can be.
     pub fn settle(&mut self, limits: Limits, now: u64) {
         for vital in Vital::ALL {
-            self.track_mut(vital)
-                .settle(limits.get(vital), limits.refill, now);
+            self.track_mut(vital).settle(limits.rate(vital), now);
         }
     }
 
@@ -178,23 +165,6 @@ impl Vitals {
         self.health.waiting(now)
     }
 
-    /// Lays a change on, settling first.
-    pub fn add_change(&mut self, change: Change, limits: Limits, now: u64) {
-        self.settle(limits, now);
-        self.changes.push(change);
-    }
-
-    /// Forgets the changes that have ended by `now`, settling first at what
-    /// they were (`limits` with them). Whether any had.
-    pub fn forget_ended(&mut self, limits: Limits, now: u64) -> bool {
-        if self.changes.iter().all(|change| change.lasts(now)) {
-            return false;
-        }
-        self.settle(limits, now);
-        self.changes.retain(|change| change.lasts(now));
-        true
-    }
-
     /// Practice from use, as much of it as this hour of playtime has room for.
     fn practise(&mut self, vital: Vital, amount: Points, playtime: u64) {
         let hour = playtime / PLAYTIME_HOUR;
@@ -210,36 +180,60 @@ impl Vitals {
         track.practice += gained;
     }
 
-    /// The most of each, and where it comes from (`limits`).
+    /// The most of each, and where it comes from (`limits`): `attributes` with
+    /// their bonuses, and `totals` for the most's own.
     pub fn most(
         &self,
         vital: Vital,
         attributes: &Attributes,
+        totals: &Totals,
         playtime: u64,
-        now: u64,
     ) -> MostParts {
+        let attribute = u32::from(attributes.get(vital.attribute())) / ATTRIBUTE_PER_POINT;
+        let playtime = (playtime / PLAYTIME_PER_POINT) as u32;
+        let practice = (self.track(vital).practice / Points::whole(PRACTICE_STEP).milli()).isqrt();
+        let base = i64::from(attribute) + i64::from(playtime) + i64::from(practice);
+        let bonus = totals.whole(Stat::Most(vital), base) - base;
         MostParts {
-            attribute: u32::from(attributes.get(vital.attribute())) / ATTRIBUTE_PER_POINT,
-            playtime: (playtime / PLAYTIME_PER_POINT) as u32,
-            practice: (self.track(vital).practice / Points::whole(PRACTICE_STEP).milli()).isqrt(),
-            changes: self
-                .changes
-                .iter()
-                .filter(|change| change.vital == vital && change.lasts(now))
-                .map(|change| change.amount)
-                .sum(),
+            vital,
+            attribute,
+            playtime,
+            practice,
+            bonus: bonus.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32,
         }
     }
 
-    /// The most of both now, refilling at the usual rate.
-    pub fn limits(&self, attributes: &Attributes, playtime: u64, now: u64) -> Limits {
+    /// The most of both with no bonuses, refilling at the usual rate: a mob's.
+    pub fn limits(&self, attributes: &Attributes, playtime: u64) -> Limits {
+        self.limits_with(attributes, &Totals::default(), playtime, None)
+    }
+
+    /// The most of both with these bonuses (`attributes` already with theirs),
+    /// refilling at the usual rate, restoring as `totals` say until `until`
+    /// (the next tick an effect ends, when it is worked out again).
+    pub fn limits_with(
+        &self,
+        attributes: &Attributes,
+        totals: &Totals,
+        playtime: u64,
+        until: Option<u64>,
+    ) -> Limits {
         Limits {
-            health: self.most(Vital::Health, attributes, playtime, now).total(),
-            mana: self.most(Vital::Mana, attributes, playtime, now).total(),
+            health: self
+                .most(Vital::Health, attributes, totals, playtime)
+                .total(),
+            mana: self.most(Vital::Mana, attributes, totals, playtime).total(),
             refill: REFILL_TICKS,
+            restore: Restore {
+                health: totals.restoring(Vital::Health),
+                mana: totals.restoring(Vital::Mana),
+                until,
+            },
         }
     }
 }
 
+#[cfg(test)]
+mod restore_tests;
 #[cfg(test)]
 mod tests;
