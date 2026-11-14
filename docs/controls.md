@@ -92,6 +92,7 @@ A camera key moves the camera a little each time you press it, and keeps it movi
 | See an item's name | Point at it | Tap it |
 | Open a bag | Double-click it | Double-tap it |
 | Put on or take off clothes | Drag them onto the clothes panel, or off it into a grid; whatever is in the way comes off into your inventory, and a red line says why if it can't. Things under other clothes take longer, the heavier what is over them | The same |
+| Eat something | Drag it onto the clothes panel: one is eaten (the top of a stack), carried or from the ground. An apple gives back Health for a while, until you move or are hurt | The same |
 | Give something to someone near | Drag it onto their name in the Nearby panel | The same |
 | Throw an item away, with all that is in it | Drop it on the bin under your inventory. Take it back until you throw away something else, which destroys it | The same |
 | Open the [debug menu](debug-menu) | Backtick (`` ` ``), or click the warning button at the top left | Tap the warning button |

@@ -3,6 +3,7 @@
 //! sure to agree with is shown at once.
 
 use bevy::prelude::*;
+use shared::bonus::is_food;
 use shared::energy::handling_cost;
 use shared::item::Item;
 use shared::protocol::ClientMessage;
@@ -53,6 +54,8 @@ pub(super) fn let_go_of(
             carried.0.to_bin_new(item);
             to_server.write(ToServer(ClientMessage::BinFromGround { item: id }));
             took.write(TookItem { with, item: id });
+        } else if aim == (Target::Body { allowed: true }) && is_food(item.top().kind) {
+            super::eat::eat_from_ground(held.item.id, item, with, out);
         } else if aim == (Target::Body { allowed: true }) {
             let id = held.item.id;
             to_server.write(ToServer(ClientMessage::WearFromGround { item: id }));
@@ -131,8 +134,13 @@ pub(super) fn let_go_of(
     }
     // Some of a mixed stack: whatever is asked is for those items together. Part
     // of a counted one: the server makes it, naming it in place of the stand-in.
+    let food = super::eat::carried_food(&carried.0, holding, held.item.id);
     let group = holding.group.take();
     let counted = holding.counted.take();
+    if let Some(stack) = food.filter(|_| aim == (Target::Body { allowed: true })) {
+        super::eat::eat_carried(stack, &mut carried.0, &mut || holding.stand_in(), out);
+        return;
+    }
     let mut send = |ToServer(then): ToServer| {
         to_server.write(ToServer(match (&group, counted) {
             (Some((stack, items)), _) => ClientMessage::FromStack {

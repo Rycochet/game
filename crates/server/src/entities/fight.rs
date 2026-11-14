@@ -53,7 +53,7 @@ impl Mob {
 
     /// How much Health it has at this tick.
     pub(crate) fn health(&self, tick: u64) -> Points {
-        let limits = self.vitals.limits(&self.attributes, 0);
+        let limits = self.limits();
         self.vitals.at(Vital::Health, limits, tick)
     }
 
@@ -185,7 +185,7 @@ pub(crate) fn hit_mob(
         Some(shoved) => by.fighter.kick_harm(&one.fighter(), shoved, &mut rng),
         None => by.fighter.harm(&by.swing, &one.fighter(), &mut rng),
     };
-    let limits = one.vitals.limits(&one.attributes, 0);
+    let limits = one.limits();
     one.vitals.hurt(harm, limits, tick, 0);
     let left = health_left(&one.vitals, limits, tick);
     let kind = one.kind;

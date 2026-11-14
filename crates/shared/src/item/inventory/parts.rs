@@ -18,6 +18,13 @@ impl Inventory {
         item.members().nth((all - count) as usize).map(|one| one.id)
     }
 
+    /// Takes the top one off a carried stack, or all of it if it is alone, out of
+    /// what is carried (eating one). `None` if it isn't in a grid.
+    pub fn take_one(&mut self, stack: Id, new_id: &mut impl FnMut() -> Id) -> Option<Item> {
+        let one = self.lift_count(stack, 1, new_id)?;
+        self.hand_over(one)
+    }
+
     /// Lifts the top `count` of a stack in a grid out on its own, lying where the
     /// stack does, like `lift_part`: the part's id. Part of a counted stack is new,
     /// its id from `new_id` (the server's, or a stand-in for a guess); all of a

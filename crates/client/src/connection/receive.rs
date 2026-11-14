@@ -228,6 +228,7 @@ pub(super) fn receive(
                 | ServerMessage::GroundGone { .. }
                 | ServerMessage::Keepers(_)
                 | ServerMessage::Sheet(_)
+                | ServerMessage::Attributes(_)
                 | ServerMessage::Vitals { .. }
                 | ServerMessage::VisitedGates(_)
                 | ServerMessage::ActionBar(_)

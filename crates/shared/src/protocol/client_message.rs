@@ -165,6 +165,10 @@ pub enum ClientMessage {
     WearFromGround { item: Id },
     /// Throws away something from a bag in the player's reach, as `BinItem`.
     BinFromGround { item: Id },
+    /// Eats the top one of something carried or in a bag in the player's reach
+    /// (`bonus::is_food`), in turn with steps: its effect starts (`Sheet::eat`).
+    /// Answered with `Inventory` (and `GroundItems`), `Sheet` and `Vitals`.
+    Consume { item: Id },
     /// Developer tools: new items of this kind for the character or `to`, made for this size
     /// (or the one getting them's own) and their fingers, answered with `Inventory`.
     DevGiveItem(DevGive),

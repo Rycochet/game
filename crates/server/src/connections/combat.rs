@@ -18,7 +18,8 @@ impl Client {
     pub(super) fn fighter(&self) -> Fighter<'_> {
         Fighter {
             kind: self.inventory.creature,
-            attributes: &self.sheet.attributes,
+            // With every bonus (`bonuses.rs`).
+            attributes: &self.bonused.attributes,
             skills: Some(&self.sheet.skills),
             wielded: Wielded::of(&self.inventory),
         }

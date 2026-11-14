@@ -4,6 +4,7 @@
 //! (`HeldObject`), which runs between `hold_items` and `aim_items`.
 
 mod aim;
+mod eat;
 mod let_go;
 mod press;
 

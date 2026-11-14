@@ -1,6 +1,7 @@
 //! A player struck by a mob: harmed, practising Defence, and perhaps killed.
 
 use bevy::prelude::*;
+use shared::bonus::Cancel;
 use shared::creature::CreatureKind;
 use shared::protocol::ServerMessage;
 use shared::vitals::{Points, Vital};
@@ -19,6 +20,10 @@ pub(super) fn struck(
     foe: CreatureKind,
     tick: u64,
 ) -> u16 {
+    if harm != Points::ZERO {
+        // Being hurt ends what it ends, restoring counted up to the harm.
+        client.cancel_effects(Cancel::Hurt, tick);
+    }
     let limits = client.limits(tick);
     let played = client.activity.played;
     client.sheet.vitals.hurt(harm, limits, tick, played);

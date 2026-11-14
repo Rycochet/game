@@ -129,6 +129,7 @@ pub(super) fn welcome(
             client.sheet.skills.settle(played);
             give_first_clothes(&mut client.inventory, world.made_now());
             client.speed = client.sheet.speed(&client.inventory);
+            client.start_wearing(world.action_clock.ticks());
             client.unsaved = true;
         }
         Err(error) => return client.refuse_for_saves(&error),
@@ -172,6 +173,7 @@ pub(super) fn send_welcome(
         && client
             .link
             .send(&ServerMessage::Sheet(client.sheet.as_sent()))
+        && client.tell_attributes()
         && client.send_vitals(world.action_clock.ticks())
         && client.send_action_bar()
         && client.send_visited_gates()

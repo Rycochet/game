@@ -183,8 +183,10 @@ pub(crate) struct Mob {
     shown: Vec<WornLook>,
     /// How strong a trail it leaves, as a percentage.
     scent: u32,
-    /// What it is like, for fighting (`Spawn::attributes`).
+    /// What it is like, for fighting (`Spawn::attributes`), with what it wears'.
     attributes: Attributes,
+    /// Every bonus from what it wears, for its most Health and Mana.
+    bonuses: shared::bonus::Totals,
     /// Its Health: not saved, so a mob unloaded is whole again.
     vitals: Vitals,
     /// What it holds to fight with, from what it was made with.

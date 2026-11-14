@@ -6,7 +6,7 @@ use shared::energy::NORMAL_SPEED;
 use shared::item::Inventory;
 use shared::movement::Gait;
 use shared::protocol::ServerMessage;
-use shared::sheet::{Row, Sheet};
+use shared::sheet::{Attributes, Sheet};
 use shared::vitals::VitalNow;
 
 use crate::common::{CarryLimit, OwnVitals, PlayerGait, PlayerSize, PlayerSpeed};
@@ -15,28 +15,32 @@ use crate::dom::Dom;
 use crate::inventory::Carried;
 use crate::widgets::UiId;
 
+mod attribute_lines;
 mod listed;
 mod vitals_lines;
 
 pub use listed::describe_listed;
 
+use attribute_lines::attribute_lines;
 use vitals_lines::vitals_lines;
 
 pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<CharacterSheet>().add_systems(
-            Update,
-            (
-                read_server,
-                publish_speed,
-                publish_field,
-                publish_limit,
-                show_words,
-            )
-                .chain(),
-        );
+        app.init_resource::<CharacterSheet>()
+            .init_resource::<WithBonuses>()
+            .add_systems(
+                Update,
+                (
+                    read_server,
+                    publish_speed,
+                    publish_field,
+                    publish_limit,
+                    show_words,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -44,10 +48,21 @@ impl Plugin for CharacterPlugin {
 #[derive(Resource, Default)]
 pub struct CharacterSheet(pub Sheet);
 
-fn read_server(mut from_server: MessageReader<FromServer>, mut sheet: ResMut<CharacterSheet>) {
+/// The character's attributes with every bonus, as the server last said
+/// (`ServerMessage::Attributes`): `None` until it has.
+#[derive(Resource, Default)]
+pub struct WithBonuses(pub Option<Attributes>);
+
+fn read_server(
+    mut from_server: MessageReader<FromServer>,
+    mut sheet: ResMut<CharacterSheet>,
+    mut with: ResMut<WithBonuses>,
+) {
     for message in from_server.read() {
-        if let ServerMessage::Sheet(new) = &message.0 {
-            sheet.0 = new.clone();
+        match &message.0 {
+            ServerMessage::Sheet(new) => sheet.0 = new.clone(),
+            ServerMessage::Attributes(new) => with.0 = Some(*new),
+            _ => {}
         }
     }
 }
@@ -89,23 +104,19 @@ fn publish_limit(
 }
 
 /// What the panel says.
-fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow)>) -> String {
+fn describe(
+    (sheet, with): (&Sheet, Option<&Attributes>),
+    carried: &Inventory,
+    most: Option<(VitalNow, VitalNow)>,
+) -> String {
     let def = carried.creature.def();
     let mut lines = vec![
         format!("{} {}, {:?}", sheet.gender.name(), def.name, def.size),
         String::new(),
     ];
-    // The nine attributes, a row to a line.
-    for row in Row::ALL {
-        let values: Vec<_> = row
-            .attributes()
-            .iter()
-            .map(|&which| format!("{} {}", which.name(), sheet.attributes.get(which)))
-            .collect();
-        lines.push(format!("{}: {}", row.name(), values.join(", ")));
-    }
+    lines.extend(attribute_lines(&sheet.attributes, with));
     lines.push(String::new());
-    lines.extend(vitals_lines(sheet, most));
+    lines.extend(vitals_lines(sheet, &carried.worn, most));
     lines.extend([
         // How much is carried now is shown under the inventory instead.
         format!(
@@ -128,7 +139,7 @@ fn describe(sheet: &Sheet, carried: &Inventory, most: Option<(VitalNow, VitalNow
 /// Writes the sheet (`inventory/sheet`, in the Character panel's markup) when
 /// what it says changes, or the panel opens.
 fn show_words(
-    sheet: Res<CharacterSheet>,
+    (sheet, with): (Res<CharacterSheet>, Res<WithBonuses>),
     carried: Res<Carried>,
     own: Res<OwnVitals>,
     ids: Query<&UiId>,
@@ -138,7 +149,7 @@ fn show_words(
 ) {
     let id = UiId::new("inventory", "sheet");
     let most = own.0.map(|told| (told.health, told.mana));
-    let words = describe(&sheet.0, &carried.0, most);
+    let words = describe((&sheet.0, with.0.as_ref()), &carried.0, most);
     let opened = new.iter().any(|new| *new == id);
     if !opened && *said == words {
         return;

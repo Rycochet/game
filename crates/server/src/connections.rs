@@ -24,11 +24,13 @@ mod action_bar;
 mod answer;
 mod answer_dev;
 mod answer_items;
+mod bonuses;
 mod change_kind;
 mod characters;
 mod client;
 mod combat;
 mod connections_impl;
+mod consume;
 mod delete_character;
 mod dev_alignment;
 mod dev_audit;
@@ -175,6 +177,8 @@ pub struct Client {
     pub(crate) activity: playtime::Activity,
     /// How much Health and Mana there can be, as the client was last told.
     vitals_told: Option<shared::vitals::Limits>,
+    /// What its bonuses go by (`bonuses.rs`).
+    bonused: bonuses::Bonused,
     /// How much it can do now, and how fast that comes back.
     energy: Energy,
     pub(crate) speed: u32,
@@ -222,6 +226,8 @@ pub struct Client {
 
 #[cfg(test)]
 mod action_bar_tests;
+#[cfg(test)]
+mod bonuses_tests;
 #[cfg(test)]
 mod dev_audit_tests;
 #[cfg(test)]
