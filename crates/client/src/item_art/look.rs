@@ -101,6 +101,9 @@ pub enum Look {
         worn: Vec<Look>,
         colours: Colours,
         hair: Hair,
+        /// How tall it stands beside its kind's usual height, in thousandths
+        /// (`Appearance::height_share`).
+        height: i32,
     },
     /// A bare body standing as its layout says, with its parts, drawn as tall as
     /// `height` millimetres beside a person (up to a person's height): what worn things
