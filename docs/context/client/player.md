@@ -43,3 +43,4 @@ The player's position: on the world map a grid point, stepped and travelled cell
 - Enemies (`common::Other` that is `Unfriendly`) can't be walked into (their cell) and routes go round them, finding a new way if one comes between. Anyone else swaps places, which the server tells of as their move. With `common::GodMode` on, enemies swap too and routes go straight through them.
 - `SpentEnergy` (common) spends energy on what isn't a step, and stops a journey for as long as that takes (`PlayerEnergy::stopped_for`).
 - `CancelledEnergy` (common) gives back the energy owed beyond its penalty, and ends a journey's pause: an ability called off (`abilities`).
+- Following a route (`level_moves::follow_route`) stops for the frame when a walk gets nowhere without being blocked: a leftover distance too small to walk once divided by the ground's slowness (or NaN) otherwise looped for ever and froze the client. `Stride::walk` walks nothing for a distance that isn't finite.

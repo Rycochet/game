@@ -120,6 +120,13 @@ impl Stride {
         exactly: Option<Spot>,
         moves: &mut Vec<(Spot, Spot)>,
     ) -> Walked {
+        // An endless (or NaN) distance would never run out: walk nothing.
+        if !distance.is_finite() {
+            return Walked {
+                distance: 0.0,
+                stuck: false,
+            };
+        }
         let mut left = distance;
         while left > 0.0 {
             if let Some(goal) = exactly
