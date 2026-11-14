@@ -53,7 +53,7 @@ Braies, loincloths and petticoats hang from the waist, so they count as worn on 
 | Hadajuban, Nagajuban | Japanese wrapped shirts: short, or to the ankle |
 | Zhongyi | A Chinese wrapped shirt with long sleeves |
 | Nightshirt, Night Chemise | Long shirts made for the night, though you can wear them at any time |
-| Hair Shirt | A rough shirt of goat or horse hair |
+| Hair Shirt | A rough shirt of goat or horse hair; wearing one costs a little Will |
 | ... and Stays, ... and Pair of Bodies | A long shirt with stiffened stays laced over it |
 | Braies, Short Braies, Drawers | Braies on a belt; short ones to the thigh; drawers to the knee on a drawstring |
 | Sokgot | Full Korean drawers on a drawstring |

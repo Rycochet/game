@@ -2,9 +2,11 @@ use super::*;
 use crate::creature::CreatureKind;
 use crate::id::Id;
 use crate::item::{Item, ItemKind, Quality};
-use crate::item_form::{ItemOrder, make_item};
+use crate::item_form::{ItemForm, ItemOrder, make_item};
+use crate::material::Material;
 use crate::rng::Seed;
 use crate::sheet::{Attribute, Attributes};
+use crate::underclothes::{UnderForm, UnderPiece};
 use crate::vitals::Vital;
 
 const TOUGHNESS: Stat = Stat::Attribute(Attribute::Toughness);
@@ -92,11 +94,46 @@ fn better_armour_gives_more_toughness_but_costs_the_same() {
 }
 
 #[test]
-fn only_armour_gives_anything() {
+fn a_hat_or_an_apple_gives_nothing() {
     let hat = Item::new(Id::for_test(1), ItemKind::Hat);
     assert!(item_bonuses(&hat).is_empty());
     let apple = Item::new(Id::for_test(1), ItemKind::Apple);
     assert!(item_bonuses(&apple).is_empty());
+}
+
+/// The first of many rolled pieces of underclothing `wanted` accepts.
+fn under(piece: UnderPiece, wanted: impl Fn(&UnderForm) -> bool) -> Item {
+    (0..5000u64)
+        .map(|seed| {
+            make_item(
+                &ItemOrder::plain(piece.kind(), Quality::Common),
+                CreatureKind::Human,
+                Id::for_test(1),
+                Seed::new(seed),
+                None,
+                &mut || Id::for_test(2),
+            )
+        })
+        .find(|item| matches!(&item.form, Some(ItemForm::Under(form)) if wanted(form)))
+        .expect("rolled")
+}
+
+#[test]
+fn a_hair_shirt_costs_five_percent_will() {
+    let hair = |form: &UnderForm| form.material == Material::Haircloth;
+    let shirt = under(UnderPiece::Shirt, hair);
+    assert_eq!(
+        item_bonuses(&shirt),
+        vec![Bonus::percent(
+            Stat::Attribute(Attribute::Will),
+            -5 * PER_CENT
+        )]
+    );
+    let linen = under(UnderPiece::Shirt, |form| !hair(form));
+    assert!(item_bonuses(&linen).is_empty());
+    // A horsehair petticoat is haircloth, but no hair shirt.
+    let petticoat = under(UnderPiece::Petticoat, hair);
+    assert!(item_bonuses(&petticoat).is_empty());
 }
 
 #[test]

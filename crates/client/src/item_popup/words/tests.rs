@@ -49,3 +49,24 @@ fn a_ring_gives_nothing() {
     let ring = Item::new(Id::for_test(1), ItemKind::Ring);
     assert!(bonus_lines(&ring, &lang).is_empty());
 }
+
+#[test]
+fn a_hair_shirt_costs_five_percent_will() {
+    use shared::item_form::ItemForm;
+    use shared::material::Material;
+    use shared::underclothes::{UnderPiece, roll};
+    let lang = Lang::new(Language::English);
+    let form = (0..5000u64)
+        .map(|seed| {
+            roll(
+                &mut Seed::new(seed).rng(),
+                UnderPiece::Shirt,
+                Quality::Common,
+            )
+        })
+        .find(|form| form.material == Material::Haircloth)
+        .expect("a hair shirt");
+    let mut shirt = Item::new(Id::for_test(1), UnderPiece::Shirt.kind());
+    shirt.form = Some(ItemForm::Under(form));
+    assert_eq!(bonus_lines(&shirt, &lang), vec![format!("{MINUS}5% Will")]);
+}
