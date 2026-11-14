@@ -2,9 +2,13 @@
 //! quality, own weight and material), so both sides always agree.
 
 use super::material::{MaterialFactors, armour_material, material_factors};
+use super::stat::PER_CENT;
 use super::stat::{Bonus, Stat};
 use crate::item::{Item, ItemCategory, Quality};
+use crate::item_form::ItemForm;
+use crate::material::Material;
 use crate::sheet::Attribute;
+use crate::underclothes::Garment;
 use crate::vitals::Vital;
 
 /// Toughness each kilogram of armour gives, at Common quality (owner, 2026-11-14).
@@ -29,13 +33,38 @@ pub const fn quality_factor(quality: Option<Quality>) -> i64 {
     }
 }
 
-/// What this item gives while worn. Only armour gives anything so far: by
-/// the kilogram of the piece's own weight (without anything in it), Toughness
-/// by its quality and material, less Agility and most Mana by its material.
+/// Will a hair shirt costs while worn, in thousandths of a percent: a light
+/// −5% (owner, 2026-11-14; other, better bonuses may come later).
+pub const HAIR_SHIRT_WILL: i32 = -5 * PER_CENT;
+
+/// What this item gives while worn: armour by its weight (`armour_bonuses`),
+/// a hair shirt less Will, nothing else so far.
 pub fn item_bonuses(item: &Item) -> Vec<Bonus> {
-    if item.kind.category() != ItemCategory::Armour {
-        return Vec::new();
+    if item.kind.category() == ItemCategory::Armour {
+        armour_bonuses(item)
+    } else if is_hair_shirt(item) {
+        vec![Bonus::percent(
+            Stat::Attribute(Attribute::Will),
+            HAIR_SHIRT_WILL,
+        )]
+    } else {
+        Vec::new()
     }
+}
+
+/// A shirt of haircloth (not a horsehair petticoat, which is haircloth too).
+fn is_hair_shirt(item: &Item) -> bool {
+    matches!(
+        item.form.as_ref(),
+        Some(ItemForm::Under(form))
+            if matches!(form.garment, Garment::Shirt(_)) && form.material == Material::Haircloth
+    )
+}
+
+/// Armour's: by the kilogram of the piece's own weight (without anything in
+/// it), Toughness by its quality and material, less Agility and most Mana by
+/// its material.
+fn armour_bonuses(item: &Item) -> Vec<Bonus> {
     let grams = i64::from(piece_grams(item));
     let material = armour_material(item).map_or(MaterialFactors::USUAL, material_factors);
     // Thousandths of a point per kilogram is one per gram.

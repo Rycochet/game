@@ -8,7 +8,7 @@ Signed off by the owner on 2026-11-04.
 
 - [x] A subject with several pages gets its own folder (`docs/armour/`) with an `index.md` overview, which has `has_children: true`, and one page per part, each with `parent:` set to the overview's title.
 - [x] Front matter: `title`, `nav_order`, and `parent` / `has_children` where they apply. A page's place in the menu follows how a player would come to it, not when it was written.
-- [ ] A subject with only one page sits at the top of `docs/`, beside the others, with a `nav_order` next to the subject a player would look at with it (`footwear.md`, 4.6, after Armour at 4.5).
+- [x] A subject with only one page sits at the top of `docs/`, beside the others, with a `nav_order` next to the subject a player would look at with it (`footwear.md`, 4.6, after Armour at 4.5). Signed off on 2026-11-14.
 - [x] File names are lower case words joined by hyphens (`full-sets.md`); titles are plain words ("Torso armour").
 
 ## What goes in
@@ -28,7 +28,7 @@ Signed off by the owner on 2026-11-04.
 
 ## How each page is laid out
 
-- [ ] A subject's page may use sub-headings under Kinds (such as **Shape** and **Names** for footwear) where its things vary in more ways than one table shows.
+- [x] A subject's page may use sub-headings under Kinds (such as **Shape** and **Names** for footwear) where its things vary in more ways than one table shows. Signed off on 2026-11-14.
 - [x] One template for every page of a subject. For armour: a short introduction (what the location covers, its layer, what goes under and over it), then **Kinds** (a table), **Styles** (a table), **Materials**, **Weights**. A heading with nothing to say is left out rather than left empty.
 - [x] Tables have a first column naming the thing and one row per thing; the same columns in the same order on every page of a subject.
 - [x] The overview page explains what the subject's pages share once (layers, styles, constructions, materials), and the other pages link to it rather than repeat it.
