@@ -33,6 +33,7 @@ pub(super) fn parts_of(
             worn,
             colours,
             hair,
+            ..
         } => super::character::character_parts(kind, &worn, colours, hair, None, meshes, materials),
         Look::Portrait(character) => match *character {
             Look::Character {
@@ -40,8 +41,9 @@ pub(super) fn parts_of(
                 worn,
                 colours,
                 hair,
+                height,
             } => {
-                let standing = Some(super::character::portrait_scale(kind));
+                let standing = Some(super::character::portrait_scale(kind, height));
                 super::character::character_parts(
                     kind, &worn, colours, hair, standing, meshes, materials,
                 )

@@ -3,7 +3,7 @@
 
 use shared::body::Frame;
 use shared::creature::CreatureKind;
-use shared::sheet::Appearance;
+use shared::sheet::{Appearance, HEIGHT_SHARES, HEIGHT_WHOLE};
 use shared::wear::WornLook;
 
 use super::super::Look;
@@ -29,16 +29,24 @@ pub fn portrait_look(
     }
 }
 
-/// How big a millimetre of this kind's model is, as a share of its picture's height.
-/// Every frame is a person's height, so it is shrunk to the kind's own.
-pub(in crate::item_art) fn portrait_scale(kind: CreatureKind) -> f32 {
+/// How big a millimetre of this kind's model is, as a share of its picture's height,
+/// for one standing `height` thousandths of its kind's usual height. Every frame is a
+/// person's height, so it is shrunk to the kind's own, then to its own Height; the
+/// tallest playable kind at its tallest fills `TALLEST_SHARE`.
+pub(in crate::item_art) fn portrait_scale(kind: CreatureKind, height: i32) -> f32 {
     let tallest = CreatureKind::ALL
         .into_iter()
         .filter(|kind| kind.def().playable)
         .map(Frame::usual_height)
         .max()
-        .unwrap_or(1);
+        .unwrap_or(1) as f32
+        * tallest_share();
     let frame = Frame::usual_height(CreatureKind::Human) as f32;
-    let own = Frame::usual_height(kind) as f32;
-    TALLEST_SHARE * own / (tallest as f32 * frame)
+    let own = Frame::usual_height(kind) as f32 * height as f32 / HEIGHT_WHOLE as f32;
+    TALLEST_SHARE * own / (tallest * frame)
+}
+
+/// The tallest Height there is, as a share of the usual.
+fn tallest_share() -> f32 {
+    HEIGHT_SHARES.into_iter().max().unwrap_or(HEIGHT_WHOLE) as f32 / HEIGHT_WHOLE as f32
 }

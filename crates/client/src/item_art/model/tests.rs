@@ -56,3 +56,49 @@ fn points_move_with_the_bone_they_are_on() {
     );
     assert_eq!(bones.part_at(belly), BodyPart::TRUNK);
 }
+
+/// A model's height at each Height look: 5% a step from its kind's usual (owner,
+/// 2026-11-14), for a person, a taur and an animal.
+#[test]
+fn height_looks_scale_the_model() {
+    use shared::sheet::{HEIGHT_SHARES, HEIGHT_WHOLE, Trait};
+    for kind in [
+        CreatureKind::Human,
+        CreatureKind::Centaur,
+        CreatureKind::Horse,
+    ] {
+        let height = |chosen: u8| {
+            let looks = Appearance([(Trait::Height, chosen)].into());
+            let look = character_look(kind, &looks, &[]).unwrap();
+            let (mut meshes, mut materials) = (Assets::default(), Assets::default());
+            let models = &mut CreatureModels::default();
+            models
+                .model(&look, &mut meshes, &mut materials)
+                .unwrap()
+                .0
+                .height
+        };
+        let average = height(0);
+        for (chosen, share) in HEIGHT_SHARES.into_iter().enumerate() {
+            let wanted = average * share as f32 / HEIGHT_WHOLE as f32;
+            let got = height(chosen as u8);
+            assert!(
+                (got - wanted).abs() < 2.0,
+                "{kind:?} {chosen}: {got} not {wanted}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_height_look_is_its_own_model() {
+    use shared::sheet::Trait;
+    let (mut meshes, mut materials) = (Assets::default(), Assets::default());
+    let mut models = CreatureModels::default();
+    for chosen in [0, 4] {
+        let looks = Appearance([(Trait::Height, chosen)].into());
+        let look = character_look(CreatureKind::Human, &looks, &[]).unwrap();
+        models.model(&look, &mut meshes, &mut materials);
+    }
+    assert_eq!(models.len(), 2);
+}

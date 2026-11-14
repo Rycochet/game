@@ -40,7 +40,7 @@ pub fn morph_look(
 ) -> Option<Look> {
     let side = |(kind, appearance): (CreatureKind, &Appearance)| {
         Some((
-            Layout::at_size(kind)?,
+            Layout::at_size(kind)?.scaled(appearance.height_share(kind)),
             Colours::of(kind, appearance),
             appearance.hair(kind),
         ))

@@ -38,7 +38,10 @@ pub fn character_look(
 ) -> Option<Look> {
     let layout = Layout::of(kind)?;
     let hair = appearance.hair(kind);
+    let height = appearance.height_share(kind);
     if layout.worn_frame().is_none() {
+        // An animal's layout is at its own size: taller or shorter by its looks.
+        let layout = layout.scaled(height);
         return Some(Look::Body {
             layout: Box::new(layout),
             height: layout.spine.base[1],
@@ -52,6 +55,7 @@ pub fn character_look(
         worn,
         colours: Colours::of(kind, appearance),
         hair,
+        height,
     })
 }
 

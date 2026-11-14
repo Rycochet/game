@@ -27,12 +27,13 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
             worn,
             colours,
             hair,
+            height,
         } => {
             let (pieces, layout) = character::dressed(*kind, worn, *colours, *hair)?;
             // Every frame is a person's height: shrunk or grown to the kind's own, as
-            // `Layout::at_size` does.
-            let share = Layout::at_size(*kind)?.spine.base[1] as f32
-                / (layout.spine.base[1] as f32).max(1.0);
+            // `Layout::at_size` does, then to its own Height.
+            let standing = Layout::at_size(*kind)?.scaled(*height);
+            let share = standing.spine.base[1] as f32 / (layout.spine.base[1] as f32).max(1.0);
             let mut pieces: Vec<_> = pieces
                 .into_iter()
                 .map(|(triangles, material)| (scaled(triangles, share), material))
@@ -42,7 +43,7 @@ pub(super) fn pieces(look: &Look) -> Option<Pieces> {
             Some(Pieces {
                 pieces,
                 skin,
-                layout: Layout::at_size(*kind)?,
+                layout: standing,
             })
         }
         Look::Body {
