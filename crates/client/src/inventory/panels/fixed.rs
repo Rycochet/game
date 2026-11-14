@@ -9,7 +9,8 @@ use crate::widgets::{ButtonTooltip, UiId};
 
 /// The button, in the window's bottom left corner (8 from it, 34 across). It
 /// has no form round it: a form on a strip has no height, and the pointer is
-/// never on what is outside its form.
+/// never on what is outside its form. The Quest Log's button sits just right
+/// of it (`quest_log/button.rs`).
 static BUTTON: Template = html!(
     "inventory.button",
     r#"

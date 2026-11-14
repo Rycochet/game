@@ -1,13 +1,15 @@
 # client: quest_log
 
-The Quest Log (L, `common::Action::QuestLog`): a moving panel in markup with the character's quests on any planet they have quest history on. Left: the planet chooser (the one the player is on first, "Here", each named by its runes, a picture drawn from `shared::hall::RUNE_STROKES`, never a font), then the list grouped Active, Completed, Failed or abandoned (newest first), each quest after its giver's marker as a badge, and a line for each giver of dailies. Right: the quest chosen in full, with Track and Abandon for one under way on this planet, and buttons for the places it sends you to. Plan: `quests.md`.
+The Quest Log (L, `common::Action::QuestLog`, or its button right of the Character button): a moving panel in markup with the character's quests on any planet they have quest history on. Left: the planet chooser (the one the player is on first, "Here", each named by its runes, a picture drawn from `shared::hall::RUNE_STROKES`, never a font), then the list grouped Active, Completed, Failed or abandoned (newest first), each quest after its giver's marker as a badge, and a line for each giver of dailies. Right: the quest chosen in full, with Track and Abandon for one under way on this planet, and buttons for the places it sends you to. Plan: `quests.md`.
 
 ## Files
 
-- `crates/client/src/quest_log/mod.rs`: `QuestLogPlugin` (`Update`, in order: `notice_closed`, `toggle_log`, `open_on_quest`, `read_server`, `read_events`, `show_log`). Tests in `tests.rs`.
+- `crates/client/src/quest_log/mod.rs`: `QuestLogPlugin` (`Startup`: `spawn_button`; `Update`: `bind_button`, `show_button`, then in order: `notice_closed`, `toggle_log`, `open_on_quest`, `read_server`, `read_events`, `show_log`). Tests in `tests.rs`.
 - `quest_log/markup.rs`: `QUEST_LOG` (`quest_log/...`): `panel`, `planet` (a `select`), `list` in a `scroll`, `choose`, `detail` (`title`, `giver`, `state`, `paras`, `steps_head`, `steps`, `reward`, `targets_head`, `targets`, `track`, `abandon`), templates `heading`, `row_yellow` / `row_blue` / `row_orange` / `row_grey` (a `mark` badge and a `quest` button: one per colour, as writing takes its class's colour only when made), `line`, `para`, `step`, `target`.
+- `quest_log/button.rs`: `BUTTON` (`hud/quest_log`, left 48 bottom 8, 34 across, on `bottom_strip()`, `GlobalZIndex(15)`, `picture:list`), `LogButton`, `spawn_button`, `bind_button` (tip "Quest Log"), `show_button` (hidden while connecting).
+- `quest_log/icon.rs`: `list_icon` (three dots and lines in the Character button's ink, named `list` in `dom::Pictures`).
 - `quest_log/state.rs`: `LogPanel` (document, the planet shown (`None` here), the quest chosen, `abandoning`, other planets' logs as `Told`, the chooser's `choices`, `rows` and `targets` by index, rune pictures by planet, `planets_dirty`, `dirty`).
-- `quest_log/open.rs`: `toggle_log` (L opens it, asking `QuestAsk::Planets`, or closes it; not while connecting), `open_on_quest` (`quests::OpenQuestLog`: opens it, or shows it, on that quest of this planet, the chooser back on "Here"), `notice_closed` (its close button, or leaving the game).
+- `quest_log/open.rs`: `toggle_log` (L or the button (`widgets::ButtonPressed`) opens it, asking `QuestAsk::Planets`, or closes it; not while connecting), `open_on_quest` (`quests::OpenQuestLog`: opens it, or shows it, on that quest of this planet, the chooser back on "Here"), `notice_closed` (its close button, or leaving the game).
 - `quest_log/read.rs`: `read_server` (`QuestNews::PlanetLog` into `others`; `quests::QuestPlanets` or this planet's `QuestBook` changing marks it dirty; `Welcome` forgets all).
 - `quest_log/input.rs`: `read_events` (the chooser (another planet asks `QuestAsk::PlanetLog`), a row, Track (`QuestAsk::Track`, none if it was the one chosen), Abandon pressed twice (`QuestAsk::Abandon`), a place opening `minimap::FullMap` centred on its poi).
 - `quest_log/show.rs`: `show_log` (the chooser when `planets_dirty`, the page when `dirty` or the view changes).
@@ -23,7 +25,7 @@ The Quest Log (L, `common::Action::QuestLog`): a moving panel in markup with the
 
 ## Depends on
 
-- `common` (`Action`, `CurrentWorld`, `KnownPois::poi_in`, `poi_name`, `GameView`, `Preferences`, `Session`, `Wording`, `local_date_time`), `quests` (`QuestBook`, `QuestPlanets`, `OpenQuestLog`, `MarkLook`, `done_steps`, `or_partly`, `plain`, `reward_line`, `step_lines`), `minimap` (`FullMap`), `connection` (`ToServer`, `FromServer`), `dom` (`Dom`, `UiEvent`, `document`, `top_strip`), `widgets` (`UiId`, `INK`), `shared::protocol`, `shared::hall` (`GateCode`, `RUNE_STROKES`), `shared::lang`.
+- `common` (`Action`, `CurrentWorld`, `KnownPois::poi_in`, `poi_name`, `GameView`, `Preferences`, `Session`, `Wording`, `local_date_time`), `quests` (`QuestBook`, `QuestPlanets`, `OpenQuestLog`, `MarkLook`, `done_steps`, `or_partly`, `plain`, `reward_line`, `step_lines`), `minimap` (`FullMap`), `connection` (`ToServer`, `FromServer`), `dom` (`Dom`, `UiEvent`, `document`, `top_strip`, `bottom_strip`, `Pictures`), `widgets` (`UiId`, `INK`, `ButtonPressed`, `ButtonTooltip`), `shared::protocol`, `shared::hall` (`GateCode`, `RUNE_STROKES`), `shared::lang`.
 
 ## Used by
 
@@ -34,4 +36,5 @@ The Quest Log (L, `common::Action::QuestLog`): a moving panel in markup with the
 - Words are in `shared/src/lang/en/quest-log.ftl`; steps, reward and "What to do:" are the talk panel's (`talk.ftl`), written through `quests`' word helpers.
 - Another planet's quests are the server's to make again: until `PlanetLog` comes the page says "Asking...". Track, Abandon and the places show only for the planet the player is on.
 - The places' buttons are greyed off the world map, as the full map shows a site's floors there.
-- Only the panel's own buttons and chooser are used, so a tap works as a click; nothing opens it by touch yet (a HUD button is the owner's to place) except a tap on the tracked quest under the minimap (`tracked_quest`), which opens it on that quest.
+- Only the panel's own buttons and chooser are used, so a tap works as a click; the HUD button opens it by touch too, and a tap on the tracked quest under the minimap (`tracked_quest`) opens it on that quest.
+- The button sits 6 right of the Character button (`inventory`, left 8): move both together.

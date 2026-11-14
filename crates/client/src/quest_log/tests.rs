@@ -48,3 +48,8 @@ fn a_planets_runes_are_drawn() {
     let data = image.data.unwrap();
     assert!(data.chunks(4).any(|pixel| pixel[3] == 255), "some ink");
 }
+
+#[test]
+fn the_button_is_good_markup() {
+    super::button::BUTTON.assert_good();
+}
