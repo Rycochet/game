@@ -106,6 +106,8 @@ fn enter_words(entry: &LogEntry, lang: &Lang) -> Option<String> {
     })?;
     let key = match way {
         DungeonWay::Cellar => "talk-enter-cellar",
+        // Gone into from the world map.
+        DungeonWay::Hidden => return None,
     };
     (entry.state == QuestState::Taken).then(|| plain(lang, key))
 }

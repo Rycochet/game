@@ -35,6 +35,10 @@ pub(crate) fn explore(client: &mut Client, world: &mut ServerWorld) -> bool {
         info!("Refused exploring from water at ({px}, {py})");
         return true;
     }
+    // Down at a hidden way into a quest's dungeon: into it.
+    if let Some(quest) = crate::quests::entrance_near(client, world.width) {
+        return crate::quests::enter_dungeon(client, world, quest, true);
+    }
     let at = arrival(client, world);
     enter_wilderness(client, world, Spot::middle_of(at))
 }

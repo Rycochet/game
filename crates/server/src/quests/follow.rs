@@ -92,7 +92,7 @@ fn follow_one(client: &mut Client, world: &mut ServerWorld, now: i64) {
     tell_dots(client, world);
     super::boss_signs::tell_bosses(client, world);
     super::finds::tell_finds(client, world);
-    super::dungeon::reset_due(client, world, now);
+    super::dungeon_reset::reset_due(client, world, now);
 }
 
 /// On coming to another place: steps moving on, and the town's markers.

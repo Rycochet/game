@@ -1,8 +1,10 @@
 //! A character's time in a quest's own dungeon (`shared::quest::QuestDungeon`),
 //! kept in their `QuestBook`: where leaving it takes them back to, and when
-//! they last left, as it resets about an hour after (owner).
+//! they last left, as it resets about an hour after (owner); and where a
+//! hidden entrance is.
 
 use serde::{Deserialize, Serialize};
+use shared::poi::Poi;
 
 use super::VisitSave;
 
@@ -17,4 +19,9 @@ pub struct DungeonStay {
     /// logged out, so no reset comes then (owner).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub left: Option<i64>,
+    /// A hidden way in (`shared::quest::DungeonWay::Hidden`): its made-up
+    /// poi, shown on their map in its chunk while the quest is taken. Kept
+    /// through resets.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entrance: Option<Poi>,
 }

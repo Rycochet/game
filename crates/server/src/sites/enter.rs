@@ -17,6 +17,10 @@ use crate::world_map::{self};
 /// level is set in, at its entrance or where they last walked out of it
 /// (`wild::poi_arrival`).
 pub(crate) fn enter_poi(client: &mut Client, world: &mut ServerWorld, chunk: ChunkPos) -> bool {
+    // A hidden way into a quest's dungeon, which only its quester has.
+    if let Some((quest, _)) = crate::quests::entrance_in(client, chunk) {
+        return crate::quests::enter_dungeon(client, world, quest, true);
+    }
     let Some(poi) = world_map::known_poi(client, world, chunk) else {
         warn!("A client tried to enter {chunk:?}, with no poi it knows of");
         return true;

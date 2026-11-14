@@ -20,6 +20,9 @@ use crate::story::Goal;
 /// The poi kind a quest's dungeon is made as: a dug cellar of barrels, with
 /// doors, entered down stairs (its mobs and looks are that kind's).
 pub const DUNGEON_KIND: PoiKind = PoiKind::Barrels;
+/// The poi kind a hidden entrance shows as on the quester's world map: a
+/// hole among the rocks.
+pub const HIDDEN_KIND: PoiKind = PoiKind::Boulders;
 
 /// Who may live in a cellar, and how likely each is: small folk, nothing
 /// too big for its passages. *To balance.*
@@ -35,6 +38,9 @@ const CELLAR_CREATURES: [(CreatureKind, u64); 4] = [
 pub enum DungeonWay {
     /// Down from the giver's own building, from their talk panel.
     Cellar,
+    /// A way down near the town that only the quester sees, on the world map
+    /// in a chunk with no poi of its own (`HIDDEN_KIND` there).
+    Hidden,
     // New ways go at the end: messages carry one by its place.
 }
 
@@ -42,8 +48,9 @@ pub enum DungeonWay {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct QuestDungeon {
     pub way: DungeonWay,
-    /// A made-up poi standing for it: `DUNGEON_KIND` at the giver's town, with
-    /// the dungeon's own seed (never the town's).
+    /// A made-up poi standing for it, with the dungeon's own seed (never the
+    /// town's): a cellar's is `DUNGEON_KIND` at the giver's town, a hidden
+    /// one's `HIDDEN_KIND` at its entrance, in its own chunk.
     pub poi: Poi,
     pub levels: u32,
     /// Each level's width and height are picked from this range.
@@ -62,8 +69,12 @@ impl QuestDungeon {
             levels: (self.levels, self.levels),
             entrance: CaveEntrance::Hole,
             doors: true,
-            water_percent: 10,
-            lava_percent: 0,
+            water_percent: if self.way == DungeonWay::Cellar {
+                10
+            } else {
+                15
+            },
+            lava_percent: if self.way == DungeonWay::Cellar { 0 } else { 5 },
         })
     }
 
