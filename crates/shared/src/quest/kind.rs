@@ -11,7 +11,7 @@ pub enum QuestKind {
     /// the same for everyone on the same UTC day.
     Daily,
     /// Orange: cities only, a long chain ending in an artifact or the
-    /// planet's set item (Quest system PR 11; not generated yet).
+    /// planet's set item (`artifact_line`).
     Artifact,
     // New kinds go at the end: messages carry one by its place.
 }

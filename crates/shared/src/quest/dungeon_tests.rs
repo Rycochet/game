@@ -66,7 +66,7 @@ fn some_quests_are_cellars_and_they_can_be_done() {
 }
 
 /// Its site has its levels, and enough of its kind live there for the count.
-fn peopled_enough(quest: &Quest) -> bool {
+pub(super) fn peopled_enough(quest: &Quest) -> bool {
     let dungeon = quest.dungeon.unwrap();
     let site = Site::with_generator(
         dungeon.poi.kind,
@@ -102,7 +102,7 @@ fn towns_and_cities_have_hidden_ways_down_nearby() {
             matches!(town.kind, PoiKind::Town | PoiKind::City),
             "{town:?}"
         );
-        assert_eq!(quest.kind, QuestKind::Normal);
+        assert_ne!(quest.kind, QuestKind::Daily);
         let dungeon = quest.dungeon.unwrap();
         let poi = dungeon.poi;
         assert_eq!(poi.kind, HIDDEN_KIND);

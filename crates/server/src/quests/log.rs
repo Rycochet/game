@@ -17,7 +17,7 @@ pub(crate) fn entry(client: &Client, world: &mut ServerWorld, id: QuestId) -> Op
 
 /// One quest of `book`, a planet's, made again in `world`, that planet's.
 fn entry_in(book: &QuestBook, world: &mut ServerWorld, id: QuestId) -> Option<LogEntry> {
-    let quest = cache::quest(world, id)?;
+    let quest = super::prize::as_seen(book, cache::quest(world, id)?);
     let (state, at, counts) = if let Some(progress) = book.taken.get(&id) {
         let ready = quest.ready_to_turn_in(&done_flags(&quest, &progress.counts));
         let state = if ready {

@@ -9,6 +9,7 @@
 //! generator: pois' seeds are secret.
 
 mod area;
+mod artifact_line;
 mod daily;
 mod dungeon;
 mod feeder;
@@ -24,6 +25,7 @@ mod moon;
 mod neighbour;
 mod owner;
 mod plan;
+mod prize;
 mod remains;
 mod requirement;
 mod reward;
@@ -44,12 +46,15 @@ pub use id::{QuestId, Slot};
 pub use kind::QuestKind;
 pub use model::Quest;
 pub use owner::owner;
+pub use prize::{PRIZE_KINDS, artifact_kind, set_item_of};
 pub use requirement::{Need, Requirement, Standing};
 pub use step::{Alternative, Step, Target, Way};
 pub use template::{boss_of, boss_tier, item_of};
 pub use town::town_quests;
 pub use world::{QuestWorld, is_larger, radius};
 
+#[cfg(test)]
+mod artifact_tests;
 #[cfg(test)]
 mod dungeon_tests;
 #[cfg(test)]

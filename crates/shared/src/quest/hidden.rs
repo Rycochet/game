@@ -21,14 +21,30 @@ const TRIES: u32 = 24;
 
 /// The plan for a hidden dungeon of `town`'s, if an empty chunk with dry land
 /// is near enough: clear its creatures and reach its bottom, alongside.
-pub(super) fn plan_hidden(world: &QuestWorld, town: &Poi, rng: &mut Rng) -> Option<Plan> {
+/// `large`: the artifact line's last quest (owner: a large quest dungeon), 4
+/// or 5 levels, wider and fuller (Claude's figures, *to balance*).
+pub(super) fn plan_hidden(
+    world: &QuestWorld,
+    town: &Poi,
+    large: bool,
+    rng: &mut Rng,
+) -> Option<Plan> {
     let bigger = size(town.kind).unwrap_or(0) as u64;
     let (x, y) = entrance(world, town, rng)?;
     let pois = world.pois;
-    let levels = rng.range_u64(2, bigger.max(1) + 2) as u32;
-    let size = (40 + 4 * bigger as i64, 52 + 6 * bigger as i64);
+    let levels = match large {
+        true => rng.range_u64(4, 6),
+        false => rng.range_u64(2, bigger.max(1) + 2),
+    } as u32;
+    let size = match large {
+        true => (56 + 4 * bigger as i64, 68 + 6 * bigger as i64),
+        false => (40 + 4 * bigger as i64, 52 + 6 * bigger as i64),
+    };
     let creatures = rng.pick_weighted(&slain_with_weights(PoiKind::Ruins));
-    let count = rng.range_u64(5 + 2 * bigger, 9 + 3 * bigger) as u32;
+    let count = match large {
+        true => rng.range_u64(12 + 3 * bigger, 18 + 4 * bigger),
+        false => rng.range_u64(5 + 2 * bigger, 9 + 3 * bigger),
+    } as u32;
     let per_level = (count.div_ceil(levels) + 1) as u8;
     let poi = Poi {
         kind: HIDDEN_KIND,

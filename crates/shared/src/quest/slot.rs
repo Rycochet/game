@@ -56,7 +56,7 @@ pub(super) fn slot_quests(
         let roll = rng.range_u64(0, 100);
         let cellars = super::dungeon::NORMAL_PERCENT;
         let hidden = (size >= 2 && roll >= cellars && roll < cellars + HIDDEN_PERCENT)
-            .then(|| plan_hidden(world, town, &mut rng))
+            .then(|| plan_hidden(world, town, false, &mut rng))
             .flatten();
         let plan = if roll < cellars {
             super::dungeon::plan_cellar(town, false, &mut rng)
@@ -101,6 +101,7 @@ pub(super) fn slot_quests(
             dark,
             continues: usize::from(chain) + 1 < plans.len(),
             text_seed: Seed::new(seed.derive("text").at(&[i64::from(chain)])),
+            prize: None,
         };
         let quest = make(world, town, plan, making, &mut rng);
         quests.push(quest);

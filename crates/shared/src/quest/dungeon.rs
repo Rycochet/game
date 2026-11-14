@@ -116,7 +116,7 @@ impl QuestDungeon {
 /// Percent of normal quests, and of dailies, that are a cellar of the
 /// giver's own (owner: commoner for dailies). *To balance.*
 pub(super) const NORMAL_PERCENT: u64 = 10;
-pub(super) const DAILY_PERCENT: u64 = 35;
+pub(super) const DAILY_PERCENT: u64 = 60;
 
 /// The plan for a cellar quest of `town`'s: clear its creatures, and on more
 /// than one level reach the bottom too, alongside.

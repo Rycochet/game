@@ -290,6 +290,8 @@ coin-copper = { $count ->
 }
 reward-training = some training
 reward-favour = a favour owed
+reward-artifact = an artifact, one of a kind
+reward-set-item = a piece of this world's own set
 
 ## The place, with "the" when it has no name of its own.
 

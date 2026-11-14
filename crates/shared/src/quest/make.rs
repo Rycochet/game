@@ -9,7 +9,7 @@ use super::{Quest, QuestId, QuestKind, QuestWorld, Requirement};
 use crate::alignment::Deed;
 use crate::poi::Poi;
 use crate::rng::{Rng, Seed};
-use crate::story::{Goal, Story};
+use crate::story::{Goal, RewardPart, Story};
 
 /// Everything about a quest but its plan.
 pub(super) struct Making<'a> {
@@ -24,6 +24,9 @@ pub(super) struct Making<'a> {
     pub dark: bool,
     pub continues: bool,
     pub text_seed: Seed,
+    /// Paid on top of its coins, which the story then names (the artifact
+    /// line's end).
+    pub prize: Option<RewardPart>,
 }
 
 pub(super) fn make(
@@ -34,7 +37,11 @@ pub(super) fn make(
     rng: &mut Rng,
 ) -> Quest {
     let daily = making.kind == QuestKind::Daily;
-    let (reward, higher) = reward(world.pois, town, plan, making.chain, daily, rng);
+    let (mut reward, mut higher) = reward(world.pois, town, plan, making.chain, daily, rng);
+    if let Some(prize) = making.prize {
+        reward.push(prize);
+        higher = true;
+    }
     let tale = Tale {
         household: household(town, making.building),
         member: making.member,

@@ -32,7 +32,7 @@ pub fn feeds_into(world: &QuestWorld, town: &Poi) -> Vec<Poi> {
 
 /// The towns joined to `town` by road, by chunk. A link counts whether or
 /// not water cuts its road (routing them all would be slow).
-fn linked(world: &QuestWorld, town: &Poi) -> Vec<Poi> {
+pub(super) fn linked(world: &QuestWorld, town: &Poi) -> Vec<Poi> {
     let at = (town.x, town.y);
     (world.roads.links_in_area(world.pois, at, at).into_iter())
         .filter_map(|(link, _)| {

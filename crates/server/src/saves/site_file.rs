@@ -26,6 +26,7 @@ pub(super) fn site_file_name(site: SiteId) -> String {
                 } => format!("g{building}_{slot}_{chain}"),
                 Slot::Feeder => "f".into(),
                 Slot::Daily { building, day } => format!("d{building}_{day}"),
+                Slot::Artifact { step } => format!("a{step}"),
             };
             let town = quest.town;
             format!("quest_{}_{}_{}_{slot}.ron", character.0, town.x, town.y)

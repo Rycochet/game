@@ -42,12 +42,16 @@ pub(crate) fn turn_in(
     // is long gone; anything found is handed over).
     let mut inventory = client.inventory.clone();
     inventory.remove_quest_items(id);
-    for item in reward_items(world, &quest) {
+    let (prizes, set_item) = super::prize::prize_items(client, world, &quest);
+    for item in reward_items(world, &quest).into_iter().chain(prizes) {
         if inventory.give(item, world.stacks, &mut new_id).is_err() {
             return refuse(client, id, QuestRefusal::NoRoom);
         }
     }
     client.inventory = inventory;
+    if set_item {
+        client.character.quests.set_item = Some(id);
+    }
     finish(client, &quest, now);
     info!("{} handed in quest {id:?}", client.in_log());
     if !super::dungeon::quest_ended(client, world, id) {
@@ -63,8 +67,8 @@ pub(crate) fn turn_in(
         && tell_markers(client, world, id.town, now)
 }
 
-/// What the giver hands over: its coins, as the fewest stacks. Items,
-/// training and favours aren't given yet (later Quest system PRs).
+/// The coins the giver hands over, as the fewest stacks (`prize` makes the
+/// artifact line's items).
 fn reward_items(world: &ServerWorld, quest: &Quest) -> Vec<Item> {
     let copper: u64 = (quest.reward.iter())
         .map(|part| match part {

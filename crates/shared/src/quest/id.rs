@@ -27,6 +27,9 @@ pub enum Slot {
     Feeder,
     /// A giver's daily quest on a UTC day (days since 1970).
     Daily { building: u16, day: i64 },
+    /// A city's artifact line: its giver's `step`th quest (0 first), each
+    /// needing the one before.
+    Artifact { step: u8 },
     // New slots go at the end: messages carry one by its place.
 }
 
@@ -44,6 +47,10 @@ impl QuestId {
                     slot,
                     chain: chain - 1,
                 },
+                ..self
+            }),
+            Slot::Artifact { step } if step > 0 => Some(Self {
+                slot: Slot::Artifact { step: step - 1 },
                 ..self
             }),
             _ => None,
