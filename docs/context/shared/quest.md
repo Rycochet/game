@@ -13,7 +13,7 @@ Quests generated from a town's seed, the same for everyone: who gives them (town
 
 - `QuestWorld { pois, roads, name_of, moons }`: what the generator reads; `name_of(&Poi) -> Option<String>` is the server's `place_name_of` (towns, castles, forts); `moons` the world's moon count (`Celestial::moon_count`).
 - `town_quests(world, town, buildings) -> Vec<Quest>`: a town's quests but its dailies (`buildings`: its site's `BuildingLook`s): every giver's slots, each a chain, then its feeder, then in a city its artifact line. Empty for anything but a town.
-- `PRIZE_KINDS` (weapons, armour pieces, jewellery), `set_item_of(planet seed value) -> (ItemKind, Quality)` (the planet's set item, Common to Legendary), `artifact_kind(seed)`: what the artifact line's end is made as (the server makes it).
+- `PRIZE_KINDS` (weapons, armour pieces, jewellery), `set_item_of(planet seed value) -> (ItemKind, Quality)` (the planet's set item, Common to Legendary), `artifact_kind(seed)`: what the artifact line's end is made as (the server makes it, from a seed of the character and quest so it is the same on every try).
 - `daily_givers(town, buildings)`, `daily_quest(world, town, buildings, building, day) -> Option<Quest>`, `utc_day(unix_seconds)`, `SECONDS_PER_DAY`.
 - `givers(town, buildings) -> Vec<Giver { building, kind, slots, daily }>`.
 - `feeder_destination(world, town) -> Option<Poi>` (the larger road neighbour its feeder goes to), `feeds_into(world, town)` (smaller neighbours whose feeders come here), `is_larger(a, b)` (size, then chunk), `radius(kind, daily)` (chunks: hamlet 3, village 4, town 6, city 7; dailies half).
