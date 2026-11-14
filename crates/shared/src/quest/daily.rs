@@ -63,6 +63,7 @@ pub fn daily_quest(
         dark: false,
         continues: false,
         text_seed: seed.derive("text"),
+        prize: None,
     };
     Some(make(world, town, &plan, making, &mut rng))
 }

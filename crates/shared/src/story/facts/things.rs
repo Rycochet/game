@@ -139,4 +139,10 @@ pub enum RewardPart {
     Training,
     /// A favour owed.
     Favour,
+    /// An artifact, named and one of a kind (the artifact line's end).
+    Artifact,
+    /// A piece of the planet's own set (the artifact line's end), or an
+    /// artifact for a character who has found it already.
+    SetItem,
+    // New parts go at the end: messages carry one by its place.
 }

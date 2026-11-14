@@ -13,6 +13,14 @@ use super::{cache, done_flags};
 use crate::ServerWorld;
 use crate::connections::Client;
 
+/// Which of a giver's chains a quest is in.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Chain {
+    Slot(u8),
+    Artifact,
+    Other,
+}
+
 /// One quest a giver talks about, and where it stands for the character.
 pub(crate) struct Offered {
     pub(crate) quest: Quest,
@@ -33,7 +41,8 @@ pub(crate) fn giver_offers(
     };
     let book = &client.character.quests;
     let mut offers = Vec::new();
-    // Each chain (or the feeder) offers its first quest not handed in.
+    // Each chain (the feeder and the artifact line too) offers its first
+    // quest not handed in.
     let mut chains_seen = BTreeSet::new();
     for quest in found
         .quests
@@ -41,8 +50,9 @@ pub(crate) fn giver_offers(
         .filter(|quest| quest.building == building)
     {
         let chain = match quest.id.slot {
-            Slot::Giver { slot, .. } => Some(slot),
-            _ => None,
+            Slot::Giver { slot, .. } => Chain::Slot(slot),
+            Slot::Artifact { .. } => Chain::Artifact,
+            _ => Chain::Other,
         };
         if book.done.contains_key(&quest.id) || chains_seen.contains(&chain) {
             continue;
@@ -85,6 +95,8 @@ fn daily_offer(
 /// Where one quest stands for the character, if they are told of it at all.
 fn offered(client: &Client, world: &ServerWorld, quest: &Quest, now: i64) -> Option<Offered> {
     let book = &client.character.quests;
+    // The reward as it will be paid: an artifact for the set item once found.
+    let quest = &super::prize::as_seen(book, quest.clone());
     let state = if let Some(progress) = book.taken.get(&quest.id) {
         match quest.ready_to_turn_in(&done_flags(quest, &progress.counts)) {
             true => OfferState::Ready,

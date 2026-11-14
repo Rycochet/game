@@ -48,6 +48,8 @@ pub(super) fn reward(lang: &Lang, parts: &[RewardPart]) -> Result<String, Render
             RewardPart::Item(item) => words.push(lang.rules().indefinite(&lang.phrase(item)?)),
             RewardPart::Training => words.push(lang.render("reward-training", &Args::new())?),
             RewardPart::Favour => words.push(lang.render("reward-favour", &Args::new())?),
+            RewardPart::Artifact => words.push(lang.render("reward-artifact", &Args::new())?),
+            RewardPart::SetItem => words.push(lang.render("reward-set-item", &Args::new())?),
         }
     }
     let words: Vec<&str> = words.iter().map(String::as_str).collect();

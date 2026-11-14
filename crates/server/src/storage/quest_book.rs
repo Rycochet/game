@@ -49,6 +49,11 @@ pub struct QuestBook {
     /// gone when it resets or the quest ends).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub dungeons: BTreeMap<QuestId, super::DungeonStay>,
+    /// The quest that paid the planet's set item, once the character has
+    /// found it (decisions.md: one per planet, for good): any other artifact
+    /// line ending in it pays an artifact instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set_item: Option<QuestId>,
 }
 
 /// How far along a quest taken is.
