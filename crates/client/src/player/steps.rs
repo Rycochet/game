@@ -15,8 +15,8 @@ use super::{
     enemy_cells,
 };
 use crate::common::{
-    CancelledEnergy, CurrentDungeon, CurrentWorld, DrawnGround, GameClock, GameView, GodMode,
-    MapPosition, NearRivers, PlayerGait, PlayerSize, PlayerSpeed, Sneaking, SpentEnergy,
+    CancelledEnergy, CurrentDungeon, CurrentWorld, DrawnGround, EscortGait, GameClock, GameView,
+    GodMode, MapPosition, NearRivers, PlayerGait, PlayerSize, PlayerSpeed, Sneaking, SpentEnergy,
     SpotPosition, WildCellHeights,
 };
 use shared::clearance::crowd_per_mille;
@@ -39,7 +39,7 @@ pub(super) fn take_steps(
     clock: Res<GameClock>,
     time: Res<Time>,
     speed: Res<PlayerSpeed>,
-    (gait, sneaking): (Res<PlayerGait>, Res<Sneaking>),
+    (gait, escort, sneaking): (Res<PlayerGait>, Res<EscortGait>, Res<Sneaking>),
     (heights, rivers, drawn): (Res<WildCellHeights>, Res<NearRivers>, Res<DrawnGround>),
     mut energy: ResMut<PlayerEnergy>,
     (mut stepped, mut moved, mut asks): (
@@ -134,7 +134,13 @@ pub(super) fn take_steps(
             continue;
         }
         let to = world.as_ref().and_then(|world| {
-            step_on_world_map_by(&world.ground, world.conditions(&clock), from, step, gait.0)
+            step_on_world_map_by(
+                &world.ground,
+                world.conditions(&clock),
+                from,
+                step,
+                gait.on_world_map(&escort),
+            )
         });
         let Some((x, y)) = to else {
             continue;
@@ -152,7 +158,7 @@ pub(super) fn take_steps(
             let road = world.roads.steps().kind_of(from, (x, y));
             let on_river = rivers.points.contains((x, y));
             let footing = world.ground.footing((x, y), conditions, road, on_river);
-            world_step_time(from, (x, y), ends, footing, gait.0)
+            world_step_time(from, (x, y), ends, footing, gait.on_world_map(&escort))
         });
         energy.energy.spend(tick, speed.0, cost);
         *position = MapPosition { x, y };

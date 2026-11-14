@@ -8,13 +8,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::hall::GateCode;
-use crate::id::Id;
 use crate::poi::ChunkPos;
 use crate::quest::{QuestId, QuestKind, Standing, Step};
 use crate::skill::SkillId;
-use crate::spot::Spot;
 use crate::story::{Ending, Person, RewardPart, Story};
 use crate::world::WorldId;
+
+pub use super::quest_marks::{BossMark, BossSign, FindMark};
 
 /// What a client asks about quests.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -112,31 +112,11 @@ pub enum QuestNews {
     /// before taking them: each giver's town has a marker on the maps until
     /// the quest is taken. Sent with the log and whenever it changes.
     Ahead(Vec<DoneAhead>),
-}
-
-/// The sign over a quest item lying where it was left, for one player.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FindMark {
-    pub at: Spot,
-    pub sign: BossSign,
-}
-
-/// The sign over a quest boss for one player.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BossMark {
-    /// The mob, as in `EntityLook::id`.
-    pub id: Id,
-    pub sign: BossSign,
-}
-
-/// Which sign a quest boss (or a quest item lying in a site) has over it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BossSign {
-    /// A red "!": someone's quest, which the player doesn't have and hasn't
-    /// dealt with (owner).
-    Unknown,
-    /// The player's own quest step: the quest's colour.
-    Quest(QuestKind),
+    /// Someone the player escorts is with them: their gait (owner: on the
+    /// world map the pair go at the pace of the slower, so world map steps
+    /// are paced by `Gait::slower` of it and the player's). `None` when
+    /// nobody is with them. Sent whenever it changes.
+    Escort(Option<crate::movement::Gait>),
 }
 
 /// A quest a step of which the character has already done, not taken yet.

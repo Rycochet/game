@@ -21,6 +21,10 @@ mod dungeon;
 mod dungeon_dots;
 mod dungeon_entrance;
 mod dungeon_reset;
+mod escort;
+mod escort_dots;
+mod escort_look;
+mod escortee;
 mod finds;
 mod follow;
 mod give_up;
@@ -41,6 +45,8 @@ pub(crate) use cache::TownQuests;
 pub(crate) use clock::unix_now;
 pub(crate) use dungeon::{came_out, dungeon_of, dungeon_poi, enter as enter_dungeon};
 pub(crate) use dungeon_entrance::{entrance_in, entrance_near};
+pub(crate) use escort::{escortee_killed, world_gait};
+pub(crate) use escort_look::world_look as escort_on_world_map;
 pub(crate) use finds::{Find, find_here, picked_up};
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
@@ -93,6 +99,8 @@ mod dots_tests;
 mod drops_tests;
 #[cfg(test)]
 mod dungeon_tests;
+#[cfg(test)]
+mod escort_tests;
 #[cfg(test)]
 mod extras_tests;
 #[cfg(test)]

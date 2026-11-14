@@ -3,6 +3,7 @@
 use shared::dungeon::line_is_clear;
 
 use super::doors::{Opened, open_on_the_way, way_level};
+use super::escortee::mind_escort;
 use super::facing::noises;
 use super::fight::{MobBlow, mob_turn};
 use super::on_ground::on_ground;
@@ -75,6 +76,13 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
         let noises = noises(&fighting, mobs);
         // Anyone at rest, settling or guarding may notice someone.
         for mob in mobs.iter_mut().filter(|mob| !mob.still) {
+            // One escorted only keeps near its quester (`escortee`).
+            if mob.escort.is_some() {
+                if mind_escort(mob, &spots) {
+                    due.insert((mob.energy.ready_at(tick, mob.speed), mob.id));
+                }
+                continue;
+            }
             mob.listen(&noises);
             mind_territory(mob, level, &spots, tick);
             if let Some(doing) = notice(mob, level, &spots) {
@@ -113,7 +121,10 @@ pub(crate) fn run_mobs(clients: &mut [Client], world: &mut ServerWorld) {
             let was_at = mob.position;
             let was_spot = mob.spot;
             let ground = (&*level, relief.as_ref());
-            let fighting = mob_turn(mob, ground, &spots, (tick, &taken), &mut blows);
+            let fighting = match mob.escort {
+                Some(_) => None,
+                None => mob_turn(mob, ground, &spots, (tick, &taken), &mut blows),
+            };
             let cost = if let Some(cost) = fighting {
                 cost
             } else if matches!(mob.doing, Doing::Tracking { .. }) {

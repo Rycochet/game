@@ -16,7 +16,9 @@ use crate::storage::SiteId;
 pub(super) const DEV_MOB_NUMBERS: u32 = 1 << 31;
 /// A site's quest boss: kept like a level's own (`dead` while it is down).
 pub(crate) const BOSS_NUMBER: u32 = DEV_MOB_NUMBERS - 1;
-/// Numbers from here up to the boss's are extras a quest's "Slay" brings
+/// Someone a quester escorts (`escortee`): never kept.
+pub(super) const ESCORT_NUMBER: u32 = BOSS_NUMBER - 1;
+/// Numbers from here up to the escortee's are extras a quest's "Slay" brings
 /// (`quest_mobs`): never kept.
 pub(super) const EXTRA_NUMBERS: u32 = 1 << 30;
 
@@ -58,6 +60,7 @@ impl Mob {
             pacing: Default::default(),
             still: false,
             kept_in: None,
+            escort: None,
         }
     }
 

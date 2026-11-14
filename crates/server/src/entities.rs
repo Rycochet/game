@@ -30,6 +30,7 @@ mod dev_gift;
 mod dev_mob;
 mod doors;
 mod doubling_back;
+mod escortee;
 mod facing;
 #[cfg(test)]
 mod facing_tests;
@@ -65,6 +66,7 @@ pub(crate) use dev_gift::{give_to_mob, mob_in_sight};
 pub(crate) use dev_mob::dev_mobs;
 pub(crate) use doors::{MobDoors, Opened};
 use doubling_back::Pacing;
+pub(crate) use escortee::{Escortee, escortee_mob, escortee_worn};
 pub(crate) use fight::{MobBlow, Striker, hit_mob};
 use gear::dressed;
 pub(super) use gear::{give, kill};
@@ -197,6 +199,8 @@ pub(crate) struct Mob {
     /// A site's own mob about in the wilderness: the site whose first level
     /// keeps it (`home_level` 0), its `home` in wilderness cells.
     kept_in: Option<SiteId>,
+    /// Someone a quester escorts (`escortee`): never kept, friendly to all.
+    escort: Option<Escortee>,
 }
 
 impl Mob {
@@ -208,6 +212,9 @@ impl Mob {
     /// How it feels about a creature of this kind, played by this character, with
     /// what it remembers of them.
     fn feeling(&self, kind: CreatureKind, character: Option<&CharacterId>) -> Feeling {
+        if self.escort.is_some() {
+            return Feeling::Friendly;
+        }
         let start = self.kind.feeling_about(kind);
         character.map_or(start, |character| self.memory.standing(character, start))
     }

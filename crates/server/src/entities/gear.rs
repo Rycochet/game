@@ -178,6 +178,7 @@ pub(super) fn bury(
             alignment: dead.alignment,
             provoked: provoked.collect(),
             boss: dead.is_boss(),
+            escort: (dead.escort.as_ref()).map(|escort| (escort.quester, escort.quest)),
         });
     }
     population.due.retain(|&(_, id)| id != mob);

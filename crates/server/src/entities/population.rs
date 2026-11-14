@@ -174,6 +174,7 @@ impl ServerWorld {
         for mob in &mut population.mobs {
             if let Doing::Going { after, gap, .. } = mob.doing
                 && after == taken.who
+                && mob.escort.is_none()
                 && mob.kind.def().uses_stairs
                 && line_is_clear(&population.level, mob.position, taken.stairs)
             {

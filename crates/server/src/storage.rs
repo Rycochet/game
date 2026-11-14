@@ -37,7 +37,7 @@ pub use characters::Everywhere;
 pub use dungeon_stay::DungeonStay;
 #[cfg(test)]
 pub use quest_book::RETAKE_AFTER;
-pub use quest_book::{Ended, Progress, QuestBook};
+pub use quest_book::{Ended, EscortAt, Progress, QuestBook};
 pub use roads::RoadSave;
 pub use saves::{
     CellMasks, CharacterSave, CharacterWorldSave, DevReturn, KnownPoi, LevelSave, MobRecord,

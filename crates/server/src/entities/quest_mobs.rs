@@ -12,7 +12,7 @@ use shared::quest::{boss_of, boss_tier};
 use shared::rng::Seed;
 use shared::sheet::Attribute;
 
-use super::made::{BOSS_NUMBER, EXTRA_NUMBERS};
+use super::made::{BOSS_NUMBER, ESCORT_NUMBER, EXTRA_NUMBERS};
 use super::{Mob, dressed};
 use crate::ServerWorld;
 use crate::ids::new_id;
@@ -134,7 +134,7 @@ impl ServerWorld {
         let seed = Seed::new(poi.seed.derive("quest extras").at(&[tick as i64]));
         let spawns = chosen_spawns(seed, kind, short as u8, &population.level, &stairs);
         let mut number = (population.mobs.iter().map(|mob| mob.number))
-            .filter(|&n| (EXTRA_NUMBERS..BOSS_NUMBER).contains(&n))
+            .filter(|&n| (EXTRA_NUMBERS..ESCORT_NUMBER).contains(&n))
             .max()
             .map_or(EXTRA_NUMBERS, |n| n + 1);
         let mut came = 0;

@@ -10,8 +10,8 @@ use shared::pathfinding::find_world_path;
 use super::route_help::{nearest_cell, towards};
 use super::{Arrived, Player, PlayerEnergy, Stepped, TRAVEL_SPEED, Travel, TravelTo, action_tick};
 use crate::common::{
-    CurrentWorld, GameClock, GameView, MapPosition, NearRivers, PlayerGait, PlayerSpeed,
-    SmoothPosition,
+    CurrentWorld, EscortGait, GameClock, GameView, MapPosition, NearRivers, PlayerGait,
+    PlayerSpeed, SmoothPosition,
 };
 
 /// Moves along the route found when the journey was asked for, always ending
@@ -29,12 +29,14 @@ pub(super) fn travel(
     mut arrived: MessageWriter<Arrived>,
     mut stepped: MessageWriter<Stepped>,
     speed_now: Res<PlayerSpeed>,
-    gait: Res<PlayerGait>,
+    (gait, escort): (Res<PlayerGait>, Res<EscortGait>),
     rivers: Res<NearRivers>,
     mut energy: ResMut<PlayerEnergy>,
     player: Single<(&mut MapPosition, &mut SmoothPosition, &mut Travel), With<Player>>,
 ) {
     let (mut tile, mut smooth, mut travel) = player.into_inner();
+    // With someone escorted, at the slower's pace.
+    let world_gait = gait.on_world_map(&escort);
     // Levels and the Hall are `travel_on_level`'s.
     let Some(world) = world.filter(|_| *view.get() == GameView::WorldMap) else {
         requests.clear();
@@ -61,7 +63,7 @@ pub(super) fn travel(
     if let Some(request) = requests.read().last() {
         let from = (tile.x, tile.y);
         let to = (request.x, request.y);
-        let path = find_world_path(ground, conditions, roads, rivers, from, to, gait.0);
+        let path = find_world_path(ground, conditions, roads, rivers, from, to, world_gait);
         travel.goal = to;
         travel.route_arrives = path.reached;
         travel.route = path.cells.into();
@@ -106,7 +108,7 @@ pub(super) fn travel(
                 );
                 let road = roads.kind_of(at, next);
                 let on = footing(ground, conditions, road, next);
-                world_step_time(at, next, ends, on, gait.0) as f64 / step_cost(at, next) as f64
+                world_step_time(at, next, ends, on, world_gait) as f64 / step_cost(at, next) as f64
             } else {
                 1.0
             };
@@ -121,11 +123,12 @@ pub(super) fn travel(
                 let step = Step::new((next.0 - at.0).signum(), (next.1 - at.1).signum())
                     .expect("the next cell isn't this one");
                 // The route was legal when it was found, but cells can change.
-                let legal = step_on_world_map_by(ground, conditions, at, step, gait.0);
+                let legal = step_on_world_map_by(ground, conditions, at, step, world_gait);
                 if legal != Some(next) {
                     // The tide or a thaw has cut the way: find another from here.
                     let goal = travel.goal;
-                    let path = find_world_path(ground, conditions, roads, rivers, at, goal, gait.0);
+                    let path =
+                        find_world_path(ground, conditions, roads, rivers, at, goal, world_gait);
                     travel.route_arrives = path.reached;
                     travel.route = path.cells.into();
                     if travel.route.is_empty() {
@@ -139,7 +142,7 @@ pub(super) fn travel(
                     ground.elevation(next.0, next.1, conditions),
                 );
                 let on = footing(ground, conditions, roads.kind_of(at, next), next);
-                let cost = world_step_time(at, next, ends, on, gait.0);
+                let cost = world_step_time(at, next, ends, on, world_gait);
                 energy.energy.spend(tick, speed_now.0, cost);
                 stepped.write(Stepped::between(step, at, next));
                 let jumped = next != step.from(at);

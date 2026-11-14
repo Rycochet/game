@@ -76,3 +76,13 @@ fn values_past_full_go_no_further() {
     skills.practise(MOVEMENT_SKILLS.climbing, 1_728_000);
     assert_eq!(Gait::of(&skills).climbing, FULL);
 }
+
+#[test]
+fn two_together_go_at_the_slower_pace_in_each_skill() {
+    let runner = skilled(0, 5000);
+    let climber = skilled(8000, 1000);
+    assert_eq!(runner.slower(climber), skilled(0, 1000));
+    assert_eq!(runner.slower(Gait::UNSKILLED), Gait::UNSKILLED);
+    assert_eq!(Gait::UNSKILLED.slower(runner), Gait::UNSKILLED);
+    assert_eq!(runner.slower(runner), runner);
+}

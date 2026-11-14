@@ -21,6 +21,7 @@ fn a_quest_to_hand_in_has_a_dot_on_its_givers_door_in_their_town() {
         at: NOW,
         counts: done.collect(),
         ready: true,
+        escort: None,
     };
     test.client
         .character

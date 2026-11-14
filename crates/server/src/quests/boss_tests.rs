@@ -71,6 +71,7 @@ fn taken(quest: &Quest) -> Progress {
         at: NOW,
         counts: vec![0; quest.steps.len()],
         ready: false,
+        escort: None,
     }
 }
 

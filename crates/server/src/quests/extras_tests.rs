@@ -59,6 +59,7 @@ fn a_slay_step_brings_extras_of_its_kind_until_there_are_enough() {
         at: NOW,
         counts: vec![0; quest.steps.len()],
         ready: false,
+        escort: None,
     };
     let book = &mut test.client.character.quests;
     book.taken.insert(quest.id, progress);

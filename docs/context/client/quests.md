@@ -6,7 +6,7 @@ What the client knows of quests, all from the server (`shared::protocol::QuestNe
 
 - `crates/client/src/quests/mod.rs`: `QuestsPlugin` (`Update`: `read_server`, `find_quest_pois`, `find_tracked_dots`; `PostUpdate` after transforms: `show_marks`). Tests in `tests.rs`.
 - `quests/book.rs`: `QuestBook` (entries, `dailies`, `tracked`, `ahead`; `followed`), `BossMarks`, `FindMarks`, `done_steps`, `DoorMarkers`, `GateQuests`, `QuestPlanets`.
-- `quests/read.rs`: `read_server` (`Log` replaces the book with its dailies and tracked quest, `Changed` one entry, `Tracked`, `Markers` the doors, `Planets` the gates (those with quests `taken`) and `QuestPlanets`; `Dots` into `LevelDots`; `Bosses` into `BossMarks`, `Finds` into `FindMarks`, `Ahead` into the book; `Welcome` forgets all).
+- `quests/read.rs`: `read_server` (`Log` replaces the book with its dailies and tracked quest, `Changed` one entry, `Tracked`, `Markers` the doors, `Planets` the gates (those with quests `taken`) and `QuestPlanets`; `Dots` into `LevelDots`; `Bosses` into `BossMarks`, `Finds` into `FindMarks`, `Ahead` into the book; `Escort` into `common::EscortGait`; `Welcome` forgets all).
 - `quests/look.rs`: `MarkLook` (`of(Marker)`, `of_boss(BossSign)` (a red "!", `common::QUEST_RED`, or the quest's "!"), `of_state(kind, QuestState)` for the log, `new(kind, ready)`, `glyph`, `class` (its badge's `span.mark-<colour>`), `colour`, `rgb`): yellow normal, blue daily, orange artifact, grey locked "!" or under way "?" (owner); the colours are `common`'s `QUEST_*`.
 - `quests/words.rs`: `or_partly`, `plain`, `step_lines` (each step with "(done)"), `reward_line`: for `talk` and `quest_log`.
 - `quests/dots.rs`: `LevelDots` (the server's `QuestNews::Dots`), `TrackedDots` and `find_tracked_dots` (the followed quest's colour and dots: on the world map each open step's poi or town (a step in a quest's own dungeon: its giver's town), or the giver's town to hand in (`world_chunks`), placed by `KnownPois`; on a level the server's cells), `OpenQuestLog`.
@@ -30,7 +30,7 @@ What the client knows of quests, all from the server (`shared::protocol::QuestNe
 
 ## Depends on
 
-- `common` (`CurrentDungeon`, `CurrentWorld`, `DrawnGround`, `GameView`, `Portal`, `QUEST_*` colours), `connection` (`FromServer`), `dungeon_map` (`CELL_SIZE`), `view3d` (`ViewCamera`, `TokenView`, `TOKEN_DIAMETER`), `shared::protocol`, `shared::quest`, `shared::hall`.
+- `common` (`CurrentDungeon`, `CurrentWorld`, `DrawnGround`, `EscortGait`, `GameView`, `Portal`, `QUEST_*` colours), `connection` (`FromServer`), `dungeon_map` (`CELL_SIZE`), `view3d` (`ViewCamera`, `TokenView`, `TOKEN_DIAMETER`), `shared::protocol`, `shared::quest`, `shared::hall`.
 
 ## Used by
 

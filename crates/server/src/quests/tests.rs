@@ -201,6 +201,7 @@ fn kills_and_arrivals_move_steps_on() {
             at: NOW,
             counts: vec![0; quest.steps.len()],
             ready: false,
+            escort: None,
         },
     );
     let other = if kind == CreatureKind::Kobold {

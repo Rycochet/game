@@ -121,7 +121,8 @@ impl Client {
         let on_river = world.river_points.contains(to);
         let footing = world.ground.footing(to, world.conditions(), road, on_river);
         let river = footing.wades();
-        let gait = Gait::of(&self.sheet.skills);
+        // With someone escorted, at the slower's pace (owner).
+        let gait = crate::quests::world_gait(self);
         let cost = world_step_time(from, to, ends, footing, gait);
         let moved = Moved {
             on_world_map: true,

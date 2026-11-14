@@ -7,7 +7,7 @@ mod place_names;
 use std::collections::btree_map::Entry;
 
 use bevy::prelude::*;
-use shared::movement::{Gait, Step, step_on_world_map_by};
+use shared::movement::{Step, step_on_world_map_by};
 use shared::poi::{ChunkPos, Poi};
 use shared::protocol::{ServerMessage, WORLD_MAP_PRELOAD, WORLD_MAP_SIGHT};
 
@@ -24,7 +24,8 @@ pub(crate) use place_names::{learn_place, learn_place_name, send_chunk};
 /// has gone.
 pub(crate) fn stepped(client: &mut Client, world: &ServerWorld, step: Step) -> bool {
     let conditions = world.conditions();
-    let gait = Gait::of(&client.sheet.skills);
+    // With someone escorted, at the slower's pace (owner).
+    let gait = crate::quests::world_gait(client);
     let from = client.world_position();
     let Some(to) = step_on_world_map_by(&world.ground, conditions, from, step, gait) else {
         info!(

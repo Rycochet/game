@@ -25,6 +25,7 @@ pub(crate) fn end(
         return true;
     }
     book.ended.insert(id, Ended { at: now, failed });
+    super::escort::dismiss(client, world, id);
     client.unsaved = true;
     let vanished = client.inventory.remove_quest_items(id) > 0;
     info!(
