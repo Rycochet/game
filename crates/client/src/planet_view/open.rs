@@ -10,7 +10,8 @@ use super::bar::{Bar, spawn_bar};
 use super::orbit::Orbit;
 use super::showing::{Choice, PlanetView, SceneAssets, Showing, build_globe};
 use crate::common::{CurrentWorld, ServerClock};
-use crate::widgets::{layer_z, leaves_presses};
+use crate::dom::OwnPointer;
+use crate::widgets::layer_z;
 
 /// Above the menus and their layers.
 const VIEW_LAYER: i32 = 50;
@@ -90,9 +91,9 @@ fn spawn_layer(
         },
         BackgroundColor(Color::BLACK),
         GlobalZIndex(layer_z(VIEW_LAYER)),
+        OwnPointer,
     ));
     let entity = layer.id();
-    layer.insert(leaves_presses(entity));
     let (mut bar, mut image) = (None, None);
     layer.with_children(|layer| {
         let node = layer.spawn((

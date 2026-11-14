@@ -64,6 +64,18 @@ pub struct Solid;
 #[require(Solid)]
 pub struct Opaque;
 
+/// On a node whose owner's code reads the pointer on it itself (a view it
+/// draws, a `dark` panel's darkening): a press on it, or on anything in it
+/// that isn't a button or element, hides what is under it but is left in the
+/// mouse's and fingers' input for the owner, never taken by a panel it lies on.
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[require(Solid)]
+pub struct OwnPointer;
+
+/// On a `dark` panel's element: its darkening across the window.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct Darkened(pub Entity);
+
 /// On an element while the pointer is on it or on something in it.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Hovered;

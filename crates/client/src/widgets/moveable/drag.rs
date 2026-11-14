@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::super::{ButtonPressed, ButtonState, Pressable, RaisePanel};
 use super::{FIRST_PANEL_Z, MoveablePanel, PanelPart};
 use crate::common::{TouchGesture, UiPointer, in_interface};
-use crate::dom::{Finder, Hit, Opaque};
+use crate::dom::{Finder, Hit, Opaque, OwnPointer};
 
 /// What is being moved, between frames.
 #[derive(Resource, Default)]
@@ -21,9 +21,17 @@ pub(in crate::widgets) struct Dragging {
     top_z: i32,
 }
 
+/// What a press on a node does: its part of a panel, whether it is a surface
+/// (`dom::Opaque`), and whether its owner reads the pointer itself.
+type PressRules<'w, 's> = (
+    Query<'w, 's, &'static PanelPart>,
+    Query<'w, 's, (), With<Opaque>>,
+    Query<'w, 's, (), With<OwnPointer>>,
+);
+
 /// What this takes from the mouse: a press on anything of the interface
 /// (`dom::Hit` has a target), and it is gone, so nothing under it sees it,
-/// unless the nearest part of a panel there leaves presses for its owner. A
+/// unless what is nearest there reads the pointer itself (`dom::OwnPointer`). A
 /// tap arrives as a press (see `touch`), so buttons work by touch; moving a
 /// panel by touch comes from `TouchGesture`.
 #[allow(clippy::too_many_arguments)]
@@ -34,7 +42,7 @@ pub(in crate::widgets) fn take_presses(
     (hit, finder): (Res<Hit>, Finder),
     mut gesture: ResMut<TouchGesture>,
     scale: Res<UiScale>,
-    (parts, surfaces): (Query<&PanelPart>, Query<(), With<Opaque>>),
+    (parts, surfaces, owned): PressRules,
     buttons: Query<(Entity, Option<&ButtonState>), With<Pressable>>,
     mut raised: MessageReader<RaisePanel>,
     mut panels: Query<(&mut MoveablePanel, &mut GlobalZIndex)>,
@@ -43,10 +51,13 @@ pub(in crate::widgets) fn take_presses(
 ) {
     let dragging = &mut *dragging;
     // What a press on this does, if it is a part of a panel; a surface
-    // (`dom::Opaque`) stops presses as a panel's body does.
+    // (`dom::Opaque`) stops presses as a panel's body does, and what reads
+    // the pointer itself (`dom::OwnPointer`) leaves them for its owner.
     let part_of = |entity: Entity| {
         let part = parts.get(entity).ok().copied();
-        part.or_else(|| surfaces.contains(entity).then_some(PanelPart::Body(entity)))
+        let owners = owned.contains(entity).then_some(PanelPart::LeftForOwner);
+        part.or(owners)
+            .or_else(|| surfaces.contains(entity).then_some(PanelPart::Body(entity)))
     };
     let mut raise = |panel: Entity, panels: &mut Query<(&mut MoveablePanel, &mut GlobalZIndex)>| {
         if let Ok((_, mut z)) = panels.get_mut(panel) {
@@ -74,7 +85,7 @@ pub(in crate::widgets) fn take_presses(
             if !state.is_some_and(|state| state.is_disabled()) {
                 pressed.write(ButtonPressed(entity));
             }
-        } else if hit.target.is_some() && !matches!(part, Some(PanelPart::LeftForOwner(_))) {
+        } else if hit.target.is_some() && !matches!(part, Some(PanelPart::LeftForOwner)) {
             mouse.clear_just_pressed(MouseButton::Left);
         }
         // A press on a button in a panel is a press on the panel, but its
@@ -89,7 +100,7 @@ pub(in crate::widgets) fn take_presses(
                 dragging.from = pointer.0;
             }
             Some(PanelPart::Body(panel)) => raise(panel, &mut panels),
-            Some(PanelPart::LeftForOwner(_)) | None => {}
+            Some(PanelPart::LeftForOwner) | None => {}
         }
     }
     if !mouse.pressed(MouseButton::Left)
@@ -118,7 +129,7 @@ pub(in crate::widgets) fn take_presses(
             let part = chain.unwrap_or_default().into_iter().find_map(part_of);
             let taken = match part {
                 Some(PanelPart::TitleBar(panel)) => Some(panel),
-                Some(PanelPart::LeftForOwner(_)) => None,
+                Some(PanelPart::LeftForOwner) => None,
                 _ => on_interface.then_some(Entity::PLACEHOLDER),
             };
             dragging.touch = Some((start, taken));

@@ -2,11 +2,6 @@
 
 use bevy::prelude::*;
 
-/// Darkens everything outside the full map, and stops widgets under it being
-/// used; presses there are left for `take_input`, which closes the map.
-#[derive(Component)]
-pub(super) struct FullMapDarkening;
-
 /// The picture of a World Gate's code in runes (`gate_runes`), under the full
 /// map's hover box's name.
 #[derive(Component)]

@@ -5,9 +5,9 @@
 use bevy::prelude::*;
 
 use crate::common::SkillsPage;
+use crate::dom::OwnPointer;
 use crate::widgets::{
-    BUTTON_PADDING, ButtonState, ButtonTooltip, INK, Pressable, TextSize, UiId, leaves_presses,
-    spawn_button,
+    BUTTON_PADDING, ButtonState, ButtonTooltip, INK, Pressable, TextSize, UiId, spawn_button,
 };
 
 /// The form all its widgets' ids are in.
@@ -16,7 +16,8 @@ pub(super) const FORM: &str = "skills";
 const CANVAS_WIDTH: f32 = 640.0;
 const CANVAS_HEIGHT: f32 = 480.0;
 
-/// Where the tree is drawn: presses on it are the page's to read.
+/// Where the tree is drawn: presses on it, or on the tree in it, are the page's
+/// to read (`dom::OwnPointer`).
 #[derive(Component)]
 pub(super) struct Canvas;
 /// The middle of the canvas, which the tree's nodes are placed from.
@@ -53,6 +54,7 @@ fn spawn_parts(column: &mut ChildSpawnerCommands) {
     let canvas = column
         .spawn((
             Canvas,
+            OwnPointer,
             Node {
                 width: px(CANVAS_WIDTH),
                 height: px(CANVAS_HEIGHT),
@@ -62,20 +64,15 @@ fn spawn_parts(column: &mut ChildSpawnerCommands) {
             BackgroundColor(Color::srgba(0.25, 0.17, 0.1, 0.06)),
         ))
         .id();
-    column
-        .commands()
-        .entity(canvas)
-        .insert(leaves_presses(canvas))
-        .with_child((
-            Origin,
-            leaves_presses(canvas),
-            Node {
-                position_type: PositionType::Absolute,
-                left: percent(50),
-                top: percent(50),
-                ..default()
-            },
-        ));
+    column.commands().entity(canvas).with_child((
+        Origin,
+        Node {
+            position_type: PositionType::Absolute,
+            left: percent(50),
+            top: percent(50),
+            ..default()
+        },
+    ));
     column.spawn((
         Details,
         Text::default(),

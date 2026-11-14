@@ -8,6 +8,7 @@ mod build;
 mod change;
 mod check;
 mod controls;
+mod dark;
 #[cfg(all(feature = "debug-api", not(target_arch = "wasm32")))]
 mod debug_api;
 mod error;
@@ -46,7 +47,7 @@ pub use object_ability::{
 };
 pub use object_grid::{DrawObjects, GridAim, GridBox, GridShown, GridThing, ThingCell};
 pub use object_slot::{SlotLook, SlotShown, SlotThing};
-pub use parts::{AlwaysBars, Opaque, Solid};
+pub use parts::{AlwaysBars, Opaque, OwnPointer, Solid};
 pub use parts::{Document, DocumentOf, document, document_in};
 pub use popup::{ClosePopups, KeptOpen};
 
@@ -118,6 +119,7 @@ impl Plugin for DomPlugin {
                         restyle::restyle,
                         controls::follow_elements,
                         surfaces::follow_surfaces,
+                        dark::follow_darkenings,
                         objects::show_objects,
                         object_grid::draw_object_grids.in_set(DrawObjects),
                         object_slot::draw_object_slots.in_set(DrawObjects),

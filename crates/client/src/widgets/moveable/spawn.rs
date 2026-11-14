@@ -87,8 +87,8 @@ pub(in crate::widgets) enum PanelPart {
     TitleBar(Entity),
     Close(Entity),
     /// Stops it reaching widgets under it, but leaves it for its owner to read
-    /// from the mouse and fingers.
-    LeftForOwner(Entity),
+    /// from the mouse and fingers (`dom::OwnPointer`).
+    LeftForOwner,
 }
 
 /// A moveable panel with this title, at this place. Returns the panel, and the

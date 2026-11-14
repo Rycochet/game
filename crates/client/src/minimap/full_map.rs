@@ -1,8 +1,8 @@
-//! The full map: whether it is open, where it is dragged to and its zoom; the darkening behind it.
+//! The full map: whether it is open, where it is dragged to and its zoom.
 
 use bevy::prelude::*;
 
-use super::{FullMapDarkening, OPENING_ZOOM};
+use super::OPENING_ZOOM;
 
 /// The full map: whether it is open, where it has been dragged to, and how
 /// far it is zoomed in.
@@ -38,16 +38,4 @@ impl FullMap {
     pub(super) fn set_open(&mut self, open: bool) {
         *self = Self { open, ..default() };
     }
-}
-
-/// The darkening shows while the full map does.
-pub(super) fn show_darkening(
-    full: Res<FullMap>,
-    mut behind: Single<&mut Visibility, With<FullMapDarkening>>,
-) {
-    behind.set_if_neq(if full.open {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    });
 }
