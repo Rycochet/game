@@ -66,13 +66,13 @@ pub(super) fn dressed(
 }
 
 /// A player gives a carried item to a mob near enough and in sight. It remembers,
-/// and keeps the item.
+/// and keeps the item. What kind of creature it was.
 pub(crate) fn give(
     client: &mut Client,
     world: &mut ServerWorld,
     item: Id,
     to: Id,
-) -> Result<(), &'static str> {
+) -> Result<CreatureKind, &'static str> {
     let character = client.character_id.ok_or("nobody to remember")?;
     let visit = client.visit.as_mut().ok_or("not in a site")?;
     let (from, place) = (visit.position(), visit.population());
@@ -96,12 +96,13 @@ pub(crate) fn give(
         .hand_over(item)
         .ok_or("can't hand that over")?;
     mob.memory.remember_gift(character);
+    let kind = mob.kind;
     let (home_level, home, memory) = (mob.home_level, mob.home, mob.memory.clone());
     let site = mob.kept_with(place.0);
     let record = record_of(world, site, (to, home_level, home));
     record.memory = memory;
     record.carried.push(item);
-    Ok(())
+    Ok(kind)
 }
 
 /// What is kept of a mob (`id`, `home_level`, `home`) on `site`: saved with the

@@ -3,7 +3,7 @@
 //! when something asked can't be done.
 
 use shared::lang::{Args, Lang};
-use shared::protocol::{Ahead, Hint, QuestRefusal};
+use shared::protocol::{Ahead, Heard, Hint, QuestRefusal};
 use shared::quest::Standing;
 use shared::site::BuildingKind;
 use shared::story::Person;
@@ -31,9 +31,50 @@ pub(super) fn giver_title(lang: &Lang, giver: &Person, kind: BuildingKind) -> St
     or_partly(lang.render("giver-title", &args))
 }
 
+/// Someone named with what they do, for words with `$name` and
+/// `$occupation`: the message `id`, or `id-house` for a house's giver, who
+/// does nothing in particular.
+fn named(lang: &Lang, id: &str, giver: &Person, kind: BuildingKind) -> (String, Args) {
+    let name = or_partly(giver.full_name(lang));
+    let occupation = occupation_id(kind);
+    if !lang.has(&occupation) {
+        return (format!("{id}-house"), Args::new().name("name", name));
+    }
+    let occupation = or_partly(lang.render(&occupation, &Args::new()));
+    let args = Args::new()
+        .name("name", name)
+        .text("occupation", occupation);
+    (id.to_owned(), args)
+}
+
+/// What a giver says of who put in a good word for the character.
+pub(super) fn heard_text(lang: &Lang, heard: &Heard) -> String {
+    let (id, args) = match heard {
+        Heard::Neighbour { giver, kind } => named(lang, "talk-heard-neighbour", giver, *kind),
+        Heard::Town { name: Some(town) } => (
+            "talk-heard-town-named".to_owned(),
+            Args::new().name("town", town),
+        ),
+        Heard::Town { name: None } => ("talk-heard-town".to_owned(), Args::new()),
+    };
+    or_partly(lang.render(&id, &args))
+}
+
 /// What a giver says of why a quest can't be taken yet.
 pub(super) fn hint_text(lang: &Lang, hint: &Hint) -> String {
+    if let Hint::Neighbour { giver, kind } = hint {
+        let (id, args) = named(lang, "hint-neighbour", giver, *kind);
+        return or_partly(lang.render(&id, &args));
+    }
     let (id, args) = match hint {
+        Hint::Neighbour { .. } => unreachable!("worded above"),
+        Hint::Moon {
+            colour: Some(colour),
+        } => (
+            "hint-moon-named",
+            Args::new().text("colour", format!("{colour:?}").to_lowercase()),
+        ),
+        Hint::Moon { colour: None } => ("hint-moon", Args::new()),
         Hint::Standing { least } => {
             let id = match least {
                 Standing::Stranger | Standing::Known => "hint-standing-known",

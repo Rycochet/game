@@ -59,6 +59,7 @@ fn find(world: &mut ServerWorld, chunk: ChunkPos, hook: Hook) -> Option<HookQues
         return None;
     }
     let town = {
+        let moons = world.moon_count();
         let ServerWorld {
             pois,
             ground,
@@ -72,6 +73,7 @@ fn find(world: &mut ServerWorld, chunk: ChunkPos, hook: Hook) -> Option<HookQues
             pois,
             roads: quests.roads(),
             name_of: &name_of,
+            moons,
         };
         owner(&quest_world, &poi, hook)?
     };

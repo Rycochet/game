@@ -44,6 +44,9 @@ pub enum Need {
     /// An alignment band. The quest is hidden entirely from anyone outside
     /// it: no grey "!", no hint.
     Alignment(Band),
+    /// The world's moon `moon` (its number among the moons) in the sky when
+    /// the quest is taken: always hidden, told only as the giver's hint.
+    Moon { moon: u8 },
 }
 
 /// A need, and whether only a hint tells of it.

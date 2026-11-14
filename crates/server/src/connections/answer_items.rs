@@ -129,9 +129,14 @@ pub(super) fn answer_items(
                 // Quest items are the character's own (owner).
                 Err("quest items can't be given")
             } else if sites::keeper_building(client, world, to).is_some() {
-                sites::give_to_keeper(client, world, item, to).map(|items| stock = Some(items))
+                let sold = sites::give_to_keeper(client, world, item, to);
+                sold.map(|items| {
+                    stock = Some(items);
+                    crate::quests::traded(client, world);
+                })
             } else {
-                crate::entities::give(client, world, item, to)
+                (crate::entities::give(client, world, item, to))
+                    .map(|kind| crate::quests::gave(client, world, kind))
             };
             match given {
                 Ok(()) => {
@@ -164,6 +169,7 @@ pub(super) fn answer_items(
             match sites::take_from_keeper(client, world, with, item, (to, x, y, rotation)) {
                 Ok(()) => {
                     client.unsaved = true;
+                    crate::quests::traded(client, world);
                     let grams = client.inventory.find(item).map_or(0, Item::total_weight);
                     let tick = world.action_clock.ticks();
                     client

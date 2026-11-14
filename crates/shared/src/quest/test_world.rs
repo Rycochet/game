@@ -28,6 +28,7 @@ impl TestWorld {
             pois: &self.pois,
             roads: &self.roads,
             name_of: &name_of,
+            moons: 2,
         }
     }
 

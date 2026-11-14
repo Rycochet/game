@@ -9,12 +9,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::hall::GateCode;
 use crate::poi::ChunkPos;
-use crate::quest::{QuestId, QuestKind, Standing, Step};
-use crate::skill::SkillId;
+use crate::quest::{QuestId, QuestKind, Step};
 use crate::story::{Ending, Person, RewardPart, Story};
 use crate::world::WorldId;
 
 pub use super::quest_marks::{BossMark, BossSign, FindMark};
+pub use super::quest_offer::{Heard, Hint, Offer, OfferState};
 
 /// What a client asks about quests.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -157,56 +157,6 @@ pub struct PlanetQuests {
     pub taken: bool,
     /// Some of them wait to be handed in ("?" over its gates, not "!").
     pub ready: bool,
-}
-
-/// One quest a giver talks about.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Offer {
-    pub id: QuestId,
-    pub kind: QuestKind,
-    /// Who gives it: the building's household's member for its slot.
-    pub giver: Person,
-    pub state: OfferState,
-}
-
-/// Where a giver's quest stands for the player.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OfferState {
-    /// On offer: its story and what it pays.
-    Available {
-        story: Box<Story>,
-        reward: Vec<RewardPart>,
-        /// The character has already killed its boss or found its item: they
-        /// say so, and that step is done on taking it.
-        ahead: Option<Ahead>,
-    },
-    /// Not yet: what the giver says of why ("!" in grey).
-    Locked(Vec<Hint>),
-    /// Taken, and still under way.
-    Taken,
-    /// Taken, every step done: to hand in ("?").
-    Ready,
-}
-
-/// Why a giver won't give a quest yet, for the client to put in the giver's
-/// words: never how far off the character is.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Hint {
-    /// Folk round here don't know the character well enough yet.
-    Standing { least: Standing },
-    /// The giver has more to ask once their last quest is done.
-    Earlier,
-    /// Someone in another town (or another giver here) should be helped first:
-    /// its name, when it has one.
-    Elsewhere {
-        town: ChunkPos,
-        name: Option<String>,
-    },
-    /// The giver wants someone good at this.
-    Skill(SkillId),
-    /// The giver has heard the character killed the quest's boss, or found
-    /// its item.
-    Ahead(Ahead),
 }
 
 /// A door's marker. A giver with quests in several states shows the first of

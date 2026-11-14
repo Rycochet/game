@@ -20,6 +20,8 @@ mod id;
 mod kind;
 mod make;
 mod model;
+mod moon;
+mod neighbour;
 mod owner;
 mod plan;
 mod remains;
@@ -52,6 +54,8 @@ pub use world::{QuestWorld, is_larger, radius};
 mod dungeon_tests;
 #[cfg(test)]
 mod golden_tests;
+#[cfg(test)]
+mod neighbour_tests;
 #[cfg(test)]
 mod print_tests;
 #[cfg(test)]

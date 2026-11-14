@@ -1,11 +1,12 @@
 //! A town's quests: every giver's slots, each a chain of one to three quests
-//! on hooks near the town; then needs on smaller towns' feeders, and the
-//! town's own feeder.
+//! on hooks near the town; then needs on smaller towns' feeders and on
+//! other givers' first quests, and the town's own feeder.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::area::{Candidate, candidates};
 use super::feeder_quest::{add_feeder_needs, feeder_quest};
+use super::neighbour::add_neighbour_needs;
 use super::slot::{Claims, slot_quests};
 use super::world::{MOST_RADIUS, pois_within, radius};
 use super::{Quest, QuestWorld, givers};
@@ -38,6 +39,7 @@ pub fn town_quests(world: &QuestWorld, town: &Poi, buildings: &[BuildingLook]) -
         }
     }
     add_feeder_needs(world, town, &mut quests);
+    add_neighbour_needs(town, &mut quests);
     quests.extend(feeder_quest(world, town, buildings));
     quests
 }

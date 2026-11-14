@@ -11,6 +11,9 @@ pub struct QuestWorld<'a> {
     /// A place's name as players know it, if it has one (towns, castles,
     /// forts: the server's `place_name_of`, which needs the place's height).
     pub name_of: &'a dyn Fn(&Poi) -> Option<String>,
+    /// How many moons the world has (`Celestial::moon_count`), for quests
+    /// that wait for one in the sky.
+    pub moons: u8,
 }
 
 /// The largest `radius`, in chunks: how far a poi may be from a town whose

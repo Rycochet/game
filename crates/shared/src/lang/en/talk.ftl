@@ -44,9 +44,21 @@ hint-standing-champion = Only the town's own champion could help me with this.
 hint-earlier = Help me with what I've already asked first.
 hint-elsewhere-named = They speak of you in { $town }? Not yet, they don't.
 hint-elsewhere = Someone else should have good words for you first.
+hint-neighbour = Help { $name }, the { $occupation }, first. Then we'll talk.
+hint-neighbour-house = Help { $name } first. Then we'll talk.
 hint-skill = I'd want someone good at { $skill }.
+hint-moon-named = Come back when the { $colour } moon is in the sky.
+hint-moon = Come back when the moon is in the sky.
 hint-dealt-with = I've heard what you did out there. I won't forget it.
 hint-found = I've heard you came across something of ours. Hold on to it.
+
+## Who put in a good word for the character, before a quest that needed
+## another done first ("I heard you helped Mara Tull").
+
+talk-heard-neighbour = I heard you helped { $name }, the { $occupation }. A friend of theirs is welcome here.
+talk-heard-neighbour-house = I heard you helped { $name }. A friend of theirs is welcome here.
+talk-heard-town-named = Word came from { $town } of what you did for them.
+talk-heard-town = Word came down the road of what you did.
 
 ## When something asked of a quest can't be done.
 

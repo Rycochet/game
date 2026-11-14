@@ -3,8 +3,8 @@
 //! numbers). An alignment requirement they don't meet hides the quest
 //! entirely (owner).
 
-use shared::protocol::Hint;
-use shared::quest::{Need, Quest, Slot};
+use shared::protocol::{Heard, Hint};
+use shared::quest::{Need, Quest, QuestId, Slot};
 
 use super::standing::standing;
 use crate::ServerWorld;
@@ -38,22 +38,13 @@ pub(crate) fn judge(quest: &Quest, client: &Client, world: &ServerWorld) -> Verd
             Need::Standing { town, least } => {
                 (standing(book, town) < least).then_some(Hint::Standing { least })
             }
-            Need::Done(id) => (!book.done.contains_key(&id)).then(|| {
-                let own_chain = quest.id.earlier() == Some(id)
-                    || matches!((quest.id.slot, id.slot), (Slot::Giver { building: a, .. }, Slot::Giver { building: b, .. }) if a == b && quest.id.town == id.town);
-                if own_chain {
-                    Hint::Earlier
-                } else {
-                    let name = (world.pois.in_chunk(id.town)).and_then(|poi| place_name_of(world, &poi));
-                    Hint::Elsewhere {
-                        town: id.town,
-                        name,
-                    }
-                }
-            }),
+            Need::Done(id) => (!book.done.contains_key(&id)).then(|| done_hint(quest, id, world)),
             Need::Skill { skill, least } => {
                 (client.sheet.skills.value(skill) < least).then_some(Hint::Skill(skill))
             }
+            Need::Moon { moon } => (!world.moon_up(moon)).then(|| Hint::Moon {
+                colour: world.moon_colour(moon),
+            }),
         };
         hints.extend(hint);
     }
@@ -62,4 +53,55 @@ pub(crate) fn judge(quest: &Quest, client: &Client, world: &ServerWorld) -> Verd
     } else {
         Verdict::Missing(hints)
     }
+}
+
+/// What the giver of `quest` says of `id`, a quest it needs done first.
+fn done_hint(quest: &Quest, id: QuestId, world: &ServerWorld) -> Hint {
+    if same_giver(quest.id, id) {
+        return Hint::Earlier;
+    }
+    match heard_from(id, world) {
+        Some(Heard::Neighbour { giver, kind }) => Hint::Neighbour { giver, kind },
+        Some(Heard::Town { name }) => Hint::Elsewhere {
+            town: id.town,
+            name,
+        },
+        None => Hint::Elsewhere {
+            town: id.town,
+            name: None,
+        },
+    }
+}
+
+/// Who a character taking `quest` was given good words by: the giver of the
+/// first quest it needed done that isn't the giver's own.
+pub(crate) fn heard(quest: &Quest, world: &ServerWorld) -> Option<Heard> {
+    (quest.requirements.iter()).find_map(|requirement| match requirement.need {
+        Need::Done(id) if !same_giver(quest.id, id) => heard_from(id, world),
+        _ => None,
+    })
+}
+
+/// Whether two quests have the same giver: the same building of one town.
+fn same_giver(a: QuestId, b: QuestId) -> bool {
+    a.town == b.town
+        && matches!((a.slot, b.slot), (Slot::Giver { building: x, .. }, Slot::Giver { building: y, .. }) if x == y)
+}
+
+/// Who gave quest `id`: another giver of the same town, or a town by name.
+fn heard_from(id: QuestId, world: &ServerWorld) -> Option<Heard> {
+    let Some(town) = world.quests.kept(id.town) else {
+        let name = (world.pois.in_chunk(id.town)).and_then(|poi| place_name_of(world, &poi));
+        return Some(Heard::Town { name });
+    };
+    if let Slot::Giver { building, .. } = id.slot {
+        let quest = town.quests.iter().find(|quest| quest.id == id)?;
+        let look = town.buildings.iter().find(|look| look.id == building)?;
+        return Some(Heard::Neighbour {
+            giver: quest.story.cast.giver().person.clone(),
+            kind: look.kind,
+        });
+    }
+    let name = place_name_of(world, &town.poi);
+    Some(Heard::Town { name })
 }
