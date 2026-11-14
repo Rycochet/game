@@ -138,3 +138,18 @@ fn enemies_are_not_walked_into() {
     // Up to touching it.
     assert!(stride.at.x >= Spot::middle_of((1, 0)).x - 160 - 40);
 }
+
+/// An endless or NaN distance walks nothing, rather than never running out.
+#[test]
+fn a_distance_that_is_not_finite_walks_nothing() {
+    let level = room(5);
+    let start = Spot::middle_of((0, 0));
+    for distance in [f64::INFINITY, f64::NAN] {
+        let mut stride = Stride::at(start);
+        let mut moves = Vec::new();
+        let walked = stride.walk(&walker(&level), DVec2::X, distance, None, &mut moves);
+        assert_eq!(walked.distance, 0.0);
+        assert_eq!(stride.at, start);
+        assert!(moves.is_empty());
+    }
+}

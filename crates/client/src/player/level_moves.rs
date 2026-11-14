@@ -44,8 +44,9 @@ pub(super) fn jump_ahead(walker: &Walker, at: Spot, way: DVec2) -> Option<Spot> 
 /// walking from one spot to another takes) along a journey's route, adding
 /// each straight move to `moves`. Waits at a closed door in the way (asked
 /// open once); finds a new way from where it is if something else is in
-/// the way, giving up if that found way is blocked at once. Whether it has
-/// arrived where it was asked to go.
+/// the way, giving up if that found way is blocked at once. Stops for this
+/// frame when a walk gets nowhere, so a leftover too small to walk can't
+/// loop. Whether it has arrived where it was asked to go.
 pub(super) fn follow_route(
     travel: &mut Travel,
     walker: &Walker,
@@ -64,7 +65,7 @@ pub(super) fn follow_route(
             }
             continue;
         }
-        if distance <= 0.0 {
+        if distance.is_nan() || distance <= 0.0 {
             break;
         }
         // A jump on the route: taken whole, and shown.
@@ -86,6 +87,12 @@ pub(super) fn follow_route(
         if walked.distance >= 1.0 {
             travel.rerouted = false;
         }
+        // Nothing walked and nothing in the way: what is left is too small to
+        // walk (`distance / slow` rounds to 0), so it waits for the next frame
+        // rather than trying for ever.
+        if !walked.stuck && walked.distance <= 0.0 {
+            break;
+        }
         if walked.stuck {
             if let Some(door) = door_ahead(walker.level, travel.stride.at, way) {
                 wait_at_door(travel, door, asks);
@@ -102,3 +109,6 @@ pub(super) fn follow_route(
     }
     false
 }
+
+#[cfg(test)]
+mod tests;
