@@ -2,7 +2,8 @@
 //! open to the Honoured, paying the planet's set item once and artifacts
 //! after.
 
-use shared::item::Quality;
+use shared::item::{Item, ItemKind, Quality};
+use shared::item_form::ItemForm;
 use shared::poi::{CHUNK_SIZE, ChunkPos, PoiKind};
 use shared::protocol::OfferState;
 use shared::quest::{Quest, QuestKind, SECONDS_PER_DAY, Slot, daily_givers, set_item_of, utc_day};
@@ -164,8 +165,37 @@ fn the_set_item_is_found_once_then_artifacts_are_paid() {
     );
 }
 
+/// What a prize is, leaving out its id and when it was made.
+fn what(items: &[Item]) -> Vec<(ItemKind, Option<Quality>, bool, Option<ItemForm>)> {
+    (items.iter())
+        .map(|item| (item.kind, item.quality, item.set, item.form.clone()))
+        .collect()
+}
+
 #[test]
-fn handing_in_the_line_pays_its_prize() {
+fn a_prize_is_the_same_on_every_try_and_differs_by_quest() {
+    let mut test = TestClient::new();
+    let (_, line) = a_line(&mut test);
+    let last = line.last().unwrap();
+    let (first, _) = prize::prize_items(&test.client, &test.world, last);
+    let (again, _) = prize::prize_items(&test.client, &test.world, last);
+    assert!(!first.is_empty());
+    assert_eq!(what(&first), what(&again));
+    assert_ne!(first[0].id, again[0].id, "each item made has its own id");
+
+    // The same reward on other quests of the line rolls other prizes.
+    let prizes: Vec<_> = (line.iter())
+        .map(|quest| {
+            let mut quest = quest.clone();
+            quest.reward = vec![RewardPart::Artifact];
+            what(&prize::prize_items(&test.client, &test.world, &quest).0)
+        })
+        .collect();
+    assert!(prizes.iter().any(|prize| *prize != prizes[0]));
+}
+
+#[test]
+fn handing_in_the_line_pays_its_prize_or_keeps_the_same_one() {
     let mut test = TestClient::new();
     let (_, line) = a_line(&mut test);
     let last = line.last().unwrap().clone();
@@ -176,20 +206,22 @@ fn handing_in_the_line_pays_its_prize() {
         escort: None,
     };
     (test.client.character.quests.taken).insert(last.id, progress);
-    // The prize's kind is rolled from a new item id at each try, and a long
-    // weapon (a spear, a polearm, some longswords) never fits a new
-    // character's packs: the giver keeps it and the player tries again.
-    for _ in 0..50 {
-        finish(&mut test, &last, NOW);
-        if !test.client.character.quests.taken.contains_key(&last.id) {
-            break;
-        }
-    }
+    let (offered, _) = prize::prize_items(&test.client, &test.world, &last);
+    finish(&mut test, &last, NOW);
     let book = &test.client.character.quests;
+    if book.taken.contains_key(&last.id) {
+        // A long weapon a new character's packs can't hold: refused, nothing
+        // paid, and the same prize waits for when they have room (owner).
+        assert!(test.client.inventory.items.is_empty());
+        let (later, _) = prize::prize_items(&test.client, &test.world, &last);
+        assert_eq!(what(&offered), what(&later));
+        return;
+    }
     assert!(book.done.contains_key(&last.id));
     let carried = &test.client.inventory.items;
     let prize = carried.iter().find(|placed| placed.item.quality.is_some());
     let prize = prize.expect("its prize, besides coins").item.clone();
+    assert_eq!(what(&offered), what(std::slice::from_ref(&prize)));
     if last.reward.contains(&RewardPart::SetItem) {
         assert!(prize.set);
         assert_eq!(book.set_item, Some(last.id));
