@@ -17,6 +17,7 @@ mod model;
 mod parts;
 mod pick;
 mod sync;
+mod tilt;
 mod turn;
 mod xray;
 
@@ -26,9 +27,10 @@ pub use flash::{TokenFlash, flash_tokens};
 pub use hull::{HullMaterial, HullMaterials, grow_hulls};
 use model::ModelPart;
 pub use model::{MODEL_SCALE, ModelAnchor, sync_models};
-pub use parts::{IconAnchor, TokenView};
+pub use parts::{IconAnchor, TokenBase, TokenView};
 pub use pick::{ClickedToken, HoveredToken, find_token_under_cursor};
 pub use sync::{resize_tokens, sync_icons, sync_tokens};
+pub use tilt::BaseTilt;
 pub use turn::turn_models;
 pub use xray::{XRAY_WHITE, XrayMaterial};
 

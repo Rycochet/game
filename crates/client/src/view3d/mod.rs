@@ -9,6 +9,7 @@ mod anti_aliasing;
 mod bands;
 mod camera;
 mod clearance;
+mod grid;
 mod light_clusters;
 mod render_scale;
 mod token;
@@ -20,11 +21,12 @@ use bevy::window::PrimaryWindow;
 use crate::common::{DrawnGround, MapPosition, Preferences, SmoothPosition, ViewFacing, ViewTurn};
 use crate::player::{Player, PlayerSystems};
 pub use camera::OrbitCamera;
+pub use grid::ViewGrid;
+use token::{BaseTilt, IconAnchor, ModelAnchor, TokenAssets, TokenBase};
 pub use token::{
     ClickedToken, DIAMETER as TOKEN_DIAMETER, HALF_THICKNESS as TOKEN_HALF_THICKNESS, HoveredToken,
     TokenFlash, TokenView, XRAY_WHITE, XrayMaterial,
 };
-use token::{IconAnchor, ModelAnchor, TokenAssets};
 
 /// Vertical field of view. Narrow (a "long lens" from far away) flattens the
 /// perspective, so the map's sides stay closer to vertical.
@@ -108,39 +110,6 @@ pub enum View3dSystems {
 #[derive(Component)]
 pub struct ViewCamera;
 
-/// How the current view lays out its grid in 3D, set by the view when it
-/// becomes current. Grid position `(x, y)` is drawn at
-/// `(x × cell_size, floor, y × cell_size)`; the camera looks at the floor and
-/// tokens stand on it. `raised`: the wilderness's cells are raised by their
-/// ground's shape (`common::DrawnGround`, flat in buildings), and so are the
-/// camera and tokens.
-#[derive(Resource, Clone, Copy, Debug, PartialEq)]
-pub struct ViewGrid {
-    pub cell_size: f32,
-    pub floor: f32,
-    pub raised: bool,
-}
-
-impl ViewGrid {
-    /// The floor's height at grid position `(x, y)`, in world units.
-    pub fn floor_at(&self, heights: &DrawnGround, x: f32, y: f32) -> f32 {
-        match self.raised {
-            true => self.floor + heights.drawn_between(x, y) * self.cell_size,
-            false => self.floor,
-        }
-    }
-}
-
-impl Default for ViewGrid {
-    fn default() -> Self {
-        Self {
-            cell_size: 1.0,
-            floor: 0.0,
-            raised: false,
-        }
-    }
-}
-
 fn spawn_camera(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -203,16 +172,37 @@ fn place_camera_and_tokens(
             Without<ModelAnchor>,
         ),
     >,
-    mut views: Query<(&TokenView, &mut Transform), (Without<IconAnchor>, Without<ModelAnchor>)>,
+    mut views: Query<
+        (&mut TokenView, &mut Transform),
+        (
+            Without<IconAnchor>,
+            Without<ModelAnchor>,
+            Without<TokenBase>,
+        ),
+    >,
     mut anchors: Query<
         (&IconAnchor, &mut Transform),
         (
             Without<ViewCamera>,
             Without<TokenView>,
             Without<ModelAnchor>,
+            Without<TokenBase>,
         ),
     >,
-    mut models: Query<(&ModelAnchor, &mut Transform), (Without<ViewCamera>, Without<TokenView>)>,
+    mut models: Query<
+        (&ModelAnchor, &mut Transform),
+        (Without<ViewCamera>, Without<TokenView>, Without<TokenBase>),
+    >,
+    mut bases: Query<
+        &mut Transform,
+        (
+            With<TokenBase>,
+            Without<ViewCamera>,
+            Without<TokenView>,
+            Without<IconAnchor>,
+            Without<ModelAnchor>,
+        ),
+    >,
 ) {
     let (mut orbit, mut camera) = camera.into_inner();
     let size = grid.cell_size;
@@ -246,28 +236,42 @@ fn place_camera_and_tokens(
     // The camera turning east (positive yaw) puts west at the top.
     turn.set_if_neq(ViewTurn(-orbit.yaw));
 
-    for (view, mut transform) in &mut views {
+    // Token views never rotate, so turning each icon anchor about the
+    // vertical towards the camera makes it face the screen while standing
+    // upright. Scaling the anchor scales its icon by the owner's `TokenSize`.
+    let rotation = TokenAssets::icon_rotation(camera.rotation);
+    let half = token::HALF_THICKNESS;
+    for (mut view, mut transform) in &mut views {
         let Ok(position) = positions.get(view.owner) else {
             continue;
         };
         let (x, y) = shown_at(position);
-        let floor = grid.floor_at(&heights, x, y);
-        transform.translation = Vec3::new(x * size, floor + token::HALF_THICKNESS, y * size);
-    }
-
-    // Token views never rotate, so turning each anchor about the vertical
-    // towards the camera makes it face the screen while standing upright.
-    // Scaling the anchor scales its icon by the owner's `TokenSize`.
-    let rotation = TokenAssets::icon_rotation(camera.rotation);
-    for (anchor, mut transform) in &mut anchors {
-        let scale = anchor.scale();
-        transform.rotation = rotation;
-        transform.scale = Vec3::splat(scale);
-        transform.translation = TokenAssets::icon_offset(scale);
-    }
-    // Models stand on the top of their bases (turned by `turn_models`).
-    for (_, mut transform) in &mut models {
-        transform.translation = Vec3::Y * token::HALF_THICKNESS;
-        transform.scale = Vec3::splat(token::MODEL_SCALE);
+        // Each base lies on the ground under it, tilted where it slopes.
+        let tilt = match grid.raised && heights.slopes() {
+            true => BaseTilt::fit(view.radius, half, |dx, dz| {
+                grid.floor_at(&heights, x + dx / size, y + dz / size)
+            }),
+            false => BaseTilt::flat(grid.floor_at(&heights, x, y)),
+        };
+        // The root at the base's middle; what stands on it stands on the
+        // middle of its top, `up` from there.
+        let up = tilt.up(half);
+        transform.translation = Vec3::new(x * size, tilt.bottom, y * size) + up;
+        view.tilt = tilt.rotation();
+        if let Ok(mut base) = bases.get_mut(view.base) {
+            base.rotation = view.tilt;
+        }
+        // The icon or model stays upright, its feet on the top's middle.
+        if let Ok((anchor, mut transform)) = anchors.get_mut(view.anchor) {
+            let scale = anchor.scale();
+            transform.rotation = rotation;
+            transform.scale = Vec3::splat(scale);
+            transform.translation = TokenAssets::icon_offset(scale) + up - Vec3::Y * half;
+        }
+        // Turned by `turn_models`.
+        if let Ok((_, mut transform)) = models.get_mut(view.model) {
+            transform.translation = up;
+            transform.scale = Vec3::splat(token::MODEL_SCALE);
+        }
     }
 }
