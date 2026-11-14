@@ -232,6 +232,7 @@ impl Tag {
             Self::ToggleRow | Self::TabBar | Self::ColourPicker | Self::KeyBox => &["value"],
             Self::Panel => &["moveable", "grip"],
             Self::Dialog => &["modal", "depth", "closable"],
+            Self::Popup => &["hover"],
             Self::Scroll => &["max-height", "auto", "scrollbars"],
             Self::Object => &["type", "for"],
             Self::ObjectGrid => &[

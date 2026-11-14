@@ -31,13 +31,7 @@ fn mark_stock(
         let Some(thing) = things.find(|thing| thing.item.id == cell.item) else {
             continue;
         };
-        // A stack is named by its top, which is what shows.
-        let top = thing.item.top();
-        let name = ItemName {
-            words: top.name(),
-            quality: top.quality,
-            set: top.set,
-        };
+        let name = ItemName(thing.item.clone());
         let stock = StockCell {
             with: *with,
             item: thing.item.clone(),

@@ -8,9 +8,10 @@ use super::super::{Carried, Holding, item_cell_in_front};
 use super::{HELD_NAME_ABOVE, InventoryButton, ItemCell, OpenGrids, TOOLTIP_OFFSET};
 use crate::common::{GROUND, GameView, UiPointer};
 use crate::dom::Hit;
-use crate::widgets::{CELL, ItemTip, ItemTooltip};
+use crate::widgets::{CELL, ItemTip, ItemTooltip, Pointed, PointedItem};
 
-/// The name of what is under the pointer, or of what is held.
+/// What is held, named with what letting go would do; or what is under the
+/// pointer, pointed at for its popup.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub(in crate::inventory) fn show_tooltip(
     carried: Res<Carried>,
@@ -18,7 +19,7 @@ pub(in crate::inventory) fn show_tooltip(
     pointer: Res<UiPointer>,
     open: Res<OpenGrids>,
     (hit, cells): (Res<Hit>, Query<&ItemCell>),
-    mut tooltip: ResMut<ItemTooltip>,
+    (mut tooltip, mut pointed): (ResMut<ItemTooltip>, ResMut<PointedItem>),
     split: Res<super::super::split::Split>,
 ) {
     let shown = if let Some(held) = holding.held {
@@ -29,13 +30,19 @@ pub(in crate::inventory) fn show_tooltip(
     } else {
         item_cell_in_front(&hit.chain, &cells).map(|cell| cell.id)
     };
+    if holding.held.is_none() {
+        let found = shown.zip(pointer.0).and_then(|(id, at)| {
+            let notes = worn_notes(&carried.0, id).trim().to_owned();
+            Some((carried.0.find(id)?.clone(), notes, at))
+        });
+        if let Some((item, notes, at)) = found {
+            pointed.0 = Some(Pointed { item, notes, at });
+        }
+        return;
+    }
     let name = shown.and_then(|id| {
-        let item = match holding.held {
-            Some(_) => holding.item(&carried.0)?,
-            None => carried.0.find(id)?,
-        };
         // A stack is named by its top, which is what shows.
-        let item = item.top();
+        let item = holding.item(&carried.0)?.top();
         let words = format!("{}{}", item.name(), worn_notes(&carried.0, id));
         Some((words, item.quality, item.set))
     });

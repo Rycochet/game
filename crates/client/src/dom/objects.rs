@@ -111,11 +111,7 @@ pub(super) fn show_objects(
                     flex_shrink: 0.0,
                     ..default()
                 };
-                let name = ItemName {
-                    words: item.name(),
-                    quality: item.quality,
-                    set: item.set,
-                };
+                let name = ItemName((**item).clone());
                 let look = ItemLook::of(item);
                 object.with_children(|object| {
                     object.spawn(room).with_children(|room| {

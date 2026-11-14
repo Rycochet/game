@@ -170,11 +170,7 @@ fn draw(commands: &mut Commands, entity: Entity, node: &mut Node, item: &Item) {
     let shape = item.shape();
     node.width = px(shape.width as f32 * CELL);
     node.height = px(shape.height as f32 * CELL);
-    let name = ItemName {
-        words: item.name(),
-        quality: item.quality,
-        set: item.set,
-    };
+    let name = ItemName(item.clone());
     commands.entity(entity).despawn_related::<Children>();
     commands.entity(entity).with_children(|parent| {
         let look = ItemLook::of(item);

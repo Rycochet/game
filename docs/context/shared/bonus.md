@@ -25,7 +25,7 @@ Bonuses: what worn items and effects (food, potions, dev tools) add to a creatur
 
 ## Used by
 
-- `sheet` (`Sheet::effects`, `sheet/bonuses.rs`), `vitals` (`Totals` in `Vitals::most` and `limits_with`), `server` (`connections/vitals.rs`, `bonuses.rs`, `consume.rs`, `ground/eat.rs`, `entities/made.rs`), client `character` (the most's lines), `inventory` (`is_food`: eating on the clothes panel).
+- `sheet` (`Sheet::effects`, `sheet/bonuses.rs`), `vitals` (`Totals` in `Vitals::most` and `limits_with`), `server` (`connections/vitals.rs`, `bonuses.rs`, `consume.rs`, `ground/eat.rs`, `entities/made.rs`), client `character` (the most's lines), `inventory` (`is_food`: eating on the clothes panel), `item_popup` (`item_bonuses`, `food_effect`: the popup's lines).
 
 ## Notes
 

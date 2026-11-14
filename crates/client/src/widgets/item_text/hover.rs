@@ -8,33 +8,35 @@ use super::inline::InlineItem;
 use crate::common::{KnownItem, KnownItems};
 use crate::dom::Hit;
 use crate::widgets::item::TOOLTIP_OFFSET;
-use crate::widgets::{ItemTip, ItemTooltip};
+use crate::widgets::{ItemTip, ItemTooltip, Pointed, PointedItem};
 
-/// What an item in writing is called, as far as it is known.
+/// What is said of an item in writing not known yet.
 fn tip(known: Option<&KnownItem>, at: Vec2) -> ItemTip {
-    let (words, quality, set) = match known {
-        Some(KnownItem::Found(item, _)) => (item.name(), item.quality, item.set),
-        Some(KnownItem::Unknown(_)) => ("Unknown item".to_owned(), None, false),
-        Some(KnownItem::Asked(_)) | None => ("Finding out what this is".to_owned(), None, false),
+    let words = match known {
+        Some(KnownItem::Unknown(_)) => "Unknown item",
+        _ => "Finding out what this is",
     };
     ItemTip {
-        words,
-        quality,
-        set,
+        words: words.to_owned(),
+        quality: None,
+        set: false,
         at: at + TOOLTIP_OFFSET,
     }
 }
 
-/// Names the item under the pointer in the writing in front there
-/// (`dom::Hit`'s target), if any.
+/// Points at the item under the pointer in the writing in front there
+/// (`dom::Hit`'s target), if any, for its popup; one not known yet is named
+/// by a tooltip saying so.
 pub(in crate::widgets) fn name_inline_items(
     hit: Res<Hit>,
     layouts: Query<(&TextLayoutInfo, &ComputedNode, &UiGlobalTransform)>,
     items: Query<&InlineItem>,
     known: Res<KnownItems>,
     mut tooltip: ResMut<ItemTooltip>,
+    mut pointed: ResMut<PointedItem>,
 ) {
-    let Some(at) = hit.at.filter(|_| tooltip.0.is_none()) else {
+    let free = tooltip.0.is_none() && pointed.0.is_none();
+    let Some(at) = hit.at.filter(|_| free) else {
         return;
     };
     let Some((layout, node, transform)) = hit.target.and_then(|front| layouts.get(front).ok())
@@ -49,7 +51,14 @@ pub(in crate::widgets) fn name_inline_items(
         .iter()
         .find(|(_, _, rect)| rect.contains(inside))
         .and_then(|(item, ..)| items.get(*item).ok());
-    if let Some(item) = under {
-        tooltip.0 = Some(tip(known.get(item.id), at));
+    let Some(item) = under else {
+        return;
+    };
+    match known.get(item.id) {
+        Some(KnownItem::Found(item, _)) => {
+            let (item, notes) = ((**item).clone(), String::new());
+            pointed.0 = Some(Pointed { item, notes, at });
+        }
+        other => tooltip.0 = Some(tip(other, at)),
     }
 }

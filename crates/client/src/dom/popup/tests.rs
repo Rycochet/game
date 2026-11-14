@@ -84,3 +84,59 @@ fn a_press_on_its_padlock_locks_it_and_another_unlocks() {
         assert_eq!(app.world().get::<Popup>(popup).unwrap().locked, locked);
     }
 }
+
+static HOVER: Template = html!(
+    "popup.hover",
+    r#"<form id="h"><popup id="box" hover left="40" top="60"><p>About it</p></popup></form>"#
+);
+
+/// A frame of hover popups closing by themselves, with the pointer at `at`,
+/// and this one kept or not: who was told they closed.
+fn hover_frame(app: &mut App, at: Option<Vec2>, kept: bool) -> Vec<UiId> {
+    let id = UiId::new("h", "box");
+    app.world_mut().resource_mut::<UiPointer>().0 = at;
+    app.world_mut().resource_mut::<KeptOpen>().0 = if kept { vec![id] } else { vec![] };
+    app.world_mut()
+        .run_system_once(hover::close_hovers)
+        .unwrap();
+    app.world_mut().flush();
+    let mut events = app.world_mut().resource_mut::<Messages<UiEvent>>();
+    let closed = events
+        .drain()
+        .filter(|event| event.value == UiValue::Closed);
+    closed.map(|event| event.id).collect()
+}
+
+/// As though the pointer last rested on it or its subject a while ago.
+fn long_ago(app: &mut App, popup: Entity) {
+    let ago = hover::LastKept(-1.0 - hover::GRACE);
+    app.world_mut().entity_mut(popup).insert(ago);
+}
+
+#[test]
+fn a_hover_popup_closes_once_the_pointer_leaves_it_and_its_subject() {
+    let mut app = built(&HOVER);
+    app.init_resource::<KeptOpen>();
+    app.init_resource::<Time<Real>>();
+    let popup = find(&mut app, "h/box");
+    assert!(app.world().get::<Popup>(popup).unwrap().hover);
+    let away = Some(Vec2::splat(900.0));
+    // Newly shown: it waits.
+    assert!(hover_frame(&mut app, away, false).is_empty());
+    // On its subject: it stays.
+    long_ago(&mut app, popup);
+    assert!(hover_frame(&mut app, away, true).is_empty());
+    // No pointer (a finger lifted): it stays.
+    long_ago(&mut app, popup);
+    assert!(hover_frame(&mut app, None, false).is_empty());
+    // Locked: it stays.
+    long_ago(&mut app, popup);
+    app.world_mut().get_mut::<Popup>(popup).unwrap().locked = true;
+    assert!(hover_frame(&mut app, away, false).is_empty());
+    // Left a while ago, unlocked: it goes.
+    app.world_mut().get_mut::<Popup>(popup).unwrap().locked = false;
+    assert_eq!(
+        hover_frame(&mut app, away, false),
+        vec![UiId::new("h", "box")]
+    );
+}

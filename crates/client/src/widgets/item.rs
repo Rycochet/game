@@ -17,7 +17,8 @@ mod picture;
 
 pub use cells::spawn_item_cells;
 pub use look::{
-    ItemLook, ItemName, ItemTip, ItemTooltip, item_colour, item_edge, item_edge_width, item_label,
+    ItemLook, ItemName, ItemTip, ItemTooltip, Pointed, PointedItem, item_colour, item_edge,
+    item_edge_width, item_label,
 };
 pub(super) use look::{NameBox, NameEdge, NameText};
 pub(super) use name::{name_item_at_pointer, show_item_tooltip, spawn_name_box};
