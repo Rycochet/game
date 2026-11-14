@@ -21,7 +21,7 @@ The whole interface is markup: HTML's look with XML's closing rule, no CSS and n
 - `crates/client/src/dom/check.rs`: `check`: raw markup into `Checked` / `CheckedNode`, with ids, forms, `for` and where elements may go.
 - `crates/client/src/dom/theme.rs`: `Theme` (resource), `Look`. `theme/over_view.rs`: looks over the game's view or a dark backdrop (the loading bar, the hover box, the status text, popups).
 - `crates/client/src/dom/layout.rs`: `node_for`: an element's `Node` from its attributes, look and place in a table.
-- `crates/client/src/dom/parts.rs`: `Document`, `DocumentOf`, `document()`, `document_in()`, `Element`, `Inert`, `Canvas`, `Solid`, `Opaque`, `OwnPointer`, `AlwaysBars`, `Hovered`; private `Darkened`, `TextStyle`, `Words`, `InTable`, `Bar`, `TemplateBody`.
+- `crates/client/src/dom/parts.rs`: `Document`, `DocumentOf`, `document()`, `document_in()`, `Element`, `Inert`, `Canvas`, `Solid`, `Opaque`, `OwnPointer`, `AlwaysBars`, `Round`, `Reach`, `Hovered`; private `Darkened`, `TextStyle`, `Words`, `InTable`, `Bar`, `TemplateBody`.
 - `crates/client/src/dom/build.rs`: `Builder`, `build_documents`. In `build/`: `table.rs`, `progress.rs`, `surfaces.rs` (`panel`, `dialog`, `footer`, `popup`, `scroll`), `title_row.rs` (a big dialog's title and close button), `container.rs`.
 - `crates/client/src/dom/dark.rs`: a `dark` panel's darkening (`spawn`, from `fixed_panel`) and `follow_darkenings` (shown as the panel's `hidden` says).
 - `crates/client/src/dom/surfaces.rs`: `follow_surfaces` (a panel's or dialog's `hidden`; a moving panel's `title` and first place; a popup's `hidden`, `left`, `top`), `clear_surfaces`, `tidy_surfaces`.
@@ -66,6 +66,8 @@ Input:
 - `Solid`: a node that isn't an element but can be the target and hides what is behind it. Required by everything looked for under the pointer (`Pressable`, `ButtonState`, panel parts, `HoverTip`, `ItemName`, scroll areas and bars, writing with items, the grids, slots and their cells). Anything else (a count, a ripple, an aim's tint) is never what the pointer is on.
 - `Opaque` (requires `Solid`): a surface a press doesn't bubble out of (a dialog's panel, an open list, a popup, View Planet's bar, the action bar's rows), so blank parchment is never a press on the darkening behind.
 - `OwnPointer` (requires `Solid`): a node whose owner's code reads the pointer on it itself (the Skills page's canvas, View Planet's layer, a `dark` panel's darkening): a press on it, or on anything in it that isn't a button or element, hides what is under it but is left in the mouse's and fingers' input for the owner, never taken by a panel it lies in.
+- `Round`: on anything the pointer can be on: pointed at only inside the circle (or oval) its box holds, its corners being what is behind it (the minimap's face).
+- `Reach(pixels)`: on anything the pointer can be on: also pointed at that far outside its box, where what is found there is behind it and isn't itself reaching (fingers round the full map's close and floor buttons).
 - `Hovered`: on each element of the chain, and nothing else.
 - Events, sent to the target and up through what holds it until stopped (`event.propagate(false)`): `Press`, `Release`, `Click { count }`, `ContextMenu`, `Wheel { lines }`; `PointerEnter` / `PointerLeave` to one element. Watch with `.observe(|click: On<Click>| …)`.
 - `PointerCapture(Option<Entity>)`: that entity is the target until the left button is let go.
@@ -96,7 +98,6 @@ Forms in use: `hud` (the corner buttons), `menu`, the requesters' (`quit`, `iron
 
 What the move to markup left, on purpose or for the owner:
 
-- **The maps' own search for what the pointer is on** (`minimap/input.rs`, `hold.rs`, `floors::under`): the maps' markup is all `inert`, and their code works from the window's size with extra reach for fingers. Moving it to `Hit` changes how the maps feel: **open, for the owner**.
 - **Control `spawn_*` functions called by code filling canvases and places the markup leaves**: Character Select's cells, Character Create's looks and difficulty, Server Options' difficulty and router rows and its copy button, View Planet's bar, the Skills page, the debug menu's grid, Give Item's preview and the split box (`spawn_item_cells`), the full map's close button, the Killed requester (`spawn_dialog`). They are the same functions `dom` shows controls with, so nothing waits on them.
 - **The login corner's words**: only its place is markup. Its words hold the account's email address, and `client.ui.html` writes back whatever `dom` holds, so they are never given to `dom`.
 
@@ -107,7 +108,7 @@ What the move to markup left, on purpose or for the owner:
 
 ## Used by
 
-Every module with interface: `system_menu`, `debug_menu`, `login`, `loading_screen`, `character_select`, `character_create`, `inventory`, `talk`, `quest_log`, `accounts_panel`, `abilities`, `character`, `step_pad`, `notices`, `hover`, `ui`, `vitals`, `minimap`; `widgets` (`Hit`, `Finder`, `Solid`, `Opaque`, `DomInput`, `GridShown`); `view3d` (`Hit`: the wheel zooms only on the view); `target` (`Hit`).
+Every module with interface: `system_menu`, `debug_menu`, `login`, `loading_screen`, `character_select`, `character_create`, `inventory`, `talk`, `quest_log`, `accounts_panel`, `abilities`, `character`, `step_pad`, `notices`, `hover`, `ui`, `vitals`, `minimap`; `widgets` (`Hit`, `Finder`, `Solid`, `Opaque`, `DomInput`, `GridShown`); `view3d` (`Hit`: the wheel zooms only on the view); `target` (`Hit`); `minimap` (`Hit`, `Finder`, `OwnPointer`, `Round`, `Reach`).
 
 ## Notes
 
@@ -146,11 +147,12 @@ Input:
 
 - The search drills down: a point not on an element isn't on anything in it. Nodes that aren't elements may hold things anywhere (the widgets do), so all inside them is tried and the one furthest in front wins. `inert` and hidden things are passed over with all they hold.
 - Our own search, not `bevy_picking`'s: its UI backend tries every node, takes its own pointers rather than `UiPointer` (mouse or finger in interface pixels, which fake input moves too), and only tells markers apart for the whole interface.
-- A left press on anything of the interface is taken from the mouse (`widgets`' `take_presses`, in `Presses`) unless the nearest panel part or `OwnPointer` leaves it to its owner. A press on an element is taken in `send_events` too, but a right press on a `canvas`, `object-grid` or `object-slot` is left for its owner (turning a held item).
+- A left press on anything of the interface is taken from the mouse (`widgets`' `take_presses`, in `Presses`) unless the nearest panel part or `OwnPointer` leaves it to its owner. A press on an element is taken in `send_events` too, but a left press in anything `OwnPointer` (the maps) and a right press on a `canvas`, `object-grid` or `object-slot` are left for their owners (dragging the map, turning a held item).
 - A press bubbles from the target to the nearest button, stopping at a panel part or an `Opaque` surface, so nothing covered reacts or lights up.
 - A click goes to the nearest thing both the press and the letting go were on; a finger's tap arrives as a left click (`touch`).
 - Every search for what is in front goes through `Hit` or `Finder`: hover tips, items' names, items in writing, what a held thing is over, grid and bar cells, hold buttons, scroll areas, and a finger on a slider or in a text box. Sliders and text boxes still work out where along themselves the pointer is.
-- Not built: several pointers at once, the capture phase, focus moved by keys, a long press as `ContextMenu`, a canvas saying a point isn't on it.
+- `Round` and `Reach` are code components, as `OwnPointer` is: no markup attribute for them yet. A reach is tried after the search, over all that reach (few), so it never makes the search look into what the pointer is off.
+- Not built: several pointers at once, the capture phase, focus moved by keys, a long press as `ContextMenu`.
 
 Objects:
 

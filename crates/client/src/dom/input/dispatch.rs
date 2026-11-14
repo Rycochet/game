@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use super::events::{Click, ContextMenu, Press, Release, Wheel};
 use super::hit::{Hit, PointerCapture};
-use crate::dom::parts::{Canvas, Element};
+use crate::dom::parts::{Canvas, Element, OwnPointer};
 
 /// A second click this soon after the first, on the same thing, is a double
 /// click. In seconds, by the real clock.
@@ -45,7 +45,8 @@ pub(super) struct Clicks {
 
 /// Sends this frame's events. A press on an element goes no further: the
 /// game behind never sees it, but for a right press on a place its owner
-/// draws in.
+/// draws in, and a left press in something whose owner reads the pointer
+/// itself (`OwnPointer`: the maps).
 #[allow(clippy::too_many_arguments)]
 pub(super) fn send_events(
     mut commands: Commands,
@@ -54,6 +55,7 @@ pub(super) fn send_events(
     scroll: Res<AccumulatedMouseScroll>,
     time: Res<Time<Real>>,
     elements: Query<Has<Canvas>, With<Element>>,
+    owned: Query<(), With<OwnPointer>>,
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut capture: ResMut<PointerCapture>,
     mut clicks: Local<Clicks>,
@@ -69,7 +71,8 @@ pub(super) fn send_events(
         if let Some(entity) = hit.target {
             commands.trigger(Press { entity, at });
         }
-        if on_element {
+        let left_for_owner = hit.chain.iter().any(|held| owned.contains(*held));
+        if on_element && !left_for_owner {
             mouse.clear_just_pressed(MouseButton::Left);
         }
     }

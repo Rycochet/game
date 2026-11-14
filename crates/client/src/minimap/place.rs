@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use super::{
     FULL_MAP_MARGIN, Room, Sources, full_map_area, full_map_corner, full_map_side, location_title,
-    minimap_picture_size,
+    minimap_across, minimap_picture_size,
 };
 use crate::dom::Dom;
 use crate::widgets::CLOSE_PIXELS;
@@ -28,8 +28,9 @@ pub struct MinimapArea {
 #[derive(Clone, Default, PartialEq)]
 pub(super) struct Placed {
     open: bool,
-    /// The minimap's picture, across.
+    /// The minimap's picture, across, and its round face.
     minimap: f32,
+    face: f32,
     /// The parchment: its top left corner, and how far across.
     corner: Vec2,
     side: f32,
@@ -51,6 +52,7 @@ pub(super) fn place_maps(
     let mut now = was.clone().unwrap_or_default();
     now.open = open;
     now.minimap = minimap_picture_size(&window);
+    now.face = minimap_across(&window);
     now.corner = full_map_corner(&window);
     now.side = full_map_side(&window);
     now.area = full_map_area(&window);
@@ -92,11 +94,17 @@ fn tell(dom: &mut Dom, was: Option<&Placed>, now: &Placed) {
     };
     if was.is_none_or(|was| was.open != now.open) {
         dom.set_flag("minimap/map", "hidden", now.open);
+        dom.set_flag("minimap/disc", "hidden", now.open);
         dom.set_flag("full_map/parchment", "hidden", !now.open);
         dom.set_flag("full_map/close", "hidden", !now.open);
     }
-    if differs(|placed| Vec2::splat(placed.minimap)) {
+    if differs(|placed| Vec2::new(placed.minimap, placed.face)) {
         size(dom, "minimap/map", Vec2::splat(now.minimap));
+        // The face, in the middle of the picture.
+        size(dom, "minimap/disc", Vec2::splat(now.face));
+        let inset = (MINIMAP_TOP + (now.minimap - now.face) / 2.0).to_string();
+        dom.set("minimap/disc", "top", &inset);
+        dom.set("minimap/disc", "right", &inset);
     }
     if differs(|placed| Vec2::splat(placed.side)) {
         size(dom, "full_map/parchment", Vec2::splat(now.side));

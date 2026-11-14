@@ -1,5 +1,7 @@
 use bevy::ecs::system::RunSystemOnce;
 use bevy::input::mouse::AccumulatedMouseScroll;
+use bevy::math::Affine2;
+use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 use shared::dungeon::Level;
 use shared::protocol::{ClientMessage, SeenPoi};
@@ -11,9 +13,10 @@ use crate::common::{
     TouchGesture, UiPointer,
 };
 use crate::connection::ToServer;
+use crate::dom::{Hit, Solid};
 use crate::player::Player;
 use crate::view3d::OrbitCamera;
-use crate::widgets::CLOSE_PIXELS;
+use crate::widgets::{ButtonPressed, UiId};
 
 #[test]
 fn ruined_places_are_named_as_ruins() {
@@ -103,6 +106,7 @@ fn app() -> App {
         .init_resource::<AccumulatedMouseScroll>()
         .init_resource::<ClickMode>()
         .init_resource::<UiPointer>()
+        .init_resource::<Hit>()
         .init_resource::<UiScale>()
         .init_resource::<TouchGesture>()
         .init_resource::<OtherLevels>()
@@ -114,7 +118,64 @@ fn app() -> App {
     app.world_mut().spawn(OrbitCamera::new(0.5, 100.0, 0.0));
     app.world_mut()
         .spawn((Player, SmoothPosition { x: 100.0, y: 100.0 }));
+    for part in [MapPart::Minimap, MapPart::Parchment] {
+        app.world_mut().spawn(part);
+    }
+    // The picture is laid out, for `dom`'s search where fingers are.
+    let window = Room::of(&Window::default(), &UiScale::default());
+    let (corner, size) = (full_map_picture_corner(&window), full_map_area(&window));
+    let node = ComputedNode {
+        size,
+        inverse_scale_factor: 1.0,
+        ..default()
+    };
+    let place = UiGlobalTransform::from(Affine2::from_translation(corner + size / 2.0));
+    let shown = (InheritedVisibility::VISIBLE, ComputedStackIndex(1));
+    app.world_mut()
+        .spawn((MapPart::Picture, Solid, node, place, shown));
     app
+}
+
+/// The map part's entity, as `bind_maps` marks it.
+fn part(app: &mut App, which: MapPart) -> Entity {
+    let mut parts = app.world_mut().query::<(Entity, &MapPart)>();
+    let found = parts.iter(app.world()).find(|(_, part)| **part == which);
+    found.expect("the part").0
+}
+
+/// What `dom`'s search would find at `at`, from the maps' sizes in a
+/// 1280 × 720 window: the minimap's face (while the full map is shut), the
+/// full map's picture in its parchment, or the darkening round it (which
+/// is not one of the maps' parts).
+fn hit_at(app: &mut App, at: Vec2) -> Hit {
+    let window = Room::of(&Window::default(), &UiScale::default());
+    let mut chain = Vec::new();
+    if app.world().resource::<FullMap>().open {
+        let picture = full_map_picture_corner(&window);
+        let area = full_map_area(&window);
+        let corner = full_map_corner(&window);
+        let side = full_map_side(&window);
+        let within = |from: Vec2, size: Vec2| at.cmpge(from).all() && at.cmplt(from + size).all();
+        if within(picture, area) {
+            chain.push(part(app, MapPart::Picture));
+        }
+        if within(corner, Vec2::splat(side)) {
+            chain.push(part(app, MapPart::Parchment));
+        } else {
+            chain.push(app.world_mut().spawn_empty().id());
+        }
+    } else {
+        let size = minimap_picture_size(&window);
+        let middle = Vec2::new(1280.0 - CORNER_GAP - size / 2.0, CORNER_GAP + size / 2.0);
+        if at.distance(middle) <= minimap_across(&window) / 2.0 {
+            chain.push(part(app, MapPart::Minimap));
+        }
+    }
+    Hit {
+        target: chain.first().copied(),
+        chain,
+        at: Some(at),
+    }
 }
 
 fn step(app: &mut App) {
@@ -136,6 +197,8 @@ fn let_go(app: &mut App) {
 
 fn set_cursor(app: &mut App, at: Vec2) {
     app.world_mut().resource_mut::<UiPointer>().0 = Some(at);
+    let hit = hit_at(app, at);
+    app.world_mut().insert_resource(hit);
 }
 
 fn press_key(app: &mut App, key: KeyCode) {
@@ -366,18 +429,14 @@ fn holding_the_minimap_puts_the_view_back_and_opens_nothing() {
 }
 
 #[test]
-fn its_button_and_clicks_outside_close_the_map() {
+fn clicks_outside_close_the_map() {
     let mut app = app();
     let side = 648.0;
     let corner = Vec2::new(1280.0 - side, 720.0 - side) / 2.0;
-    let button = corner
-        + Vec2::new(
-            side - FULL_MAP_MARGIN - CLOSE_PIXELS / 2.0,
-            FULL_MAP_MARGIN + CLOSE_PIXELS / 2.0,
-        );
+    // (Its close button is `dom`'s: `close::close_on_button`.)
     for (at, stays_open) in [
         (corner + Vec2::splat(side / 2.0), true),
-        (button, false),
+        (corner + Vec2::splat(2.0), true),
         (corner - Vec2::splat(5.0), false),
     ] {
         app.world_mut().resource_mut::<FullMap>().set_open(true);
@@ -500,19 +559,26 @@ fn clicking_a_floors_button_on_the_full_map_shows_it_round_the_player() {
     // Only on the full map, and only in a site.
     assert!(floors::buttons(GameView::Dungeon, false, dungeon, levels).is_empty());
     assert!(floors::buttons(GameView::WorldMap, true, dungeon, levels).is_empty());
-    let window = Window::default();
-    let on_button = |row: usize| {
-        let (corner, _) = floors::column(&Room::of(&window, &UiScale::default()), 2);
-        let down = row as f32 * (floors::BUTTON + floors::BUTTON_GAP);
-        corner + Vec2::new(5.0, 5.0 + down)
+    // The buttons' widgets, as `dom` builds them; a press on one is `dom`'s.
+    app.add_message::<ButtonPressed>();
+    let button = |app: &mut App, row: usize| {
+        let id = UiId::new("full_map", "go").at(row);
+        app.world_mut().spawn(id).id()
+    };
+    let rows = [button(&mut app, 0), button(&mut app, 1)];
+    let on_button = |app: &mut App, row: usize| {
+        app.world_mut().write_message(ButtonPressed(rows[row]));
+        app.world_mut()
+            .run_system_once(floors::go_to_pressed)
+            .expect("the system runs");
     };
     app.world_mut().resource_mut::<FullMap>().set_open(true);
-    click(&mut app, on_button(0));
+    on_button(&mut app, 0);
     assert_eq!(app.world().resource::<OtherLevels>().showing(), Some(2));
 
     // A dragged map stays where it was, even with nothing known there.
     app.world_mut().resource_mut::<FullMap>().centre = Some((300.0, 300.0));
-    click(&mut app, on_button(1));
+    on_button(&mut app, 1);
     assert_eq!(app.world().resource::<OtherLevels>().showing(), None);
     let full = app.world().resource::<FullMap>();
     assert!(full.open);

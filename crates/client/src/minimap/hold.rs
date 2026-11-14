@@ -4,10 +4,10 @@
 //! which now opens when it is let go.
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 
-use super::{CORNER_GAP, FullMap, Room, minimap_across, minimap_picture_size};
-use crate::common::{GameView, TouchGesture, UiPointer, in_interface};
+use super::{FullMap, MapPart};
+use crate::common::{GameView, TouchGesture, in_interface};
+use crate::dom::{Finder, Hit};
 use crate::view3d::OrbitCamera;
 
 /// How long the minimap is held before the view goes back, in seconds: as a
@@ -23,26 +23,18 @@ pub(super) struct MinimapHold {
     done: bool,
 }
 
-/// Whether this point (in interface pixels) is on the minimap.
-fn on_minimap(window: &Room, at: Vec2) -> bool {
-    let middle = Vec2::new(
-        window.width() - CORNER_GAP - minimap_picture_size(window) / 2.0,
-        CORNER_GAP + minimap_picture_size(window) / 2.0,
-    );
-    at.distance(middle) <= minimap_across(window) / 2.0
-}
-
 /// Takes presses on the minimap before the maps' `take_input` sees them: a
 /// press held long enough puts every camera back; one let go before that
-/// opens the full map.
+/// opens the full map. Whether the mouse or a finger is on the minimap's
+/// face is `dom`'s search (`Hit`, `Finder`), which leaves the press here
+/// (`dom::OwnPointer`).
 #[allow(clippy::too_many_arguments)]
 pub(super) fn hold_minimap(
     mut mouse: ResMut<ButtonInput<MouseButton>>,
     mut gesture: ResMut<TouchGesture>,
-    window: Single<&Window, With<PrimaryWindow>>,
     ui_scale: Res<UiScale>,
     view: Res<State<GameView>>,
-    pointer: Res<UiPointer>,
+    (hit, finder, parts): (Res<Hit>, Finder, Query<&MapPart>),
     time: Res<Time<Real>>,
     mut full: ResMut<FullMap>,
     mut hold: ResMut<MinimapHold>,
@@ -52,12 +44,12 @@ pub(super) fn hold_minimap(
         *hold = MinimapHold::default();
         return;
     }
-    let window = Room::of(&window, &ui_scale);
+    let on_minimap = |chain: &[Entity]| MapPart::Minimap.holds(chain, &parts);
     let finger = gesture
         .still_at
         .map(|at| in_interface(at, &ui_scale))
-        .filter(|&at| on_minimap(&window, at));
-    let over = pointer.0.is_some_and(|at| on_minimap(&window, at));
+        .filter(|&at| on_minimap(&finder.chain_at(at)));
+    let over = on_minimap(&hit.chain);
     // A tap is a click on lifting the finger: the hold already decided it.
     if gesture.tap && hold.done {
         mouse.clear_just_pressed(MouseButton::Left);

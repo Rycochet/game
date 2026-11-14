@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::ui::{ComputedStackIndex, UiGlobalTransform};
 
 use super::Finder;
-use crate::dom::parts::{Element, Inert, Solid};
+use crate::dom::parts::{Element, Inert, Reach, Round, Solid};
 use crate::dom::{Attrs, Tag};
 
 /// A node as if laid out at `corner`, `size` across, `stack` from the back.
@@ -95,4 +95,34 @@ fn inert_and_hidden_things_are_passed_over_with_all_they_hold() {
     let hidden = world.spawn((laid(Vec2::ZERO, BIG, 4), Solid)).id();
     world.entity_mut(hidden).insert(InheritedVisibility::HIDDEN);
     assert_eq!(target(&mut world, Vec2::splat(10.0)), Some(behind));
+}
+
+#[test]
+fn a_round_thing_is_pointed_at_only_inside_its_circle() {
+    let mut world = World::new();
+    let behind = world.spawn((laid(Vec2::ZERO, BIG, 1), Solid)).id();
+    let round = (laid(Vec2::ZERO, BIG, 2), element(), Round);
+    let round = world.spawn(round).id();
+    assert_eq!(target(&mut world, Vec2::splat(50.0)), Some(round));
+    assert_eq!(target(&mut world, Vec2::new(50.0, 2.0)), Some(round));
+    // A corner of its box is off the circle: what is behind.
+    assert_eq!(target(&mut world, Vec2::splat(5.0)), Some(behind));
+}
+
+#[test]
+fn a_reach_counts_a_little_outside_over_what_is_behind() {
+    let mut world = World::new();
+    let behind = world.spawn((laid(Vec2::ZERO, BIG, 1), Solid)).id();
+    let button = (laid(Vec2::splat(40.0), SMALL, 2), Solid, Reach(10.0));
+    let button = world.spawn(button).id();
+    let over = world.spawn((laid(Vec2::new(70.0, 0.0), SMALL, 3), Solid));
+    let over = over.id();
+    assert_eq!(target(&mut world, Vec2::splat(50.0)), Some(button));
+    assert_eq!(target(&mut world, Vec2::new(35.0, 50.0)), Some(button));
+    assert_eq!(target(&mut world, Vec2::new(25.0, 50.0)), Some(behind));
+    assert_eq!(target(&mut world, Vec2::new(50.0, 65.0)), Some(button));
+    // What is in front of it keeps its own place.
+    assert_eq!(target(&mut world, Vec2::new(75.0, 10.0)), Some(over));
+    world.entity_mut(button).insert(Inert);
+    assert_eq!(target(&mut world, Vec2::new(35.0, 50.0)), Some(behind));
 }

@@ -72,6 +72,18 @@ pub struct Opaque;
 #[require(Solid)]
 pub struct OwnPointer;
 
+/// On anything the pointer can be on (an element, or a `Solid` node): it is
+/// pointed at only inside the circle (or oval) its box holds, so a round
+/// thing's corners are what is behind it (the minimap).
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct Round;
+
+/// On anything the pointer can be on: it also counts as pointed at this many
+/// interface pixels outside its box, for fingers, where what is found there
+/// is behind it (the full map's close and floor buttons).
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub struct Reach(pub f32);
+
 /// On a `dark` panel's element: its darkening across the window.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct Darkened(pub Entity);
