@@ -18,6 +18,15 @@ fn a_cellar(test: &mut TestClient) -> (shared::poi::Poi, Quest) {
 /// A quest with a dungeon entered `way`, open to anyone, in a town near the
 /// start, and that town's poi.
 pub(super) fn a_dungeon(test: &mut TestClient, way: DungeonWay) -> (shared::poi::Poi, Quest) {
+    a_dungeon_where(test, |quest| quest.dungeon.is_some_and(|d| d.way == way))
+}
+
+/// A quest open to anyone that `wanted`, in a town near the start, and that
+/// town's poi.
+pub(super) fn a_dungeon_where(
+    test: &mut TestClient,
+    wanted: impl Fn(&Quest) -> bool,
+) -> (shared::poi::Poi, Quest) {
     let (x, y) = test.client.world_position();
     let reach = 24 * CHUNK_SIZE;
     let mut towns: Vec<_> = (test.world.pois)
@@ -36,14 +45,13 @@ pub(super) fn a_dungeon(test: &mut TestClient, way: DungeonWay) -> (shared::poi:
                 quests.extend(daily.map(|quest| (*quest).clone()));
             }
         }
-        let open = quests.into_iter().find(|quest| {
-            quest.dungeon.is_some_and(|d| d.way == way) && quest.requirements.is_empty()
-        });
+        let open =
+            (quests.into_iter()).find(|quest| wanted(quest) && quest.requirements.is_empty());
         if let Some(quest) = open {
             return (town, quest);
         }
     }
-    panic!("no {way:?} quest near the start");
+    panic!("no such quest near the start");
 }
 
 /// In the town, then the quest taken, which goes straight into its cellar.

@@ -32,8 +32,11 @@ pub(super) fn dungeon_cells(
         let (chunk, bit) = level_chunk(x, y);
         remembered.is_some_and(|masks| masks.get(&chunk).is_some_and(|m| m & (1 << bit) != 0))
     };
-    match goal_level(visit, hook) {
-        Some(goal) => visit.stairs_towards(goal, seen),
-        None => Vec::new(),
+    // A locked stage door stands before the way down.
+    let stage = super::stage_door::locked_stage(client, world);
+    let mut cells: Vec<(i64, i64)> = stage.map(|(at, _)| at).into_iter().collect();
+    if let Some(goal) = goal_level(visit, hook) {
+        cells.extend(visit.stairs_towards(goal, seen));
     }
+    cells
 }

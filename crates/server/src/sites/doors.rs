@@ -25,6 +25,7 @@ mod kick;
 mod locks;
 mod looks;
 mod share;
+mod stage;
 
 pub(super) use act::changed_at;
 use act::{close_near, dev_all, dev_key, open_door};

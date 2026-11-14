@@ -136,7 +136,7 @@ pub(crate) fn picked_up(client: &mut Client, world: &mut ServerWorld, quest: Hoo
 /// Sends the sign over the player's quest item lying in sight, if it has
 /// changed. `false` if the client has gone.
 pub(super) fn tell_finds(client: &mut Client, world: &mut ServerWorld) -> bool {
-    let marks = match find_here(client, world) {
+    let mut marks: Vec<FindMark> = match find_here(client, world) {
         Some(find) => {
             let (x, y) = find.at.cell();
             let seen = client.visit.as_mut().is_some_and(|v| v.can_see(x, y));
@@ -148,6 +148,8 @@ pub(super) fn tell_finds(client: &mut Client, world: &mut ServerWorld) -> bool {
         }
         None => Vec::new(),
     };
+    // A quest dungeon's locked stage door has the quest's marker too.
+    marks.extend(super::stage_door::stage_mark(client, world));
     if marks == client.quest_seen.finds {
         return true;
     }

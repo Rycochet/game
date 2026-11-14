@@ -31,6 +31,7 @@ mod parcels;
 mod planet_log;
 mod planets;
 mod progress;
+mod stage_door;
 mod standing;
 mod turn_in;
 
@@ -104,5 +105,7 @@ mod log_tests;
 mod parcel_tests;
 #[cfg(test)]
 mod planets_tests;
+#[cfg(test)]
+mod stage_tests;
 #[cfg(test)]
 mod tests;

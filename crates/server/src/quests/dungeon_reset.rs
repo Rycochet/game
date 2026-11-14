@@ -22,6 +22,12 @@ pub(crate) fn reset_due(client: &mut Client, world: &mut ServerWorld, now: i64) 
         if reset(client, world, id) {
             sent &= log::tell_changed(client, world, id);
         }
+        // Its keys vanish wherever they are (owner): carried ones here, the
+        // rest with the copy.
+        if client.inventory.remove_quest_items(id) > 0 {
+            client.update_speed(world.action_clock.ticks());
+            sent &= client.send_inventory();
+        }
     }
     sent
 }
