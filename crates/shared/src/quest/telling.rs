@@ -53,7 +53,10 @@ pub(super) fn tell_plan(world: &QuestWorld, town: &Poi, plan: &Plan, tale: Tale)
             distance: DistanceBand::between(from, (poi.x, poi.y), width),
         }
     });
-    if plan.dungeon.is_some() {
+    if plan
+        .dungeon
+        .is_some_and(|d| d.way == super::DungeonWay::Cellar)
+    {
         // Under the giver's own house.
         request.place = Some(Place {
             description: PlaceDescription::new(PlaceKind::Cellar, false),

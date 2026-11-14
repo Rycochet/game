@@ -186,7 +186,8 @@ fn take_exit(client: &mut Client, world: &mut ServerWorld, exit: Exit) -> bool {
 }
 
 /// Out of a quest's dungeon by its way up: back where they went in (beside
-/// the giver's door), or onto the world map at its town if that is unknown.
+/// the giver's door), or, gone into from the world map (a hidden entrance),
+/// onto it at its poi, remembering what they saw inside.
 pub(crate) fn leave_dungeon(client: &mut Client, world: &mut ServerWorld) -> bool {
     leave(client, world);
     let Some(visit) = client.visit.take() else {
@@ -195,7 +196,12 @@ pub(crate) fn leave_dungeon(client: &mut Client, world: &mut ServerWorld) -> boo
     let back = crate::quests::came_out(client, visit.id, crate::quests::unix_now());
     match (back, visit.poi()) {
         (Some(back), _) => super::resume(client, world, back),
-        (None, Some(&poi)) => leave_for_poi(client, world, poi, visit.id),
+        (None, Some(&poi)) => {
+            client.character.world_position = (poi.x, poi.y);
+            client.changed_map();
+            let (x, y) = (poi.x, poi.y);
+            client.link.send(&ServerMessage::OnWorldMap { x, y }) && look_around(client, world)
+        }
         (None, None) => true,
     }
 }

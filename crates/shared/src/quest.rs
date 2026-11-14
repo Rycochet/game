@@ -14,6 +14,7 @@ mod dungeon;
 mod feeder;
 mod feeder_quest;
 mod givers;
+mod hidden;
 mod hook;
 mod id;
 mod kind;
@@ -32,7 +33,7 @@ mod town;
 mod world;
 
 pub use daily::{SECONDS_PER_DAY, daily_givers, daily_quest, utc_day};
-pub use dungeon::{DUNGEON_KIND, DungeonWay, QuestDungeon};
+pub use dungeon::{DUNGEON_KIND, DungeonWay, HIDDEN_KIND, QuestDungeon};
 pub use feeder::{feeder_destination, feeds_into};
 pub use givers::{Giver, givers};
 pub use hook::Hook;

@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 use shared::protocol::{QuestNews, QuestRefusal, ServerMessage};
-use shared::quest::{Quest, QuestId};
+use shared::quest::{DungeonWay, Quest, QuestId};
 
 use super::{MOST_TAKEN, log, offers, tell_markers};
 use crate::ServerWorld;
@@ -66,13 +66,15 @@ pub(crate) fn accept(
             return false;
         }
     }
+    super::dungeon_entrance::note_entrance(client, &quest);
     let ahead = super::ahead::already_done(client, &quest);
     (!ahead || super::ahead::tell_ahead(client, world))
         && learn_targets(client, world, &quest)
         && log::tell_changed(client, world, id)
         && tell_markers(client, world, id.town, now)
         // A cellar of the giver's own: straight down into it (owner).
-        && (quest.dungeon.is_none() || super::dungeon::enter(client, world, id, reach))
+        && (quest.dungeon.is_none_or(|d| d.way != DungeonWay::Cellar)
+            || super::dungeon::enter(client, world, id, reach))
 }
 
 /// The building of a quest's giver.

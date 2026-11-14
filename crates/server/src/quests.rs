@@ -19,6 +19,8 @@ mod dots;
 mod drops;
 mod dungeon;
 mod dungeon_dots;
+mod dungeon_entrance;
+mod dungeon_reset;
 mod finds;
 mod follow;
 mod give_up;
@@ -36,7 +38,8 @@ pub(crate) use ask::answer_quest;
 pub(crate) use bosses::boss_quest;
 pub(crate) use cache::TownQuests;
 pub(crate) use clock::unix_now;
-pub(crate) use dungeon::{came_out, dungeon_of, dungeon_poi};
+pub(crate) use dungeon::{came_out, dungeon_of, dungeon_poi, enter as enter_dungeon};
+pub(crate) use dungeon_entrance::{entrance_in, entrance_near};
 pub(crate) use finds::{Find, find_here, picked_up};
 pub(crate) use follow::{Seen, follow, killed};
 pub(crate) use planet_log::answer_planet_logs;
@@ -93,6 +96,8 @@ mod dungeon_tests;
 mod extras_tests;
 #[cfg(test)]
 mod finds_tests;
+#[cfg(test)]
+mod hidden_tests;
 #[cfg(test)]
 mod log_tests;
 #[cfg(test)]

@@ -17,7 +17,9 @@ pub(super) fn chunk_message(
     world: &ServerWorld,
     chunk: ChunkPos,
 ) -> ServerMessage {
-    let poi = known_poi(client, world, chunk);
+    // A hidden entrance of the character's quests: theirs alone to see.
+    let entrance = crate::quests::entrance_in(client, chunk).map(|(_, poi)| poi);
+    let poi = entrance.or_else(|| known_poi(client, world, chunk));
     let named = client
         .character
         .pois
@@ -31,6 +33,12 @@ pub(super) fn chunk_message(
         poi: poi.map(|poi| seen_poi(world, poi)),
         name,
     })
+}
+
+/// Sends `chunk` again if the client has it (a hidden entrance has come or
+/// gone). `false` if the client has gone.
+pub(crate) fn send_chunk(client: &mut Client, world: &ServerWorld, chunk: ChunkPos) -> bool {
+    !client.world_chunks.contains(&chunk) || client.link.send(&chunk_message(client, world, chunk))
 }
 
 /// The character learns the name of the place in `chunk` (going into it, or

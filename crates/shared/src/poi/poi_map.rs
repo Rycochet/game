@@ -68,6 +68,15 @@ impl PoiMap {
         (self.width / CHUNK_SIZE).max(1)
     }
 
+    /// Whether world grid point `(x, y)` is where a poi could stand: dry land
+    /// at high tide, short of the ice, in a chunk with no World Gate (quests'
+    /// hidden entrances, `quest::QuestDungeon`).
+    pub fn is_open_land(&self, x: i64, y: i64) -> bool {
+        let x = x.rem_euclid(self.width);
+        let dry = self.surface.sample(x, y).height > self.land_above;
+        dry && !self.ground.past_the_ice(y) && !self.has_gate(self.chunk_at(x, y))
+    }
+
     /// The chunk containing world grid point `(x, y)`.
     pub fn chunk_at(&self, x: i64, y: i64) -> ChunkPos {
         ChunkPos {

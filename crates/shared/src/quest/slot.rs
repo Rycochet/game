@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::area::Candidate;
 use super::givers::quest_seed;
+use super::hidden::{HIDDEN_PERCENT, plan_hidden};
 use super::make::{Making, make};
 use super::plan::Plan;
 use super::template::plan;
@@ -50,9 +51,17 @@ pub(super) fn slot_quests(
     let dark = size > 0 && rng.range_u64(0, 100) < DARK_PERCENT;
     let mut plans = Vec::new();
     for _ in 0..length {
-        // Sometimes a cellar of the giver's own; otherwise a hook nearby.
-        let plan = if rng.range_u64(0, 100) < super::dungeon::NORMAL_PERCENT {
+        // Sometimes a cellar of the giver's own, or in towns and cities a
+        // hidden way down nearby; otherwise a hook nearby.
+        let roll = rng.range_u64(0, 100);
+        let cellars = super::dungeon::NORMAL_PERCENT;
+        let hidden = (size >= 2 && roll >= cellars && roll < cellars + HIDDEN_PERCENT)
+            .then(|| plan_hidden(world, town, &mut rng))
+            .flatten();
+        let plan = if roll < cellars {
             super::dungeon::plan_cellar(town, false, &mut rng)
+        } else if let Some(hidden) = hidden {
+            hidden
         } else {
             let Some(main) = choose(candidates, claims, &mut rng) else {
                 break;

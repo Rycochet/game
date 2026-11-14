@@ -1,9 +1,9 @@
 //! Dots for a step done in a quest's own dungeon: from outside it, the giver's
-//! door it is entered by; inside, for exploring it, the stairs the character
+//! door it is entered by (a hidden one's entrance, from the wilderness); inside, for exploring it, the stairs the character
 //! remembers leading on towards its deepest level (counted kills have none).
 
 use shared::protocol::level_chunk;
-use shared::quest::{Hook, Quest};
+use shared::quest::{DungeonWay, Hook, Quest};
 
 use super::dots::{goal_level, return_cells};
 use crate::ServerWorld;
@@ -18,8 +18,13 @@ pub(super) fn dungeon_cells(
     hook: Hook,
 ) -> Vec<(i64, i64)> {
     let inside = super::dungeon::site_of(client, quest.id) == Some(visit.id());
-    if !inside {
-        return return_cells(visit, world, quest);
+    match quest.dungeon {
+        _ if inside => {}
+        // A hidden entrance: where it is, when the wilderness about it is in view.
+        Some(dungeon) if dungeon.way == DungeonWay::Hidden => {
+            return visit.wild_cell_of(&dungeon.poi).into_iter().collect();
+        }
+        _ => return return_cells(visit, world, quest),
     }
     let memory = client.character.memory.get(&visit.id());
     let remembered = memory.and_then(|levels| levels.get(&visit.index()));

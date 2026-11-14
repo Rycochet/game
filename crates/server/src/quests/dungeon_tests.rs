@@ -1,7 +1,8 @@
 use shared::poi::CHUNK_SIZE;
-use shared::quest::{Hook, Quest, Target};
+use shared::quest::{DungeonWay, Hook, Quest, Target};
 
-use super::dungeon::{RESET_AFTER, enter, quest_ended, reset_due, site_of};
+use super::dungeon::{RESET_AFTER, enter, quest_ended, site_of};
+use super::dungeon_reset::reset_due;
 use super::progress::{Event, advance};
 use super::tests::NOW;
 use super::{accept::accept, cache};
@@ -11,8 +12,14 @@ use crate::storage::SiteId;
 /// A quest with a cellar of the giver's own, open to anyone, in a town near
 /// the start, and that town's poi.
 fn a_cellar(test: &mut TestClient) -> (shared::poi::Poi, Quest) {
+    a_dungeon(test, DungeonWay::Cellar)
+}
+
+/// A quest with a dungeon entered `way`, open to anyone, in a town near the
+/// start, and that town's poi.
+pub(super) fn a_dungeon(test: &mut TestClient, way: DungeonWay) -> (shared::poi::Poi, Quest) {
     let (x, y) = test.client.world_position();
-    let reach = 16 * CHUNK_SIZE;
+    let reach = 24 * CHUNK_SIZE;
     let mut towns: Vec<_> = (test.world.pois)
         .in_area((x - reach, y - reach), (x + reach, y + reach))
         .into_iter()
@@ -29,14 +36,14 @@ fn a_cellar(test: &mut TestClient) -> (shared::poi::Poi, Quest) {
                 quests.extend(daily.map(|quest| (*quest).clone()));
             }
         }
-        let open = quests
-            .into_iter()
-            .find(|quest| quest.dungeon.is_some() && quest.requirements.is_empty());
+        let open = quests.into_iter().find(|quest| {
+            quest.dungeon.is_some_and(|d| d.way == way) && quest.requirements.is_empty()
+        });
         if let Some(quest) = open {
             return (town, quest);
         }
     }
-    panic!("no cellar quest near the start");
+    panic!("no {way:?} quest near the start");
 }
 
 /// In the town, then the quest taken, which goes straight into its cellar.
@@ -156,14 +163,7 @@ fn coming_out_goes_back_and_an_hour_later_it_resets() {
         left + RESET_AFTER
     ));
     assert!(!test.world.sites.contains_key(&site));
-    assert!(
-        !test
-            .client
-            .character
-            .quests
-            .dungeons
-            .contains_key(&quest.id)
-    );
+    assert_eq!(test.client.character.quests.dungeons[&quest.id].left, None);
     assert_eq!(
         test.client.character.quests.taken[&quest.id].counts[step],
         0
