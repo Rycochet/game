@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::alignment::Alignment;
+use crate::bonus::Effects;
 use crate::creature::{CreatureKind, Size};
 use crate::energy::NORMAL_SPEED;
 use crate::gender::Gender;
@@ -18,6 +19,7 @@ use crate::skill::Skills;
 use crate::vitals::Vitals;
 
 mod attributes;
+mod bonuses;
 mod build;
 mod fits;
 mod foes;
@@ -30,6 +32,7 @@ mod shapeshift;
 
 pub use crate::ability::Ability;
 pub use attributes::{Attribute, Attributes, Row};
+pub use bonuses::Situation;
 pub use build::{Build, Dot, POINTS_TOTAL, TURN_STEPS, WEIGHT_TOTAL};
 pub use foes::{Foe, Foes};
 pub use from_build::{POINT_WEIGHT, SPREAD};
@@ -175,6 +178,10 @@ pub struct Sheet {
     /// What it remembers of each kind of creature it has fought (`Foes`).
     #[serde(default)]
     pub foes: Foes,
+    /// Bonuses laid on it for a while or for good (`shared::bonus`): none in
+    /// older saves, whose changes to the most `settled` turns into these.
+    #[serde(default)]
+    pub effects: Effects,
 }
 
 impl Default for Sheet {
@@ -202,14 +209,17 @@ impl Sheet {
             vitals: Vitals::default(),
             true_form: None,
             foes: Foes::default(),
+            effects: Effects::default(),
         }
     }
 
     /// As loaded, its body of kind `kind`: a save from before the nine attributes has
     /// none, so they are worked out again from its build (the centre, for such a save);
-    /// one from before alignments starts at 0.
+    /// one from before alignments starts at 0, and one from before effects has its
+    /// changes to the most turned into effects.
     pub fn settled(mut self, kind: CreatureKind) -> Self {
         self.alignment.get_or_insert(Alignment::NEUTRAL);
+        self.fold_old_changes();
         if self.attributes == Attributes::default() {
             if !self.build.is_valid() {
                 self.build = Build::CENTRED;

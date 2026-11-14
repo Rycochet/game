@@ -9,6 +9,7 @@ pub mod alignment;
 pub mod armour;
 pub mod blade;
 pub mod body;
+pub mod bonus;
 pub mod celestial;
 pub mod clearance;
 pub mod climate;

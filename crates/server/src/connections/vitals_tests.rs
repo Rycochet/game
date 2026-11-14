@@ -77,7 +77,7 @@ fn a_bonus_raises_both_until_it_ends() {
     let told: Vec<_> = std::iter::from_fn(|| test.end.receive().unwrap()).collect();
     let (health, _) = vitals(&told);
     assert_eq!((health.value.shown(), health.most), (h, h));
-    assert!(test.client.sheet.vitals.changes.is_empty());
+    assert!(test.client.sheet.effects.is_empty());
 }
 
 #[test]

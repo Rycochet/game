@@ -22,6 +22,11 @@ impl Points {
         Self(points.saturating_mul(PER_POINT))
     }
 
+    /// Both added, as far as there is room.
+    pub const fn plus(self, other: Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
+
     /// The thousandths.
     pub const fn milli(self) -> u32 {
         self.0
