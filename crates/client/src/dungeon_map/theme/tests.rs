@@ -12,3 +12,17 @@ fn pictures_exist() {
         }
     }
 }
+
+/// Walls are drawn natural exactly where the shared rules block them as
+/// natural (`PoiKind::natural_walls`), so they block where they are drawn.
+#[test]
+fn natural_walls_match_the_shared_rule() {
+    for kind in PoiKind::ALL {
+        let natural = Theme::of(Some(kind)).shape == Shape::Natural;
+        assert_eq!(natural, kind.natural_walls(), "{kind:?}");
+    }
+    assert_eq!(
+        Theme::of_level(Some(LevelKind::Wilderness)).shape,
+        Shape::Built
+    );
+}

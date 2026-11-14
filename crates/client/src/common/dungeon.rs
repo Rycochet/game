@@ -77,6 +77,9 @@ impl CurrentDungeon {
     pub fn enter(&mut self, info: LevelInfo) {
         let (min_x, min_y, width, height) = info.bounds;
         self.level = Level::new(min_x, min_y, width, height);
+        // As the server's copy: natural walls block wider at the foot.
+        let natural = info.kind.poi().is_some_and(|kind| kind.natural_walls());
+        self.level.set_natural_walls(natural);
         self.known = Sight::new(&self.level);
         self.remembered = Sight::new(&self.level);
         self.stairs.clear();

@@ -11,7 +11,7 @@ Owner's request (2026-11-10), answers agreed 2026-11-10/11. For sites, the wilde
 
 ## Owner's decisions
 
-1. Blockers: whole wall cells as now, plus thin ones (door frames, natural windows' columns, fences, tree trunks, corner squeezes). Playtest will tell.
+1. Blockers: whole wall cells as now, plus thin ones (door frames, natural windows' columns, fences, tree trunks, corner squeezes). Playtest will tell. It did (2026-11-14): walls, windows and closed doors now block only where they are drawn, as thin bars like fences (natural walls as wide as their foot), with no corner notches; a wall's cell still gives no footing, so a creature's middle stops at its edge (`decisions.md`).
 2. Squeezing: through a gap down to half its own width; speed divided by (wanted / available)², so at most 4× slower. Route costs per size use it. Large gets through a door slowly; Huge needs 0.75 cell (depends on door frame width, check); Giant never.
 3. Field of view is a **game rule**: a cone ahead plus a small circle all round; mobs notice by theirs; server sends by it. Shared, so a future ability can draw an enemy's arc. Reverses "nothing in the game faces a way" (2026-11-09): owner wants a wider audience. Record in decisions.md.
 4. Players pass through players; non-enemies can be squeezed past slowly ("excuse me"); enemies block.

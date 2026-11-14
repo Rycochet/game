@@ -32,6 +32,8 @@ pub struct Level {
     pub(super) swings: BTreeMap<(i64, i64), Swing>,
     /// The doors known to be locked (see `doors.rs`).
     pub(super) locked: BTreeSet<(i64, i64)>,
+    /// Whether its walls are natural, wider at the foot (`PoiKind::natural_walls`).
+    natural_walls: bool,
 }
 
 impl Level {
@@ -47,7 +49,21 @@ impl Level {
             rooms: vec![NO_ROOM; (width * height) as usize],
             swings: BTreeMap::new(),
             locked: BTreeSet::new(),
+            natural_walls: false,
         }
+    }
+
+    /// Whether its walls are natural: wider at the foot, as drawn, so wider
+    /// where they block (`clearance`). Built (thin) unless set.
+    pub fn natural_walls(&self) -> bool {
+        self.natural_walls
+    }
+
+    /// Sets whether its walls are natural, from its poi's kind
+    /// (`PoiKind::natural_walls`): the server's site levels and the client's
+    /// copy alike.
+    pub fn set_natural_walls(&mut self, natural: bool) {
+        self.natural_walls = natural;
     }
 
     /// For testing the view: a room with 15 × 7 floor cells (east–west ×

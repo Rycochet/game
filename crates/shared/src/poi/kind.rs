@@ -104,4 +104,28 @@ impl PoiKind {
     pub fn is_town(self) -> bool {
         matches!(self, Self::Hamlet | Self::Village | Self::Town | Self::City)
     }
+
+    /// Whether its site's walls are natural: curved like a letter C, wider at
+    /// the foot (crypts, caves, ice), rather than built straight. As they are
+    /// drawn, so as they block (`clearance`, `Level::natural_walls`).
+    pub fn natural_walls(self) -> bool {
+        use PoiKind::*;
+        matches!(
+            self,
+            Crypt
+                | MossyCrypt
+                | BloodyCrypt
+                | Mausoleum
+                | Grave
+                | Ruins
+                | Barrel
+                | Barrels
+                | GrassyCave
+                | EarthCave
+                | RockCave
+                | Boulders
+                | IceCave
+                | IceShelter
+        )
+    }
 }

@@ -24,13 +24,16 @@ fn steps_between_middles_go_by_the_cell_rule() {
     let jump = moved(&level, Size::Medium, (0, 0), Spot::middle_of((2, 0)));
     assert!(jump.is_some_and(LevelMove::jumped));
     // Walls touching at a corner: the cell rule lets a Medium creature cut
-    // it, but anyone bigger goes by its circle, which has no room there.
+    // it, but anyone bigger goes by its circle: a Giant has no room between
+    // natural walls' feet.
     level.set(3, 2, Cell::Wall);
     level.set(4, 3, Cell::Wall);
+    level.set_natural_walls(true);
     let (from, to) = (Spot::middle_of((3, 3)), Spot::middle_of((4, 2)));
     assert!(moved(&level, Size::Medium, (3, 3), to).is_some());
-    assert_eq!(check_segment(&level, Size::Large, from, to), None);
-    assert!(moved(&level, Size::Large, (3, 3), to).is_none());
+    assert!(moved(&level, Size::Large, (3, 3), to).is_some());
+    assert_eq!(check_segment(&level, Size::Giant, from, to), None);
+    assert!(moved(&level, Size::Giant, (3, 3), to).is_none());
 }
 
 #[test]

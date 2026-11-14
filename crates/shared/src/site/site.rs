@@ -150,7 +150,7 @@ impl Site {
     /// a building's ground floor, a cave's first level).
     pub fn level(&self, index: u32) -> SiteLevel {
         assert!(index < self.levels(), "no level {index}");
-        match &self.plan {
+        let mut level = match &self.plan {
             Plan::Building(plan) => plan.level(index),
             Plan::Cave(plan) => plan.level(index),
             Plan::Town(plan) => plan.level(),
@@ -158,7 +158,9 @@ impl Site {
             Plan::Herbalist(plan) => plan.level(index),
             Plan::Oasis(plan) => plan.level(),
             Plan::DevArea(plan) => plan.level(),
-        }
+        };
+        level.level.set_natural_walls(self.kind.natural_walls());
+        level
     }
 
     /// What `stairs` on level `index` are built as, the same at both ends:
